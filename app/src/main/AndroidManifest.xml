@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <instrumentation
+        android:name="com.riteldevelopment.carriertestoverride.CarrierConfigInstrumentation"
+        android:functionalTest="true"
+        android:handleProfiling="false"
+        android:targetPackage="${applicationId}" />
+
+    <!--
+      Package visibility for the apps whose cached region this tool resets. Without these the UI could
+      not tell installed from missing on API 30+, and the target list would claim every app is absent.
+      Stopping and wiping happen as the shell UID, which sees everything, so this is purely so the
+      screen can label the rows honestly.
+    -->
+    <queries>
+        <package android:name="com.sec.android.app.samsungapps" />
+        <package android:name="com.samsung.android.voc" />
+        <package android:name="com.zhiliaoapp.musically" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:process=":ui">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".InstrumentationHostService"
+            android:exported="false" />
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:process=":ui"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <!--
+          Compose drags in androidx.startup, which by default instantiates EmojiCompatInitializer,
+          ProcessLifecycleInitializer and ProfileInstallerInitializer in the DEFAULT process.
+
+          The default process is the one Samsung's AMS attaches the NO_RESTART Instrumentation to, and it
+          is deliberately kept to nothing but InstrumentationHostService's bare Binder. Emoji font loading
+          and ART profile writing there is wasted work that adds timing variability to a process the
+          privileged flow depends on being ready. All three initializers only matter where the Compose UI
+          actually runs, so the provider is pinned to :ui.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            android:process=":ui"
+            tools:node="merge" />
+
+    </application>
+
+</manifest>

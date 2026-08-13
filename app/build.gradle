@@ -1,0 +1,77 @@
+plugins {
+    id "com.android.application"
+    // Kotlin itself comes from AGP 9's built-in support; only the Compose compiler plugin is applied,
+    // and its version must equal AGP's vendored Kotlin (2.2.10).
+    id "org.jetbrains.kotlin.plugin.compose"
+}
+
+android {
+    namespace = "com.riteldevelopment.carriertestoverride"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "com.riteldevelopment.carriertestoverride"
+        minSdk = 29
+        targetSdk = 37
+        versionCode = 4
+        versionName = "3.1.0"
+    }
+
+    buildFeatures {
+        aidl = true
+        buildConfig = true
+        compose = true
+    }
+
+    // Built-in Kotlin derives its jvmTarget from these, so setting jvmTarget separately is both
+    // unnecessary and a common source of "Inconsistent JVM-target compatibility" failures.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    // Shizuku is vendored rather than resolved, so the privileged surface is pinned to bytes that have
+    // been validated on hardware. These four AARs are the whole of app/libs; the annotation jar that
+    // used to ship alongside them was dropped because it duplicates the androidx.annotation classes
+    // Compose pulls in transitively, which fails the build with "Duplicate class".
+    implementation files(
+            "libs/aidl-13.1.5.aar",
+            "libs/shared-13.1.5.aar",
+            "libs/api-13.1.5.aar",
+            "libs/provider-13.1.5.aar"
+    )
+
+    implementation "androidx.core:core-ktx:1.19.0"
+    implementation "androidx.activity:activity-compose:1.13.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.11.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
+
+    implementation platform("androidx.compose:compose-bom:2026.06.01")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-graphics"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.compose.foundation:foundation"
+    implementation "androidx.compose.material3:material3"
+    // material3 no longer brings the icon set transitively, so material-icons-CORE is declared explicitly.
+    // material-icons-EXTENDED is deliberately avoided: it is frozen at 1.7.8 while the rest of Compose is
+    // at 1.11.4, and it drags in thousands of unused vectors. Conventional controls (overflow, check,
+    // warning, lock, chevrons) use the core set; the domain-specific marks — the identity arrow and the
+    // hazard hatching — are drawn locally.
+    implementation "androidx.compose.material:material-icons-core"
+
+    debugImplementation "androidx.compose.ui:ui-tooling"
+}

@@ -1,0 +1,2 @@
+-keep class com.riteldevelopment.carriertestoverride.CarrierOverrideUserService { public <init>(...); *; }
+-keep interface com.riteldevelopment.carriertestoverride.ICarrierOverrideService { *; }

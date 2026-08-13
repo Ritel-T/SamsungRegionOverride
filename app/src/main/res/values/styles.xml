@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Compose owns every pixel, so the platform theme only has to do two things: follow the system
+      light/dark setting, and get out of the way before the first frame.
+
+      The 2.x theme hardcoded a light background plus statusBarColor / navigationBarColor /
+      windowLightStatusBar. Those bar colours are no-ops from targetSdk 35 onward and the hardcoded
+      light background produced a white flash on a dark-themed device, so they are all gone;
+      enableEdgeToEdge() and the Compose theme handle bar icon appearance instead.
+    -->
+    <style name="AppTheme" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

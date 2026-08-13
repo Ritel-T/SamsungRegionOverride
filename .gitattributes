@@ -1,0 +1,27 @@
+# Line endings are normalised in the repository and checked out as LF everywhere.
+#
+# Without this, a clone on Windows commits CRLF and a clone on Linux commits LF, so the same file
+# has two identities and every cross-platform diff is whole-file noise. Storing LF and letting Git
+# translate on checkout is the portable answer; `text=auto` still leaves Git free to detect binary
+# content and leave it alone.
+* text=auto eol=lf
+
+# Except the Windows launcher: cmd.exe parses a .bat by line, and an LF-only batch file misreads
+# multi-line constructs. It must keep CRLF on disk.
+*.bat text eol=crlf
+
+# Binaries: never normalised, never diffed as text.
+*.jar   binary
+*.aar   binary
+*.apk   binary
+*.png   binary
+*.jpg   binary
+*.webp  binary
+*.ttf   binary
+*.otf   binary
+*.keystore binary
+*.jks   binary
+
+# Generated or vendored, so keep it out of diff summaries and language statistics.
+gradle/wrapper/gradle-wrapper.jar binary linguist-vendored
+app/libs/** binary linguist-vendored

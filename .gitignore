@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+**/build/
+
+# Project-local Gradle home. Kept inside the tree so the build can run fully offline once warmed,
+# which is why it needs ignoring explicitly rather than living in ~/.gradle.
+.gradle-user-home/
+
+# Local machine configuration: absolute SDK paths, never portable.
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Build outputs that can land outside build/
+*.apk
+*.aab
+captures/
+
+# Signing material must never be committed.
+*.jks
+*.keystore
+
+# OS clutter
+.DS_Store
+Thumbs.db
