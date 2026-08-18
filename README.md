@@ -230,4 +230,7 @@ but unproven, and behaviour on non-Samsung devices is neither.
 
 ## License
 
-Not yet licensed — until a LICENSE file lands, default copyright applies.
+[MIT](LICENSE).
+
+The Shizuku libraries vendored in `app/libs` are third party and stay under their own license
+(Apache-2.0), which the MIT grant here does not extend to.
