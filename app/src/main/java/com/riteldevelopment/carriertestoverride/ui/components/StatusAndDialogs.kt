@@ -279,6 +279,13 @@ private fun applyDialogBody(request: DialogRequest.ConfirmApply): AnnotatedStrin
 
     append("\nName: ${target.carrierName}")
     append("\n\nThe radio keeps its real network; only what the framework reports changes.")
+    // The app country layer makes the IMS stack re-register under the overridden identity, which the
+    // real network rejects. Data survives, voice and SMS do not. Saying "only what the framework
+    // reports changes" and stopping there would be a comfortable half-truth, so the cost is stated
+    // where the user is deciding rather than discovered afterwards on a call that will not connect.
+    if (layers.appCountry) {
+        append("\n\nCalls and SMS stop on this SIM while App country is live. Restore brings them back.")
+    }
 }
 
 private fun clearAllDialogBody(sim: SimInfo): AnnotatedString = buildAnnotatedString {

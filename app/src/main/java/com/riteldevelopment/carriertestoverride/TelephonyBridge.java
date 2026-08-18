@@ -64,21 +64,167 @@ final class TelephonyBridge {
                 + "\nNote: AOSP has no separate clear API, so a reboot is the definitive restore.";
     }
 
+    static final String SUB_INTERFACE_NAME = "com.android.internal.telephony.ISub";
+
+    /**
+     * Lists methods of a hidden telephony interface whose name matches {@code pattern}, for the
+     * diagnostic entry point. Hidden interfaces differ by vendor and version, so finding the available
+     * recovery call on a given build is a matter of looking rather than assuming.
+     *
+     * @param scope {@code sub} for {@code ISub}, anything else for {@code ITelephony}
+     */
+    static String listMethods(String scope, String pattern) throws Exception {
+        Class<?> iface = Class.forName("sub".equals(scope) ? SUB_INTERFACE_NAME : INTERFACE_NAME);
+        List<String> matches = new ArrayList<>();
+        for (Method method : iface.getMethods()) {
+            if (method.getName().toLowerCase().contains(pattern.toLowerCase())) {
+                matches.add(signature(method));
+            }
+        }
+        matches.sort(Comparator.naturalOrder());
+        return matches.isEmpty() ? "<no match for " + pattern + ">" : String.join("\n", matches);
+    }
+
+    /**
+     * Sets the override with no validation, for the diagnostic entry point only.
+     *
+     * <p>{@link #applySimOverride} refuses a null IMSI on purpose; this exists so {@link RuntimeProbe}
+     * can measure what each individual field does to the live IMS registration, which is how the
+     * fake IMSI was ruled out as the cause of the voice/SMS regression.</p>
+     */
+    static String overrideRaw(int subId, String mccMnc, String imsi, String name) throws Exception {
+        requireValidSubId(subId);
+        Method method = findCarrierOverrideMethod();
+        Object telephony = getTelephonyProxy();
+        invoke(method, telephony, buildCarrierOverrideArguments(method, subId, mccMnc, imsi, name));
+        return "raw override: subId=" + subId + ", MCC/MNC=" + valueOrNull(mccMnc)
+                + ", IMSI=" + valueOrNull(imsi) + ", SPN/PNN=" + valueOrNull(name);
+    }
+
+    /**
+     * Asks the framework to re-evaluate the UICC profile for one subscription.
+     *
+     * <p>In AOSP this only re-runs carrier privilege evaluation
+     * ({@code UiccProfile.refresh()} posts {@code EVENT_CARRIER_PRIVILEGES_LOADED}); it does not
+     * re-read SIM records and does not re-register IMS. It is called after an identity change because
+     * it is the one documented companion to {@code setCarrierTestOverride}, not because it is
+     * sufficient on its own: measured on SM-S938B it does not bring IMS back. Kept only as a probe.</p>
+     */
+    static String refreshUiccProfile(int subId) throws Exception {
+        requireValidSubId(subId);
+        Class<?> iface = Class.forName(INTERFACE_NAME);
+        Method method;
+        try {
+            method = iface.getMethod("refreshUiccProfile", int.class);
+        } catch (NoSuchMethodException missing) {
+            return "refreshUiccProfile: unavailable on this build";
+        }
+        invoke(method, getTelephonyProxy(), new Object[]{subId});
+        return "refreshUiccProfile: ok for subId=" + subId;
+    }
+
+    /**
+     * Turns the UICC applications for one subscription off and on.
+     *
+     * <p>This is what the SIM on/off switch in Settings does, and on this hardware it is the only
+     * thing observed to bring IMS back after a region override; {@code refreshUiccProfile} and
+     * {@code disableIms}/{@code enableIms} both leave the stack deregistered.</p>
+     */
+    static String cycleUiccApplications(int subId) throws Exception {
+        requireValidSubId(subId);
+        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
+        Method setter = null;
+        for (Method candidate : iface.getMethods()) {
+            if ("setUiccApplicationsEnabled".equals(candidate.getName())) {
+                setter = candidate;
+                break;
+            }
+        }
+        if (setter == null) {
+            return "setUiccApplicationsEnabled: unavailable on this build";
+        }
+        Object sub = getProxy("isub", SUB_INTERFACE_NAME);
+        invoke(setter, sub, buildToggleArgs(setter, subId, false));
+        try {
+            Thread.sleep(UICC_CYCLE_SETTLE_MILLIS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+        invoke(setter, sub, buildToggleArgs(setter, subId, true));
+        return "UICC applications cycled for subId=" + subId + " via " + signature(setter);
+    }
+
+    /** The two known argument orders for setUiccApplicationsEnabled differ by vendor and version. */
+    private static Object[] buildToggleArgs(Method setter, int subId, boolean enabled) {
+        Class<?>[] params = setter.getParameterTypes();
+        if (params.length == 2 && params[0] == boolean.class) {
+            return new Object[]{enabled, subId};
+        }
+        return new Object[]{subId, enabled};
+    }
+
+    private static final long UICC_CYCLE_SETTLE_MILLIS = 3000;
+
+    /** Whether IMS is registered for this subscription. False here is what "cannot call" looks like. */
+    static boolean isImsRegistered(int subId) throws Exception {
+        Class<?> iface = Class.forName(INTERFACE_NAME);
+        Method method = iface.getMethod("isImsRegistered", int.class);
+        return (Boolean) method.invoke(getTelephonyProxy(), subId);
+    }
+
+    /**
+     * Tears the IMS stack down and brings it back for one slot.
+     *
+     * <p>This is the programmatic form of toggling the SIM off and on in Settings. It is needed because
+     * Samsung's IMS service picks a per-slot MNO profile ({@code CU_CN}, {@code Vodafone_GB}, …) from
+     * the carrier identity and does not re-pick it when the identity is put back — so after a restore
+     * the stack stays configured for the foreign carrier and never re-registers.</p>
+     *
+     * <p>Takes a slot index, not a subId: {@code disableIms}/{@code enableIms} are addressed per modem.</p>
+     */
+    static String restartIms(int slotIndex) throws Exception {
+        if (slotIndex < 0) {
+            throw new IllegalArgumentException("Invalid slot index: " + slotIndex);
+        }
+        Class<?> iface = Class.forName(INTERFACE_NAME);
+        Method disable = iface.getMethod("disableIms", int.class);
+        Method enable = iface.getMethod("enableIms", int.class);
+        Object telephony = getTelephonyProxy();
+
+        invoke(disable, telephony, new Object[]{slotIndex});
+        // The stack needs a moment to actually tear down; re-enabling too eagerly is a no-op because
+        // the disable has not been processed yet, which shows up as "the fix did nothing".
+        try {
+            Thread.sleep(IMS_RESTART_SETTLE_MILLIS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+        invoke(enable, telephony, new Object[]{slotIndex});
+        return "IMS restarted for slot " + slotIndex;
+    }
+
+    private static final long IMS_RESTART_SETTLE_MILLIS = 1500;
+
     private static Object getTelephonyProxy() throws Exception {
+        return getProxy("phone", INTERFACE_NAME);
+    }
+
+    /** Resolves a system Binder service and wraps it in its hidden {@code $Stub} interface proxy. */
+    private static Object getProxy(String serviceName, String ifaceName) throws Exception {
         Class<?> serviceManager = Class.forName("android.os.ServiceManager");
         Method getService = serviceManager.getMethod("getService", String.class);
-        IBinder binder = (IBinder) getService.invoke(null, "phone");
+        IBinder binder = (IBinder) getService.invoke(null, serviceName);
         if (binder == null) {
-            throw new IllegalStateException("phone Binder service is unavailable");
+            throw new IllegalStateException(serviceName + " Binder service is unavailable");
         }
 
-        Class<?> stub = Class.forName(INTERFACE_NAME + "$Stub");
+        Class<?> stub = Class.forName(ifaceName + "$Stub");
         Method asInterface = stub.getMethod("asInterface", IBinder.class);
-        Object telephony = asInterface.invoke(null, binder);
-        if (telephony == null) {
-            throw new IllegalStateException("ITelephony.Stub.asInterface returned null");
+        Object proxy = asInterface.invoke(null, binder);
+        if (proxy == null) {
+            throw new IllegalStateException(ifaceName + ".Stub.asInterface returned null");
         }
-        return telephony;
+        return proxy;
     }
 
     private static Method findCarrierOverrideMethod() throws Exception {

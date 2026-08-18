@@ -88,7 +88,7 @@ The first build **must be online** to fetch the Kotlin/Compose dependencies. Onc
 The APK lands in [`app/build/outputs/apk/debug/app-debug.apk`](app/build/outputs/apk/debug/app-debug.apk).
 
 Toolchain: Gradle 9.7.0, AGP 9.3.1, Kotlin 2.2.10, Compose BOM 2026.06.01. `compileSdk`/`targetSdk` are
-37 and `minSdk` is 29; the current version is `3.1.0`.
+37 and `minSdk` is 29; the current version is `3.2.0`.
 
 A few build constraints worth knowing:
 
@@ -110,9 +110,13 @@ A few build constraints worth knowing:
 3. Choose a region from the catalog, or type the MCC/MNC, ISO and carrier name in directly.
 4. For Galaxy Store and Samsung Members leave both layers on. For apps like TikTok, app country alone is
    often enough.
+   **While the app country layer is live that SIM cannot make calls or send SMS** — data is unaffected,
+   and Restore brings voice back. If you need to stay reachable, run the SIM identity layer on its own,
+   which does not disturb IMS.
 5. Press Apply, confirm, and grant Shizuku permission.
 6. Use the target apps panel to stop and reopen an app so it picks the new region up.
-7. Press Restore when finished. Reboot if SIM state or IMS misbehaves.
+7. Press Restore when finished. Restore also re-initialises the SIM so IMS re-registers, which is what
+   brings calls and SMS back — see "Voice and SMS" below for why that step exists.
 
 With no SIM at all there is usually no valid `subId` or `IccRecords`, so the SIM identity layer cannot
 work; the CarrierConfig layer also requires a valid subscription.
@@ -153,6 +157,34 @@ than assumed there, so a user-chosen list drops in without touching the AIDL sur
 - "Clear all CarrierConfig test overrides" also clears the persistent layer and cannot rebuild what
   another tool had set.
 
+## Diagnostics without the UI
+
+`RuntimeProbe` is a `main()` that drives the privileged layers from a shell. It runs under
+`app_process` as the shell user, which holds the same `MODIFY_PHONE_STATE` the Shizuku UserService runs
+with, so it reaches the same interfaces without Shizuku, the UI, or a rebuild between measurements.
+
+```bash
+APK=$(adb shell pm path com.riteldevelopment.carriertestoverride.debug | tr -d '\r' | sed 's/^package://')
+adb shell "CLASSPATH=$APK app_process / com.riteldevelopment.carriertestoverride.RuntimeProbe ims-state 4"
+```
+
+| Command | Purpose |
+| --- | --- |
+| `sim-probe` | `setCarrierTestOverride` / `refreshUiccProfile` signatures on this build |
+| `methods SUBSTRING` / `sub-methods SUBSTRING` | list matching `ITelephony` / `ISub` methods |
+| `sim-set SUB MCCMNC\|- IMSI\|- NAME\|-` | set one field at a time; `-` passes null |
+| `sim-restore SUB MCCMNC\|- NAME\|-` | the shipped restore call |
+| `ims-state SUB` | `isImsRegistered` — the observable that matters for voice |
+| `ims-restart SLOT` | `disableIms` + `enableIms` (no effect here; kept as a probe) |
+| `uicc-cycle SUB` | `setUiccApplicationsEnabled` off/on — the working IMS recovery |
+| `uicc-refresh SUB` | `refreshUiccProfile` (carrier privileges only) |
+| `country-apply` / `country-clear` | the CarrierConfig layer — needs the app's instrumentation host, so it fails from a bare shell |
+
+One caution learned the hard way: `IsVoiceCallAvailable` and the CS-domain `availableServices` in
+`dumpsys telephony.registry` are **not** valid observables for this failure. They report modem CS
+registration, which a framework-level override cannot touch, and they stayed `true`/`[VOICE,SMS,VIDEO]`
+throughout a break that had genuinely killed calls. Use `ims-state`.
+
 ## Hardware verification — SM-S938B
 
 Target: Samsung SM-S938B, Android 16, One UI 8.5, dual SIM (slot 1 `46009`, slot 2 `46001`, both READY).
@@ -188,13 +220,78 @@ dumpsys carrier_config        mOverrideConfigs : null
                               sim_country_iso_override_string =
 ```
 
-**The CarrierConfig layer clears completely** — `mOverrideConfigs` returns to `null`. The residual `EE`
-does not come from the app country layer; it is the SPN/PNN the SIM identity layer wrote, still sitting in
-the telephony framework's name cache. The restore call does pass `SPN/PNN=China Unicom` and the framework
-accepts it, but `setCarrierTestOverride` has no way to clear that cache. Still true 40 seconds later, so
-it is not a settling delay. This matches "a reboot is the definitive restore" above.
+**The CarrierConfig layer clears completely** — `mOverrideConfigs` returns to `null`.
 
 Both values that drive Galaxy Store and TikTok region detection — MCC/MNC and ISO — revert cleanly.
+
+The residual `EE` is **persisted, not cached**. An earlier version of this file blamed a framework name
+cache; that was wrong. It is a column in the subscription database:
+
+```text
+dumpsys isub   id=2 ... displayName=EE  carrierName=<real operator name>  displayNameSource=CARRIER
+```
+
+That is why it survives reboots, and why the restore does not clear it — the restore never writes that
+column. `ISub.setDisplayNameUsingSrc(String,int,int)` is present on this device and is the fix; it needs
+the original name captured at apply time, which is not yet implemented. Cosmetic only: it is the SIM's
+label, not an input to region detection.
+
+### Voice and SMS stop while the app country layer is live
+
+Applying the app country layer deregisters IMS for that subscription. Data keeps working, calls and SMS
+do not. This is the single most important behaviour in this document, so it is stated with the
+measurement that established it (`ITelephony.isImsRegistered(subId)`, sampled every ~12 s):
+
+```text
+03:14:19  ims2=true  ims4=true   num=46001,46009    both SIMs healthy
+03:14:31  ims2=true  ims4=false  num=46001,23430    apply, both layers, sub 4
+03:16:12  ims2=true  ims4=false  num=46001,23430    still down after 100 s — no self-heal
+03:16:25  ims2=true  ims4=false  num=46001,46009    restore puts the identity back...
+03:17:28  ims2=true  ims4=false  num=46001,46009    ...and IMS stays down
+```
+
+Only the overridden subscription is affected; the other SIM stays registered throughout.
+
+**The SIM identity layer alone does not cause this.** Measured separately, with the override live:
+
+```text
+sim-set 4 23430 234300000000001 EE   ->  isImsRegistered(4)=true, num=46001,23430
+```
+
+So the identity layer — including its fake IMSI, which was the first suspect and is not the cause — can
+be used on its own without losing voice. It is the CarrierConfig write that makes the IMS stack
+re-register under the overridden identity, which the real network then rejects.
+
+Once deregistered, nothing re-triggers registration: putting the identity back is not itself an event the
+IMS stack acts on. Users hit this as "even after restoring, that SIM can only use data", lasting until
+they toggle the SIM in Settings or reboot.
+
+**The fix is to perform that toggle programmatically.** Three candidates were tested against a genuinely
+broken stack; only the last works:
+
+| Call | Result |
+| --- | --- |
+| `ITelephony.refreshUiccProfile(subId)` | no effect — in AOSP it only re-runs carrier privilege evaluation |
+| `ITelephony.disableIms(slot)` + `enableIms(slot)` | no effect — IMS never left the registered/deregistered state it was in |
+| `ISub.setUiccApplicationsEnabled(false→true, subId)` | **IMS back within 15 s** |
+
+`setUiccApplicationsEnabled` is what the SIM on/off switch in Settings calls. `CarrierOverrideUserService`
+now runs it after a successful restore, and the end-to-end flow through the UI verifies:
+
+```text
+after APPLY    ims4=false  ims2=true  num=46001,23430
+after RESTORE  ims4=true   ims2=true  num=46001,46009
+```
+
+**Ordering is load-bearing.** The cycle runs only after both layers have been put back. Cycling while an
+override is still live re-registers IMS against the fake identity and deregisters it again — verified:
+
+```text
+override live + uicc-cycle  ->  isImsRegistered(4)=false, num=46001,23430
+```
+
+So this cannot be repurposed as an "apply and keep calls working" step. While the country layer is live,
+that SIM has no voice or SMS by construction; the apply dialog says so.
 
 ### Correction: this device has no persistent CarrierConfig API
 

@@ -1,5 +1,20 @@
 package com.riteldevelopment.carriertestoverride;
 
+/**
+ * Shell entry point for inspecting and exercising the privileged layers without the UI.
+ *
+ * <p>Run under {@code app_process} as the shell user, which has the same {@code MODIFY_PHONE_STATE}
+ * the Shizuku UserService runs with:</p>
+ *
+ * <pre>
+ * adb shell CLASSPATH=&lt;path-to-base.apk&gt; app_process / \
+ *     com.riteldevelopment.carriertestoverride.RuntimeProbe sim-probe
+ * </pre>
+ *
+ * <p>The {@code sim-*} commands take one field at a time so the effect of each on the live IMS
+ * registration can be measured separately; that is how the IMSI's role in the voice/SMS regression
+ * was isolated. {@code -} means "pass null for this field".</p>
+ */
 public final class RuntimeProbe {
     private RuntimeProbe() {
     }
@@ -19,18 +34,70 @@ public final class RuntimeProbe {
     }
 
     private static void runCommand(String[] args) throws Exception {
-        if ("country-apply".equals(args[0]) && args.length == 4) {
+        String command = args[0];
+        if ("sim-probe".equals(command) && args.length == 1) {
+            // Telephony only. The CarrierConfig probe needs the instrumentation host, which does not
+            // exist in an app_process shell, so the default no-arg path cannot be used here.
+            System.out.println(TelephonyBridge.inspectRuntime());
+            return;
+        }
+        if ("methods".equals(command) && args.length == 2) {
+            System.out.println(TelephonyBridge.listMethods("telephony", args[1]));
+            return;
+        }
+        if ("sim-set".equals(command) && args.length == 5) {
+            System.out.println(TelephonyBridge.overrideRaw(Integer.parseInt(args[1]),
+                    nullable(args[2]), nullable(args[3]), nullable(args[4])));
+            return;
+        }
+        if ("sim-restore".equals(command) && args.length == 4) {
+            System.out.println(TelephonyBridge.restoreOriginal(
+                    Integer.parseInt(args[1]), nullable(args[2]), nullable(args[3])));
+            return;
+        }
+        if ("sub-methods".equals(command) && args.length == 2) {
+            System.out.println(TelephonyBridge.listMethods("sub", args[1]));
+            return;
+        }
+        if ("uicc-cycle".equals(command) && args.length == 2) {
+            System.out.println(TelephonyBridge.cycleUiccApplications(Integer.parseInt(args[1])));
+            return;
+        }
+        if ("ims-state".equals(command) && args.length == 2) {
+            System.out.println("isImsRegistered(" + args[1] + ")="
+                    + TelephonyBridge.isImsRegistered(Integer.parseInt(args[1])));
+            return;
+        }
+        if ("ims-restart".equals(command) && args.length == 2) {
+            System.out.println(TelephonyBridge.restartIms(Integer.parseInt(args[1])));
+            return;
+        }
+        if ("uicc-refresh".equals(command) && args.length == 2) {
+            System.out.println(TelephonyBridge.refreshUiccProfile(Integer.parseInt(args[1])));
+            return;
+        }
+        if ("country-apply".equals(command) && args.length == 4) {
             System.out.println(CarrierConfigBridge.applyTransient(
                     Integer.parseInt(args[1]), args[2], args[3], true));
             return;
         }
-        if ("country-clear".equals(args[0]) && (args.length == 2 || args.length == 3)) {
+        if ("country-clear".equals(command) && (args.length == 2 || args.length == 3)) {
             System.out.println(CarrierConfigBridge.clearTransient(
                     Integer.parseInt(args[1]), args.length == 3 ? args[2] : null));
             return;
         }
-        throw new IllegalArgumentException(
-                "Usage: RuntimeProbe [country-apply SUB_ID ISO NAME"
-                        + " | country-clear SUB_ID [RESTORE_ISO]]");
+        throw new IllegalArgumentException("Usage: RuntimeProbe ["
+                + "sim-probe | methods NAME_SUBSTRING"
+                + " | sim-set SUB_ID MCCMNC|- IMSI|- NAME|-"
+                + " | sim-restore SUB_ID MCCMNC|- NAME|-"
+                + " | ims-state SUB_ID | ims-restart SLOT_INDEX"
+                + " | uicc-refresh SUB_ID"
+                + " | country-apply SUB_ID ISO NAME"
+                + " | country-clear SUB_ID [RESTORE_ISO]]");
+    }
+
+    /** {@code -} is the shell's way of saying null, which is a meaningful value for every field here. */
+    private static String nullable(String value) {
+        return "-".equals(value) ? null : value;
     }
 }

@@ -116,6 +116,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
         }
         if (succeeded > 0) {
+            appendSection(result, recoverIms(subId));
             appendSection(result, TargetApps.forceStopDefaults());
         }
         appendSection(result, "Layers: " + succeeded + "/" + attempted + " succeeded");
@@ -138,6 +139,34 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             return TargetApps.refresh(packages, wipeMode, relaunch);
         } catch (Throwable throwable) {
             return failure("Refreshing target apps failed", throwable);
+        }
+    }
+
+    /**
+     * Brings IMS back after a restore, so voice and SMS work again without a reboot.
+     *
+     * <p>Applying the app country layer makes the IMS stack re-register using the overridden identity,
+     * which the real network rejects: data keeps working, calls and SMS stop. Putting the identity back
+     * does not re-trigger registration, so the subscription stays deregistered indefinitely — measured
+     * at over two minutes on SM-S938B, and reported by users as lasting until they toggle the SIM in
+     * Settings or reboot. Cycling the UICC applications is that Settings toggle, done programmatically.</p>
+     *
+     * <p>Ordering matters and is not incidental: this runs <em>after</em> both layers have been put
+     * back. Cycling while an override is still live re-registers IMS against the fake identity and
+     * deregisters it again — verified on hardware.</p>
+     *
+     * <p>Never fatal. The restore itself has already succeeded by this point, so a device that does not
+     * expose the call should report that and leave the user with the manual workaround, not turn a good
+     * restore into a failure.</p>
+     */
+    private static String recoverIms(int subId) {
+        try {
+            return TelephonyBridge.cycleUiccApplications(subId);
+        } catch (Throwable throwable) {
+            Log.w(TAG, "IMS recovery failed", throwable);
+            return "IMS recovery unavailable: " + throwable.getClass().getSimpleName()
+                    + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage())
+                    + "\nIf calls or SMS do not work, turn this SIM off and on in Settings, or reboot.";
         }
     }
 
