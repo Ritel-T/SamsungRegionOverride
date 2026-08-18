@@ -1,366 +1,233 @@
 # Samsung Region Override
 
-A Shizuku tool, aimed primarily at recent Samsung phones, that temporarily changes the SIM/carrier
-region that apps such as Galaxy Store, Samsung Members and TikTok read. It combines two complementary
-mechanisms into a two-layer override, each independently switchable and independently restorable:
+Makes a Samsung phone report a different SIM region to the apps that gate content on it — no root, and
+without changing which network the radio is actually on.
 
-1. **SIM identity** — overrides MCC/MNC, a test IMSI and PNN/SPN through
-   `ITelephony.setCarrierTestOverride()`, resolved reflectively rather than by hard-coded binder
-   transaction id.
-2. **App country** — following the approach of [nrfr-android16-optimized][nrfr], overrides
-   `sim_country_iso_override_string` through `CarrierConfigManager.overrideConfig()`, and optionally the
-   carrier display name.
+Galaxy Store, Samsung Members and TikTok all decide what you can see from the region the framework
+reports for your SIM. This app rewrites that report through two Android test-override APIs, runs them
+with shell privileges over [Shizuku](https://shizuku.rikka.app/), and puts the real values back when
+you are done.
 
-The radio, the network it is camped on, the phone number, GPS and the IP address are untouched.
+It is a framework-level lie, not a network one. Your modem still registers on your real carrier, your
+number is unchanged, and nothing here touches roaming, billing, or carrier locks.
 
-## Why two layers
+---
 
-On SM-S938B / Android 16 / One UI 8.5, Samsung's carrier test override changes the target slot's MCC/MNC
-and name to `23430 / EE`, but the system's SIM country can stay at `cn`. Conversely an Nrfr-style
-CarrierConfig override changes the ISO country apps see without faking the SIM MCC/MNC that Samsung's own
-software reads. Both layers together are therefore the primary mode for Galaxy Store and Samsung Members;
-app country alone suits general apps such as TikTok.
+## What it changes
 
-## What it does
+Two independent layers. Run either alone or both together.
 
-- Two-SIM aware. Slots are laid out side by side at fixed positions — a slot the hardware has but nothing
-  occupies keeps its place as a hatched placeholder, so the layout does not move when a SIM appears.
-- A catalog of around 200 carriers across some 75 countries, searchable by country, carrier, ISO or
-  MCC/MNC at once. Any value can still be typed by hand; editing a field drops the preset.
-- Custom 5–6 digit MCC/MNC, two-letter ISO country and carrier name. The test IMSI is derived from the
-  MCC/MNC and padded to 15 digits.
-- Accepts both `setCarrierTestOverride(int + 9 Strings)` and the older `int + 7 Strings` signature, and
-  refuses to call anything it does not recognise.
-- ICCID, GID1, GID2, carrier privilege rules and APN are always `null`.
-- CarrierConfig writes only the **transient** layer by default, so it does not survive a reboot; an
-  ordinary restore clears only that layer.
-- A separate "clear all CarrierConfig test overrides" exists for explicitly removing the persistent
-  values other tools leave behind. It asks for confirmation, and it is unavailable on hardware with no
-  persistent override API — see the correction below.
-- Each target app gets its own button to stop it, optionally wipe its storage, and optionally reopen it,
-  so it re-reads the region without waiting to be killed by the system.
-- The UI, the instrumentation host and the Shizuku UserService run in separate processes, so Samsung's
-  `NO_RESTART` instrumentation path cannot take the interface down. The `androidx.startup` initializers
-  Compose brings in (emoji2, ProcessLifecycle, ProfileInstaller) are pinned to `:ui`, leaving the default
-  process as nothing but a bare binder — it is what AMS attaches the instrumentation to, and it should not
-  also be doing font loading and ART profile writes.
-- Each SIM shows what it currently reports and which layers this tool has written to it, and
-  "now → target" is laid out for digit-by-digit comparison. After an operation the SIMs are re-read seven
-  times over about five seconds, so the change is visible landing.
+| | **SIM identity** | **App country** |
+|---|---|---|
+| API | `ITelephony.setCarrierTestOverride` | `CarrierConfigManager.overrideConfig` |
+| Writes | MCC/MNC, a test IMSI, SPN and PNN | `sim_country_iso_override_string`, optionally `carrier_name_override_bool` + `carrier_name_string` |
+| Answers | `getSimOperator()`, `getSimOperatorName()` | `getSimCountryIso()` |
+| Needs | SIM state `READY` | a valid subId |
+| Survives reboot | no | no |
+| Costs calls and SMS | no | **yes — see below** |
 
-## Architecture
+The SIM identity layer writes only the four fields it needs. ICCID, GID1, GID2, APN and the carrier
+privilege rules go in as `null`, so the SIM keeps its real values for all of them.
 
-The interface is Kotlin + Jetpack Compose. The privileged core that calls hidden interfaces is still
-Java and is unchanged.
+## What it costs
+
+**Applying the App country layer deregisters IMS on that subscription.** Mobile data is unaffected —
+data does not need IMS — but calls and SMS stop. Restoring the identity does not bring IMS back on its
+own, which is why restore now cycles the SIM's UICC applications for you.
+
+Measured with `ITelephony.isImsRegistered(subId)` on the affected subscription and on the untouched one
+beside it:
 
 ```
-ui/                        Compose UI: OverrideScreen + components/, theme in ui/theme/
-ui/OverrideViewModel.kt    the only state holder; one operation = one cancellable coroutine
-ui/RegionPresets.kt        the carrier catalog
-data/                      ShizukuController / InstrumentationHost / OverrideRepository /
-                           OverrideStore / SimRepository / TargetAppRepository
-*.java                     TelephonyBridge, CarrierConfigBridge, CarrierConfigInstrumentation,
-                           CarrierOverrideUserService, InstrumentationHostService, TargetApps,
-                           RuntimeProbe
+03:14:19  ims2=true  ims4=true   numeric=46001,46009   healthy
+03:14:31  ims2=true  ims4=false  numeric=46001,23430   apply, both layers
+03:16:12  ims2=true  ims4=false  numeric=46001,23430   no self-heal after 100 s
+03:16:25  ims2=true  ims4=false  numeric=46001,46009   restore returns the real identity
+03:17:28  ims2=true  ims4=false  numeric=46001,46009   IMS is still down
 ```
 
-The privileged path — reflective `ITelephony` and `CarrierConfigManager` calls, the AIDL transaction ids,
-the instrumentation flow — is left as it was, because it has been validated on real hardware. `TargetApps`
-is the one addition, and it only shells out to `am` and `pm`.
+**The SIM identity layer alone does not do this.** With that override live and nothing else — a foreign
+MCC/MNC, a fake IMSI, a foreign SPN — `isImsRegistered` stays `true` and calls keep working. If the
+apps you care about read the operator rather than the country, run that layer on its own and pay
+nothing.
 
-In 2.x an "apply" was a state machine spread across five callbacks re-entering a shared `pendingAction`
-field. It is now one straight-line coroutine, which is why **waiting for Shizuku or for the permission
-grant can be cancelled**, and why progress is reported as five honest stages.
+Three recovery levers, tested against a genuinely deregistered stack:
 
-## Building
+| Call | Result |
+|---|---|
+| `ITelephony.refreshUiccProfile(subId)` | no effect — in AOSP it only re-runs carrier-privilege evaluation |
+| `ITelephony.disableIms` + `enableIms` | no effect |
+| `ISub.setUiccApplicationsEnabled(false → true)` | **IMS back within 15 s** |
 
-Needs **JDK 21** (AGP 9) and Android SDK Platform 37.
+The third is what the SIM on/off switch in Settings calls, and restore performs it automatically.
+Ordering is load-bearing: cycling while an override is still live re-registers IMS against the *fake*
+identity and drops it again, so it runs only after both layers have been put back.
 
-```powershell
-$env:JAVA_HOME = "C:\Users\<you>\scoop\apps\openjdk21\current"
-$env:GRADLE_USER_HOME = "$PWD\.gradle-user-home"
-.\gradlew.bat :app:assembleDebug
+If it ever fails, the manual equivalent still works — turn the SIM off and on in Settings, or reboot.
+
+## Requirements
+
+- A Samsung device on Android 10 (API 29) or newer. Developed and verified on **SM-S938B, Android 16,
+  One UI 8.5**.
+- **Shizuku 13+**, running and granted. Wireless debugging is enough; root also works but is not needed.
+- A SIM in state `READY`, for the SIM identity layer.
+
+## Build
+
+No release APK is published yet, so build one:
+
+```bash
+./gradlew assembleDebug
 ```
 
-The first build **must be online** to fetch the Kotlin/Compose dependencies. Once they are cached in
-`.gradle-user-home`, `--offline` works as before.
-
-The APK lands in [`app/build/outputs/apk/debug/app-debug.apk`](app/build/outputs/apk/debug/app-debug.apk).
-
-Toolchain: Gradle 9.7.0, AGP 9.3.1, Kotlin 2.2.10, Compose BOM 2026.06.01. `compileSdk`/`targetSdk` are
-37 and `minSdk` is 29; the current version is `3.2.0`.
-
-A few build constraints worth knowing:
-
-- **AGP decides the Kotlin version.** AGP 9 ships Kotlin built in, and additionally applying
-  `org.jetbrains.kotlin.android` fails outright on an extension name clash. AGP 9.3.1 pins Kotlin 2.2.10,
-  so the Compose compiler plugin must be exactly 2.2.10 — plugin and compiler are ABI-bound.
-- `app/libs` pins the Shizuku API 13.1.5 AARs. The `annotation-1.3.0.jar` that shipped with them in the
-  2.x tree is gone: it duplicates the `androidx.annotation` classes Compose pulls in transitively and
-  fails the build with `Duplicate class`.
-- `androidx.startup.InitializationProvider` is pinned to the `:ui` process in the manifest.
-- R8 is off for release. `CarrierConfigBridge` names the instrumentation class with a string constant, so
-  enabling minification needs keep rules first or the privileged path will not find the class at runtime.
-- The debug APK is roughly 40 MB: uncompressed, and carrying the debug-only `ui-tooling`.
+Needs JDK 17 or newer. The wrapper pins Gradle 9.7.0, and AGP 9.3.1 supplies Kotlin 2.2.10. The four
+Shizuku AARs are vendored in `app/libs` rather than resolved, so the privileged surface stays pinned to
+bytes that have been run on hardware.
 
 ## Using it
 
-1. Install and start Shizuku. In non-root mode it has to be restarted after every reboot.
-2. Install the APK, open it, and pick the target SIM.
-3. Choose a region from the catalog, or type the MCC/MNC, ISO and carrier name in directly.
-4. For Galaxy Store and Samsung Members leave both layers on. For apps like TikTok, app country alone is
-   often enough.
-   **While the app country layer is live that SIM cannot make calls or send SMS** — data is unaffected,
-   and Restore brings voice back. If you need to stay reachable, run the SIM identity layer on its own,
-   which does not disturb IMS.
-5. Press Apply, confirm, and grant Shizuku permission.
-6. Use the target apps panel to stop and reopen an app so it picks the new region up.
-7. Press Restore when finished. Restore also re-initialises the SIM so IMS re-registers, which is what
-   brings calls and SMS back — see "Voice and SMS" below for why that step exists.
+1. Start Shizuku. The status row at the top must read `Connected · uid 2000 · granted`.
+2. Pick a SIM. The panel below the selector diffs what it reports now against what you are about to
+   make it report.
+3. Pick a target region — search the preset list, or type the MCC/MNC, country ISO and carrier name by
+   hand. A preset only fills those three fields; nothing consults it afterwards.
+4. Choose your layers. Both are on by default.
+5. **Apply**, and confirm. The target apps are force-stopped for you, since they latch their region at
+   startup.
+6. If an app still shows the old region, use the target apps panel to wipe its data and relaunch it.
+7. **Restore** when you are finished. Calls and SMS come back on their own.
 
-With no SIM at all there is usually no valid `subId` or `IccRecords`, so the SIM identity layer cannot
-work; the CarrierConfig layer also requires a valid subscription.
+The overflow menu also holds *Clear all CarrierConfig overrides*, which removes every transient **and
+persistent** test value on that subId — including ones written by other tools, which it cannot rebuild.
+
+## How it works
+
+Every privileged write goes through a single shell-UID service.
+
+1. The Compose UI runs in a `:ui` process and binds `InstrumentationHostService`, whose only job is to
+   keep the app's **default** process alive.
+2. It waits for Shizuku, requests permission, and binds `CarrierOverrideUserService` — an AIDL
+   UserService that Shizuku starts under uid 2000, the identity `adb shell` has, which carries
+   `MODIFY_PHONE_STATE`.
+3. The **SIM identity** layer goes straight from there to the hidden interface by reflection:
+   `ServiceManager.getService("phone")` → `ITelephony$Stub.asInterface` → `setCarrierTestOverride`.
+4. The **App country** layer cannot. Samsung rejects `overrideConfig` from the shell UID on recent
+   firmware, and `cmd phone cc` is permission-denied for shell too. So the shell service calls
+   `IActivityManager.startInstrumentation` on the app's own `CarrierConfigInstrumentation` with
+   `INSTR_FLAG_NO_RESTART`, and that instrumentation calls
+   `UiAutomation.adoptShellPermissionIdentity(MODIFY_PHONE_STATE, READ_PHONE_STATE)`. The result holds
+   shell's permissions under the app's package identity — the combination Samsung's implementation
+   accepts.
+
+Step 1 exists because of step 4: AMS attaches a `NO_RESTART` instrumentation to the default process,
+and the flow is unreliable if that process is not already running. The UI sits in `:ui` so an
+instrumentation crash cannot take the interface down with it, and `androidx.startup`'s initializers are
+pinned to `:ui` for the same reason.
+
+**Restore.** AOSP has no clear API for `setCarrierTestOverride`, so restore writes the saved real values
+back rather than removing anything. The originals come from a per-subscription snapshot in
+SharedPreferences, captured before the first override and never overwritten while one is live. Clearing
+the country layer first re-applies an override containing *only* the real ISO and waits for
+`getSimCountryIso()` to report it, because Samsung caches that value and dropping the override without
+warming the cache leaves the stale one in place. A reboot remains the definitive undo.
 
 ## Target apps
 
-Apply and restore already force-stop every target app. The panel does the same on demand — one button per
-app, not one button for all of them, because reopening brings an app to the foreground and a bulk run
-would throw three apps up in sequence and leave you wherever the last one landed. It adds the two options
-that only make sense when a person is asking for them:
+Changing what telephony reports is half the job — these apps read their region once, at startup, and
+hold it.
 
-| Wipe | What runs | Notes |
-| --- | --- | --- |
-| Keep | `am force-stop` only | Always safe. Enough for an app that re-reads region on cold start. |
-| Cache | `pm clear --cache-only` | **Does nothing on One UI 8.5** — see below. Reported as `timeout`. |
-| Data | `pm clear` | Signs you out. The only wipe that works on the primary target device. |
+| Package | App |
+|---|---|
+| `com.sec.android.app.samsungapps` | Galaxy Store |
+| `com.samsung.android.voc` | Samsung Members |
+| `com.zhiliaoapp.musically` | TikTok |
 
-"Open it afterwards" resolves the launcher activity and starts it. The underlying call still accepts a
-list — it is what apply and restore use to stop everything at once — and when given several packages it
-launches them in reverse order so the first listed ends up on top rather than buried.
+They are force-stopped after every successful apply and restore. The panel adds two options for when
+that is not enough: a wipe (`Keep` / `Cache` / `Data`) and a relaunch. `Data` signs you out of the app,
+but it is usually the only thing that forces a real re-detect, because the cached region tends to live
+in an app's data rather than its cache.
 
-An app that is not installed is shown as `ABSENT` with its button disabled, and every step reports its own
-exit status per package, so a step that did nothing says so rather than being silently skipped.
-
-The list is currently the three packages above. It is passed to the privileged call as an array rather
-than assumed there, so a user-chosen list drops in without touching the AIDL surface.
-
-## Restore semantics and risk
-
-- The SIM identity layer triggers a CarrierConfig reload, which can briefly disturb APN, VoLTE, IMS or
-  mobile data.
-- An ordinary restore writes back the MCC/MNC, name and ISO from the snapshot taken before the first
-  operation. Because Samsung's country cache does not always fall back immediately after CarrierConfig is
-  cleared, the original ISO is written first and the transient override dropped afterwards. AOSP has no
-  separate clear API for the SIM test override, so a reboot remains the definitive restore.
-- Passing `null` to the CarrierConfig API clears *every* test value in that layer, not just this tool's
-  three keys. If another tool also uses the **transient** layer, an ordinary restore clears its values too.
-- "Clear all CarrierConfig test overrides" also clears the persistent layer and cannot rebuild what
-  another tool had set.
+`Cache` is kept because it is the correct API, but it is a **documented no-op on One UI 8.5** — the
+platform accepts `pm clear --cache-only` and then never calls back the observer the command waits on.
+It is timeout-bounded and reports `timeout` rather than claiming a wipe that did not happen.
 
 ## Diagnostics without the UI
 
-`RuntimeProbe` is a `main()` that drives the privileged layers from a shell. It runs under
-`app_process` as the shell user, which holds the same `MODIFY_PHONE_STATE` the Shizuku UserService runs
-with, so it reaches the same interfaces without Shizuku, the UI, or a rebuild between measurements.
+`RuntimeProbe` is a shell entry point into the same bridges, run under `app_process` as the shell user —
+the same identity, and the same `MODIFY_PHONE_STATE`, that the Shizuku service has. This is how the IMS
+regression above was isolated.
 
 ```bash
-APK=$(adb shell pm path com.riteldevelopment.carriertestoverride.debug | tr -d '\r' | sed 's/^package://')
-adb shell "CLASSPATH=$APK app_process / com.riteldevelopment.carriertestoverride.RuntimeProbe ims-state 4"
+adb shell CLASSPATH=$(adb shell pm path com.riteldevelopment.carriertestoverride.debug | cut -d: -f2 | tr -d '\r') app_process / com.riteldevelopment.carriertestoverride.RuntimeProbe sim-probe
 ```
 
-| Command | Purpose |
-| --- | --- |
-| `sim-probe` | `setCarrierTestOverride` / `refreshUiccProfile` signatures on this build |
-| `methods SUBSTRING` / `sub-methods SUBSTRING` | list matching `ITelephony` / `ISub` methods |
-| `sim-set SUB MCCMNC\|- IMSI\|- NAME\|-` | set one field at a time; `-` passes null |
-| `sim-restore SUB MCCMNC\|- NAME\|-` | the shipped restore call |
-| `ims-state SUB` | `isImsRegistered` — the observable that matters for voice |
-| `ims-restart SLOT` | `disableIms` + `enableIms` (no effect here; kept as a probe) |
-| `uicc-cycle SUB` | `setUiccApplicationsEnabled` off/on — the working IMS recovery |
-| `uicc-refresh SUB` | `refreshUiccProfile` (carrier privileges only) |
-| `country-apply` / `country-clear` | the CarrierConfig layer — needs the app's instrumentation host, so it fails from a bare shell |
+That is the debug package; drop the `.debug` for a release build. It answers with the uid it is running
+as, the proxy it resolved, and the override signature this firmware exposes:
 
-One caution learned the hard way: `IsVoiceCallAvailable` and the CS-domain `availableServices` in
-`dumpsys telephony.registry` are **not** valid observables for this failure. They report modem CS
-registration, which a framework-level override cannot touch, and they stayed `true`/`[VOICE,SMS,VIDEO]`
-throughout a break that had genuinely killed calls. Use `ims-state`.
-
-## Hardware verification — SM-S938B
-
-Target: Samsung SM-S938B, Android 16, One UI 8.5, dual SIM (slot 1 `46009`, slot 2 `46001`, both READY).
-
-### Telephony round trip (2026-08-12 / 2026-08-13)
-
-Runtime probe:
-
-```text
+```
 uid=2000
-setCarrierTestOverride(int,String,String,String,String,String,String,String,String,String)
+proxy=com.android.internal.telephony.ITelephony$Stub$Proxy
+methods=refreshUiccProfile(int) | setCarrierTestOverride(int,String,String,String,String,String,String,String,String,String)
 ```
 
-Both layers applied to subId 2 and then restored:
+| Command | What it does |
+|---|---|
+| `sim-probe` | uid, the `ITelephony` proxy, and the override signatures this build exposes |
+| `methods SUBSTRING` | matching `ITelephony` methods |
+| `sub-methods SUBSTRING` | matching `ISub` methods |
+| `sim-set SUB MCCMNC IMSI NAME` | raw `setCarrierTestOverride`, unvalidated — lets you move one field at a time |
+| `sim-restore SUB MCCMNC NAME` | write identity values back |
+| `ims-state SUB` | `isImsRegistered(subId)` — the observable that matters |
+| `ims-restart SLOT` | `disableIms` + `enableIms`, by slot index |
+| `uicc-cycle SUB` | `setUiccApplicationsEnabled` off, settle, on |
+| `uicc-refresh SUB` | `refreshUiccProfile(subId)` |
+| `country-apply SUB ISO NAME` | the CarrierConfig layer — needs the instrumentation host, so not usable from a bare shell |
+| `country-clear SUB [ISO]` | clear it |
 
-```text
-MCC/MNC     46001 -> 23430
-country     cn    -> gb
-carrier     China Unicom -> EE
-IMSI        234300000000001
-call        setCarrierTestOverride(int,String x9)
+`-` means `null`, which is a meaningful value for every string field.
+
+**One caution, because it cost real time here.** Do not measure this with `IsVoiceCallAvailable` or the
+CS `availableServices` list from `dumpsys telephony.registry`. Those report *modem* CS registration,
+which a framework override cannot touch — they read `true` and `[VOICE,SMS,VIDEO]` straight through a
+break that has genuinely killed calling. `isImsRegistered` is the observable that moves.
+
+## Known limits
+
+- **The display name is not restored.** The App country layer's name override lands in the subscription
+  database (`displayName`, `displayNameSource=CARRIER`), not only in the transient config, so it
+  survives both restore and reboot. It is cosmetic — the SIM's label, not an input to region detection —
+  but it is real. Fixing it needs the original name captured at apply time.
+- **No layer survives a reboot.** That is the undo story and also the limit: a phone that reboots loses
+  its override.
+- **Preset codes are one widely reported MNC per carrier.** Large networks own many, especially Indian
+  circles and US regional codes. That is enough for checks that read the MCC and the country, which is
+  nearly all of them. The catalog holds 204 entries across 74 countries, of which exactly one —
+  `gb / EE / 23430` — has been applied and restored end to end on hardware.
+- **Samsung-specific by design.** The instrumentation detour exists because Samsung rejects shell-UID
+  CarrierConfig writes. On a device that does not, it is unnecessary overhead — untested there.
+- **Two SIM slots.** The selector is laid out for two, which covers every consumer handset.
+
+## Project layout
+
+```
+app/src/main/java/…/
+  TelephonyBridge.java              ITelephony / ISub over reflection — the SIM identity layer
+  CarrierConfigBridge.java          starts the instrumentation and waits on its result
+  CarrierConfigInstrumentation.java runs in the app process with shell permissions adopted
+  CarrierOverrideUserService.java   the AIDL service Shizuku hosts at uid 2000
+  TargetApps.java                   stop / wipe / relaunch, every step bounded and reported verbatim
+  RuntimeProbe.java                 shell entry point
+  data/                             Shizuku, SIMs, snapshots, and operation orchestration
+  ui/                               Compose screen, view model, and the region catalog
 ```
 
-After an ordinary restore:
+## Verified on
 
-```text
-gsm.sim.operator.numeric      46009,46001     <- reverted
-gsm.sim.operator.iso-country  cn,cn           <- reverted
-gsm.sim.operator.alpha        China Unicom,EE <- not reverted
-dumpsys carrier_config        mOverrideConfigs : null
-                              carrier_name_override_bool = false
-                              carrier_name_string =
-                              sim_country_iso_override_string =
-```
+SM-S938B · Android 16 · One UI 8.5 · Shizuku 13.1.5 · dual SIM.
 
-**The CarrierConfig layer clears completely** — `mOverrideConfigs` returns to `null`.
+Everything described here as measured was measured there. Behaviour on other Samsung firmware is likely
+but unproven, and behaviour on non-Samsung devices is neither.
 
-Both values that drive Galaxy Store and TikTok region detection — MCC/MNC and ISO — revert cleanly.
+## License
 
-The residual `EE` is **persisted, not cached**. An earlier version of this file blamed a framework name
-cache; that was wrong. It is a column in the subscription database:
-
-```text
-dumpsys isub   id=2 ... displayName=EE  carrierName=<real operator name>  displayNameSource=CARRIER
-```
-
-That is why it survives reboots, and why the restore does not clear it — the restore never writes that
-column. `ISub.setDisplayNameUsingSrc(String,int,int)` is present on this device and is the fix; it needs
-the original name captured at apply time, which is not yet implemented. Cosmetic only: it is the SIM's
-label, not an input to region detection.
-
-### Voice and SMS stop while the app country layer is live
-
-Applying the app country layer deregisters IMS for that subscription. Data keeps working, calls and SMS
-do not. This is the single most important behaviour in this document, so it is stated with the
-measurement that established it (`ITelephony.isImsRegistered(subId)`, sampled every ~12 s):
-
-```text
-03:14:19  ims2=true  ims4=true   num=46001,46009    both SIMs healthy
-03:14:31  ims2=true  ims4=false  num=46001,23430    apply, both layers, sub 4
-03:16:12  ims2=true  ims4=false  num=46001,23430    still down after 100 s — no self-heal
-03:16:25  ims2=true  ims4=false  num=46001,46009    restore puts the identity back...
-03:17:28  ims2=true  ims4=false  num=46001,46009    ...and IMS stays down
-```
-
-Only the overridden subscription is affected; the other SIM stays registered throughout.
-
-**The SIM identity layer alone does not cause this.** Measured separately, with the override live:
-
-```text
-sim-set 4 23430 234300000000001 EE   ->  isImsRegistered(4)=true, num=46001,23430
-```
-
-So the identity layer — including its fake IMSI, which was the first suspect and is not the cause — can
-be used on its own without losing voice. It is the CarrierConfig write that makes the IMS stack
-re-register under the overridden identity, which the real network then rejects.
-
-Once deregistered, nothing re-triggers registration: putting the identity back is not itself an event the
-IMS stack acts on. Users hit this as "even after restoring, that SIM can only use data", lasting until
-they toggle the SIM in Settings or reboot.
-
-**The fix is to perform that toggle programmatically.** Three candidates were tested against a genuinely
-broken stack; only the last works:
-
-| Call | Result |
-| --- | --- |
-| `ITelephony.refreshUiccProfile(subId)` | no effect — in AOSP it only re-runs carrier privilege evaluation |
-| `ITelephony.disableIms(slot)` + `enableIms(slot)` | no effect — IMS never left the registered/deregistered state it was in |
-| `ISub.setUiccApplicationsEnabled(false→true, subId)` | **IMS back within 15 s** |
-
-`setUiccApplicationsEnabled` is what the SIM on/off switch in Settings calls. `CarrierOverrideUserService`
-now runs it after a successful restore, and the end-to-end flow through the UI verifies:
-
-```text
-after APPLY    ims4=false  ims2=true  num=46001,23430
-after RESTORE  ims4=true   ims2=true  num=46001,46009
-```
-
-**Ordering is load-bearing.** The cycle runs only after both layers have been put back. Cycling while an
-override is still live re-registers IMS against the fake identity and deregisters it again — verified:
-
-```text
-override live + uicc-cycle  ->  isImsRegistered(4)=false, num=46001,23430
-```
-
-So this cannot be repurposed as an "apply and keep calls working" step. While the country layer is live,
-that SIM has no voice or SMS by construction; the apply dialog says so.
-
-### Correction: this device has no persistent CarrierConfig API
-
-"Clear all CarrierConfig test overrides" **cannot succeed here**. The runtime probe reports:
-
-```text
-carrierConfigMethod=overrideConfig(int,PersistableBundle)
-```
-
-Two parameters, no `boolean persistent`. An earlier note in this file recorded
-`overrideConfig(int,PersistableBundle,boolean)`; that was wrong, and this section supersedes it.
-
-So the operation fails and says so, rather than guessing:
-
-```text
-ERROR: Clearing CarrierConfig overrides failed
-java.lang.IllegalStateException: java.lang.UnsupportedOperationException:
-This Android version has no persistent override API
-```
-
-That is the designed behaviour. `CarrierConfigInstrumentation` throws when asked for a persistent write it
-cannot make, which is the same probe-then-refuse rule the SIM identity layer follows instead of guessing
-binder transaction ids.
-
-The practical impact is limited: apply and ordinary restore only ever touch the transient layer and both
-work. Only clearing **another tool's persistent values** is unavailable here; that needs a reboot or the
-tool that wrote them.
-
-### Target-app commands (2026-08-13)
-
-Verified from an adb shell, which runs as the same uid 2000 the UserService does:
-
-```text
-am force-stop --user current <pkg>           ok
-pm clear --user 0 <pkg>                      Success in 0.4s, cache directory gone
-pm clear --cache-only --user 0 <pkg>         never returns; killed after 90s
-cmd package resolve-activity --brief ...     com.sec.android.app.samsungapps/.SamsungAppsMainActivity
-am start -a MAIN -c LAUNCHER -n <component>  ok
-```
-
-`--cache-only` was tested against a debuggable package by seeding a file in its cache directory: after the
-call was killed, **the file was still there**. The platform accepts the request and then never invokes the
-`IPackageDataObserver` the shell command blocks on. PackageManager stays responsive afterwards, so the
-call is safe to make — it is simply useless here, which is why the wipe level is a visible choice and why
-the report shows `timeout` rather than claiming success.
-
-Stopping and reopening was confirmed working on this device. The installed/absent state was confirmed too,
-from both sides: TikTok was missing at first and shown as `ABSENT`, and after it was installed the panel
-picked that up on the next resume without a restart.
-
-## Compatibility
-
-- **Primary scope**: recent Samsung One UI / Android 12–16. Only the SM-S938B above has been fully
-  validated on hardware.
-- **Other vendors**: the CarrierConfig app country layer sits on an AOSP interface and should port
-  reasonably well. The SIM identity layer depends on whether the OEM keeps a compatible signature and how
-  it restricts shell. The app probes first and reports a failure on a mismatch rather than guessing binder
-  transaction ids.
-- Android and OEM updates can change hidden interfaces and permission policy, so every model and major
-  version should get a capability probe and a reversibility test before being called supported.
-
-## Sources
-
-- [AOSP `CarrierConfigManager.overrideConfig()`][carrier-config]
-- [AOSP `KEY_SIM_COUNTRY_ISO_OVERRIDE_STRING`][country-key]
-- [AOSP `CarrierConfigLoader` override implementation][carrier-loader]
-- [Reference project `nrfr-android16-optimized`][nrfr]
-
-[carrier-config]: https://android.googlesource.com/platform/frameworks/base/+/master/telephony/java/android/telephony/CarrierConfigManager.java
-[country-key]: https://android.googlesource.com/platform/frameworks/base/+/master/telephony/java/android/telephony/CarrierConfigManager.java
-[carrier-loader]: https://android.googlesource.com/platform/packages/services/Telephony/+/master/src/com/android/phone/CarrierConfigLoader.java
-[nrfr]: https://github.com/Swimteam0/nrfr-android16-optimized
+Not yet licensed — until a LICENSE file lands, default copyright applies.
