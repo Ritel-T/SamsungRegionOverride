@@ -82,10 +82,18 @@ data class OverrideActions(
     val onConfirmWipeData: (List<TargetApp>) -> Unit,
 )
 
+/**
+ * The standing hazard note.
+ *
+ * It names App country rather than SIM identity because that is what the measurements show: with only
+ * the SIM identity layer applied IMS stays registered and calls work, while App country deregisters it
+ * for as long as it is live. The earlier wording blamed SIM identity and called the disturbance
+ * "brief", which pointed a worried user at the wrong switch.
+ */
 private const val RISK_TEXT =
-    "SIM identity can trigger a CarrierConfig reload, briefly disturbing APN, VoLTE, IMS or mobile " +
-        "data. Restore clears every transient CarrierConfig test value on the subId, not only this " +
-        "tool's. A reboot is the definitive undo."
+    "App country deregisters IMS on this SIM: data keeps working, calls and SMS stop until you " +
+        "restore. Restore clears every transient CarrierConfig test value on the subId, not only " +
+        "this tool's. A reboot is the definitive undo."
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

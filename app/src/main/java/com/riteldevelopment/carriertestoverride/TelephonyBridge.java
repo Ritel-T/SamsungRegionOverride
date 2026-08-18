@@ -12,7 +12,14 @@ import java.util.List;
 
 final class TelephonyBridge {
     private static final String INTERFACE_NAME = "com.android.internal.telephony.ITelephony";
+    private static final String SUB_INTERFACE_NAME = "com.android.internal.telephony.ISub";
     private static final String METHOD_NAME = "setCarrierTestOverride";
+
+    /** How long the UICC applications stay off before being switched back on. */
+    private static final long UICC_CYCLE_SETTLE_MILLIS = 3000;
+
+    /** How long the IMS stack is left down before being re-enabled. */
+    private static final long IMS_RESTART_SETTLE_MILLIS = 1500;
 
     private TelephonyBridge() {
     }
@@ -63,8 +70,6 @@ final class TelephonyBridge {
                 + "\nIMSI/ICCID/GID/APN/privilege rules fall back to the real SIM records"
                 + "\nNote: AOSP has no separate clear API, so a reboot is the definitive restore.";
     }
-
-    static final String SUB_INTERFACE_NAME = "com.android.internal.telephony.ISub";
 
     /**
      * Lists methods of a hidden telephony interface whose name matches {@code pattern}, for the
@@ -163,8 +168,6 @@ final class TelephonyBridge {
         return new Object[]{subId, enabled};
     }
 
-    private static final long UICC_CYCLE_SETTLE_MILLIS = 3000;
-
     /** Whether IMS is registered for this subscription. False here is what "cannot call" looks like. */
     static boolean isImsRegistered(int subId) throws Exception {
         Class<?> iface = Class.forName(INTERFACE_NAME);
@@ -175,10 +178,11 @@ final class TelephonyBridge {
     /**
      * Tears the IMS stack down and brings it back for one slot.
      *
-     * <p>This is the programmatic form of toggling the SIM off and on in Settings. It is needed because
-     * Samsung's IMS service picks a per-slot MNO profile ({@code CU_CN}, {@code Vodafone_GB}, …) from
-     * the carrier identity and does not re-pick it when the identity is put back — so after a restore
-     * the stack stays configured for the foreign carrier and never re-registers.</p>
+     * <p>Written as a candidate fix for the post-restore deregistration, on the theory that Samsung's
+     * IMS service picks a per-slot MNO profile ({@code CU_CN}, {@code Vodafone_GB}, …) from the carrier
+     * identity and does not re-pick it when the identity is put back. Measured on SM-S938B the theory
+     * does not hold up: the stack comes back still deregistered. {@link #cycleUiccApplications} is what
+     * actually recovers it. Kept only as a probe, so the negative result stays reproducible.</p>
      *
      * <p>Takes a slot index, not a subId: {@code disableIms}/{@code enableIms} are addressed per modem.</p>
      */
@@ -202,8 +206,6 @@ final class TelephonyBridge {
         invoke(enable, telephony, new Object[]{slotIndex});
         return "IMS restarted for slot " + slotIndex;
     }
-
-    private static final long IMS_RESTART_SETTLE_MILLIS = 1500;
 
     private static Object getTelephonyProxy() throws Exception {
         return getProxy("phone", INTERFACE_NAME);

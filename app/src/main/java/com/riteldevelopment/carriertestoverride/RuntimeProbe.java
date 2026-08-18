@@ -12,8 +12,9 @@ package com.riteldevelopment.carriertestoverride;
  * </pre>
  *
  * <p>The {@code sim-*} commands take one field at a time so the effect of each on the live IMS
- * registration can be measured separately; that is how the IMSI's role in the voice/SMS regression
- * was isolated. {@code -} means "pass null for this field".</p>
+ * registration can be measured separately. That is how the SIM identity layer — the fake IMSI first
+ * among the suspects — was ruled out as the cause of the voice/SMS regression, leaving the app country
+ * layer. {@code -} means "pass null for this field".</p>
  */
 public final class RuntimeProbe {
     private RuntimeProbe() {
@@ -86,12 +87,15 @@ public final class RuntimeProbe {
                     Integer.parseInt(args[1]), args.length == 3 ? args[2] : null));
             return;
         }
+        // Every branch above is listed here. A command that works but is undocumented is a command
+        // nobody finds, which is what happened to sub-methods and uicc-cycle.
         throw new IllegalArgumentException("Usage: RuntimeProbe ["
-                + "sim-probe | methods NAME_SUBSTRING"
+                + "sim-probe"
+                + " | methods NAME_SUBSTRING | sub-methods NAME_SUBSTRING"
                 + " | sim-set SUB_ID MCCMNC|- IMSI|- NAME|-"
                 + " | sim-restore SUB_ID MCCMNC|- NAME|-"
                 + " | ims-state SUB_ID | ims-restart SLOT_INDEX"
-                + " | uicc-refresh SUB_ID"
+                + " | uicc-cycle SUB_ID | uicc-refresh SUB_ID"
                 + " | country-apply SUB_ID ISO NAME"
                 + " | country-clear SUB_ID [RESTORE_ISO]]");
     }
