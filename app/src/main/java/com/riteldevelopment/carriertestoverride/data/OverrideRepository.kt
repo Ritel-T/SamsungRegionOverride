@@ -57,6 +57,14 @@ data class OperationOutcome(
     val isError: Boolean,
     val simLayerFailed: Boolean,
     val countryLayerFailed: Boolean,
+    /**
+     * The apply landed but left the SIM unable to make calls.
+     *
+     * Not a failure — every layer the user asked for is in place — but the single most consequential
+     * thing the operation can report, so it is lifted out of the detail text and into the headline
+     * rather than left for whoever expands the report.
+     */
+    val voiceStopped: Boolean = false,
 ) {
     /**
      * Whether the privileged service ran far enough to report on the layers at all.
@@ -291,6 +299,7 @@ class OverrideRepository(
             isError = message.startsWith(ERROR_PREFIX) || message.contains("\n$ERROR_PREFIX"),
             simLayerFailed = LAYER_FAILURE_MARKERS.sim.any(message::contains),
             countryLayerFailed = LAYER_FAILURE_MARKERS.country.any(message::contains),
+            voiceStopped = message.contains(CarrierOverrideUserService.VOICE_STOPPED),
         )
         reconcile(outcome)
         outcome

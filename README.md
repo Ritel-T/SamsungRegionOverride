@@ -17,7 +17,12 @@ number is unchanged, and nothing here touches roaming, billing, or carrier locks
 
 Two independent layers. Run either alone or both together.
 
-| | **SIM identity** | **App country** |
+The UI calls them **Network** and **Country**, after the signal each one sets rather than the API each
+one writes — the question people arrive with is which switch makes a particular app believe them.
+Samsung's own apps read the network; TikTok and most others read the country. The table keeps the
+internal names, which is what the code and the result reports use.
+
+| | **SIM identity** (Network) | **App country** (Country) |
 |---|---|---|
 | API | `ITelephony.setCarrierTestOverride` | `CarrierConfigManager.overrideConfig` |
 | Writes | MCC/MNC, a test IMSI, SPN and PNN | `sim_country_iso_override_string`, optionally `carrier_name_override_bool` + `carrier_name_string` |
@@ -51,6 +56,19 @@ MCC/MNC, a fake IMSI, a foreign SPN — `isImsRegistered` stays `true` and calls
 apps you care about read the operator rather than the country, run that layer on its own and pay
 nothing.
 
+It is not perfectly deterministic, and the tool does not pretend otherwise. A later round of testing on
+the same device found the App country layer applied *on its own* leaving IMS registered for a full 50 s,
+and found both layers applied together going both ways across repeated runs of one build. Write order
+and a wait for the carrier config reload broadcast were both tried as fixes; neither made an apply
+reliably keep voice, and the negative results are recorded in `CarrierConfigInstrumentation` so nobody
+retries them blind. What the tool does instead is **watch IMS for 8 s after an apply and say what
+happened** — the result headline reads *Applied — calls and SMS stopped* when it did, so the failure is
+never something you discover from a missed call.
+
+One thing is firm: **cycling the UICC does not help while the override is still live.** Tested directly
+— IMS stayed down for 48 s after a cycle with the country override in place. Restore is the recovery,
+because it drops the override first and cycles afterwards.
+
 Three recovery levers, tested against a genuinely deregistered stack:
 
 | Call | Result |
@@ -62,6 +80,11 @@ Three recovery levers, tested against a genuinely deregistered stack:
 The third is what the SIM on/off switch in Settings calls, and restore performs it automatically.
 Ordering is load-bearing: cycling while an override is still live re-registers IMS against the *fake*
 identity and drops it again, so it runs only after both layers have been put back.
+
+Restore also checks before it cycles. The cycle is itself a few seconds with no service, so spending it
+on a subscription whose IMS is already registered would be paying an outage to fix nothing; when the
+registration is healthy the cycle is skipped and the report says so. An unreadable registration state
+cycles anyway — not knowing is not the same as knowing it is fine.
 
 If it ever fails, the manual equivalent still works — turn the SIM off and on in Settings, or reboot.
 
@@ -91,9 +114,10 @@ bytes that have been run on hardware.
    make it report.
 3. Pick a target region — search the preset list, or type the MCC/MNC, country ISO and carrier name by
    hand. A preset only fills those three fields; nothing consults it afterwards.
-4. Choose your layers. Both are on by default.
+4. Choose your layers. Both are on by default. If only TikTok-style apps matter to you, turn **Network**
+   off; if only Samsung's apps matter, turn **Country** off and the apply costs nothing.
 5. **Apply**, and confirm. The target apps are force-stopped for you, since they latch their region at
-   startup.
+   startup. The apply then watches IMS for 8 s and tells you whether calls still work.
 6. If an app still shows the old region, use the target apps panel to wipe its data and relaunch it.
 7. **Restore** when you are finished. Calls and SMS come back on their own.
 

@@ -71,7 +71,7 @@ fun PresetField(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = preset?.label ?: "Custom",
+                text = preset?.let { "${it.flag} ${it.label}" } ?: "Custom",
                 style = MaterialTheme.typography.bodyLarge,
                 color = scheme.onSurface,
                 maxLines = 1,
@@ -84,12 +84,6 @@ fun PresetField(
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
             )
-        }
-        if (preset?.verified == true) {
-            // Not the success colour: green is reserved for "this layer is currently applied", and that
-            // badge sits a few hundred pixels away. Provenance is not live state.
-            VerifiedBadge()
-            Spacer(Modifier.width(8.dp))
         }
         Icon(
             imageVector = Icons.Filled.KeyboardArrowDown,
@@ -108,16 +102,6 @@ fun PresetField(
             },
         )
     }
-}
-
-@Composable
-private fun VerifiedBadge() {
-    StateBadge(
-        text = "TESTED",
-        active = true,
-        activeColor = MaterialTheme.colorScheme.secondaryContainer,
-        onActiveColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    )
 }
 
 /**
@@ -212,6 +196,13 @@ private fun PresetRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Its own column so the names beside it start on a common left edge; flags differ in width
+        // enough that inlining them would leave the carrier names visibly ragged.
+        Text(
+            text = preset.flag,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = preset.carrier,
@@ -229,10 +220,6 @@ private fun PresetRow(
             )
         }
         Spacer(Modifier.width(10.dp))
-        if (preset.verified) {
-            VerifiedBadge()
-            Spacer(Modifier.width(8.dp))
-        }
         // Right-aligned and tabular so the codes form a column the eye can scan down.
         Box(contentAlignment = Alignment.CenterEnd) {
             Column(horizontalAlignment = Alignment.End) {

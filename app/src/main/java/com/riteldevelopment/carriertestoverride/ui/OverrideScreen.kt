@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -57,6 +61,7 @@ import com.riteldevelopment.carriertestoverride.ui.components.ResultPanel
 import com.riteldevelopment.carriertestoverride.ui.components.ShizukuStatusRow
 import com.riteldevelopment.carriertestoverride.ui.components.SimSelector
 import com.riteldevelopment.carriertestoverride.ui.components.TargetAppsPanel
+import com.riteldevelopment.carriertestoverride.ui.components.rememberAppIcon
 
 /** Everything the screen can do, hoisted so the screen itself stays previewable and stateless. */
 data class OverrideActions(
@@ -89,17 +94,18 @@ data class OverrideActions(
 )
 
 /**
- * The standing hazard note.
+ * The standing note.
  *
- * It names App country rather than SIM identity because that is what the measurements show: with only
- * the SIM identity layer applied IMS stays registered and calls work, while App country deregisters it
- * for as long as it is live. The earlier wording blamed SIM identity and called the disturbance
- * "brief", which pointed a worried user at the wrong switch.
+ * Names Country rather than Network because that is what the measurements point at: with only Network
+ * applied IMS stayed registered across every run, while Country live is what the deregistration tracks.
+ * It says "can" rather than "will" for the same reason — the same build, run twice, went both ways, and
+ * a warning that overstates its certainty is one the user catches out and then stops believing.
  */
 private const val RISK_TEXT =
-    "App country deregisters IMS on this SIM: data keeps working, calls and SMS stop until you " +
-        "restore. Restore clears every transient CarrierConfig test value on the subId, not only " +
-        "this tool's. A reboot is the definitive undo."
+    "Country can stop calls and SMS on this SIM until you Restore; Network on its own has not. " +
+        "Cycling the SIM does not bring them back while the override is live. Restore also clears " +
+        "every transient CarrierConfig value on this SIM, including ones other tools wrote, and a " +
+        "reboot undoes everything."
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,10 +120,7 @@ fun OverrideScreen(
             TopAppBar(
                 title = { Text("Region Override") },
                 actions = {
-                    // Named rather than iconised. Nothing in the icon set means "Shizuku", and a guessed
-                    // glyph would be a control the user has to press once to find out what it does —
-                    // for the one destination this screen sends people to when it cannot proceed.
-                    TextButton(onClick = actions.onOpenShizuku) { Text("Shizuku") }
+                    ShizukuButton(onClick = actions.onOpenShizuku)
                     OverflowMenu(state = state, actions = actions)
                 },
             )
@@ -165,12 +168,15 @@ fun OverrideScreen(
                 TargetBlock(state = state, actions = actions)
             }
 
-            item("layer-sim") {
-                SimIdentityLayer(state = state, actions = actions)
+            // Country before Network, matching both the order the service writes them in and the order
+            // a user needs them: the country signal is what most apps read, so it is the one most
+            // people are here for. The network signal is the specialist case.
+            item("layer-country") {
+                CountryLayer(state = state, actions = actions)
             }
 
-            item("layer-country") {
-                AppCountryLayer(state = state, actions = actions)
+            item("layer-sim") {
+                NetworkLayer(state = state, actions = actions)
             }
 
             item("apps") {
@@ -215,6 +221,37 @@ fun OverrideScreen(
 }
 
 /**
+ * The one place this screen sends people when it cannot proceed.
+ *
+ * Shizuku's own launcher icon, next to a leave-the-app glyph. The icon carries the identity — it is the
+ * thing the user will look for on their home screen — and the glyph carries the verb, which an app icon
+ * alone never does: a bare icon in an app bar reads as a status light as easily as a button.
+ *
+ * Falls back to the glyph alone when Shizuku is not installed. The action still has somewhere useful to
+ * go in that case, because the view model answers a missing package with an install hint rather than
+ * silence, and a control that vanishes would leave that hint unreachable.
+ */
+@Composable
+private fun ShizukuButton(onClick: () -> Unit) {
+    val icon = rememberAppIcon(KnownPackages.SHIZUKU)
+    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 10.dp)) {
+        if (icon != null) {
+            Image(
+                bitmap = icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(5.dp))
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+            contentDescription = "Open Shizuku",
+            modifier = Modifier.size(if (icon == null) 22.dp else 15.dp),
+        )
+    }
+}
+
+/**
  * The destructive action lives here rather than as a third button: it is rare, and it wipes persistent
  * CarrierConfig overrides written by *other* tools, so it should not sit a thumb-width from Apply.
  */
@@ -252,14 +289,14 @@ private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
 /**
  * The preset picker and the carrier name.
  *
- * The name lives here rather than inside a layer because *both* layers consume it — the SIM identity
- * layer writes it as PNN/SPN, and the app country layer writes it as the display name. Everything that
- * belongs to exactly one layer lives inside that layer instead.
+ * The name lives here rather than inside a layer because *both* layers consume it — the network layer
+ * writes it as PNN/SPN, and the country layer can write it as the subscription's display name.
+ * Everything that belongs to exactly one layer lives inside that layer instead.
  */
 @Composable
 private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
     Column {
-        MicroLabel("TARGET REGION")
+        MicroLabel("PRETEND TO BE")
         Spacer(Modifier.height(8.dp))
         PresetField(
             preset = state.preset,
@@ -267,7 +304,7 @@ private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
             onSelect = actions.onSelectPreset,
         )
         // Under the field they fill, so tapping one shows its effect in the line directly above.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         QuickPickRow(
             quickPicks = state.quickPicks,
             selectedId = state.presetId,
@@ -281,56 +318,29 @@ private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
             enabled = !state.isBusy,
             singleLine = true,
             label = { Text("Carrier name") },
-            supportingText = { Text("Used by both layers") },
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
+/**
+ * The everyday switch: what country the phone reports to apps.
+ *
+ * Named for the signal rather than the mechanism. "App country" described where the value is written;
+ * "Country" describes what the user is setting, and the icons beside it say who will believe it.
+ */
 @Composable
-private fun SimIdentityLayer(state: OverrideUiState, actions: OverrideActions) {
+private fun CountryLayer(state: OverrideUiState, actions: OverrideActions) {
     val sim = state.selectedSim
     LayerSection(
-        title = "SIM identity",
-        subtitle = "MCC/MNC, test IMSI and SPN/PNN",
-        enabled = state.layers.simIdentity,
-        applied = sim?.flags?.simIdentity == true,
-        accent = MaterialTheme.colorScheme.primary,
-        controlsEnabled = !state.isBusy,
-        onEnabledChange = actions.onSimIdentityLayerChange,
-    ) {
-        OutlinedTextField(
-            value = state.mccMnc,
-            onValueChange = actions.onMccMncChange,
-            enabled = !state.isBusy,
-            singleLine = true,
-            label = { Text("MCC/MNC") },
-            supportingText = { Text("5 or 6 digits") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (sim != null && !sim.isReady) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "This layer needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AppCountryLayer(state: OverrideUiState, actions: OverrideActions) {
-    val sim = state.selectedSim
-    LayerSection(
-        title = "App country",
-        subtitle = "CarrierConfig SIM country ISO",
+        title = "Country",
+        subtitle = "TikTok and most apps read this",
         enabled = state.layers.appCountry,
         applied = sim?.flags?.appCountry == true,
         accent = MaterialTheme.colorScheme.secondary,
         controlsEnabled = !state.isBusy,
         onEnabledChange = actions.onAppCountryLayerChange,
+        readerPackages = KnownPackages.COUNTRY_READERS,
     ) {
         OutlinedTextField(
             value = state.countryIso,
@@ -348,10 +358,63 @@ private fun AppCountryLayer(state: OverrideUiState, actions: OverrideActions) {
                 onCheckedChange = actions.onCarrierNameOverrideChange,
                 enabled = !state.isBusy,
             )
+            Column {
+                Text(
+                    text = "Rename the SIM too",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                // The old label said "Also override the display name", which named a field rather than
+                // an effect and left people unable to guess what ticking it would do.
+                Text(
+                    text = "Shows the carrier name above in the status bar and Settings",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        // The one fact that should reach someone who reads nothing else on this screen, kept to a
+        // single line and placed against the switch that causes it rather than in the standing note at
+        // the bottom, which is where a reader who has already decided will not look.
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "May stop calls and SMS until you Restore.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+/** The specialist switch: the network code the SIM claims to be on. */
+@Composable
+private fun NetworkLayer(state: OverrideUiState, actions: OverrideActions) {
+    val sim = state.selectedSim
+    LayerSection(
+        title = "Network",
+        subtitle = "Galaxy Store and Samsung apps read this",
+        enabled = state.layers.simIdentity,
+        applied = sim?.flags?.simIdentity == true,
+        accent = MaterialTheme.colorScheme.primary,
+        controlsEnabled = !state.isBusy,
+        onEnabledChange = actions.onSimIdentityLayerChange,
+        readerPackages = KnownPackages.NETWORK_READERS,
+    ) {
+        OutlinedTextField(
+            value = state.mccMnc,
+            onValueChange = actions.onMccMncChange,
+            enabled = !state.isBusy,
+            singleLine = true,
+            label = { Text("MCC/MNC") },
+            supportingText = { Text("5 or 6 digits") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (sim != null && !sim.isReady) {
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = "Also override the display name",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = "This layer needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }

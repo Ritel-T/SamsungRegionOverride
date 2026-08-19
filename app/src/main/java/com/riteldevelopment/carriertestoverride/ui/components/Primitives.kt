@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +44,9 @@ import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 
 /** Consistent gap between the screen's top-level blocks. */
 val BlockGap: Dp = 14.dp
+
+/** Sized to sit on the subtitle's line without outweighing the layer title above it. */
+private val LayerReaderIconSize: Dp = 16.dp
 
 /** Small tracked-out label used for field names and section headers. */
 @Composable
@@ -156,6 +161,15 @@ fun LayerSection(
     controlsEnabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Packages that read this layer, shown as their own icons beside the subtitle.
+     *
+     * The question a user actually arrives with is "which switch makes *my* app believe me", and a
+     * sentence naming apps answers it slower than the apps' own icons do. Uninstalled packages simply
+     * do not render, which is honest: an icon row that showed a placeholder would be claiming this
+     * phone has an app it does not.
+     */
+    readerPackages: List<String> = emptyList(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val success = LocalOverrideColors.current.success
@@ -204,12 +218,26 @@ fun LayerSection(
                     )
                     if (applied) StateBadge(text = "LIVE", active = true)
                 }
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.height(3.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    readerPackages.forEach { packageName ->
+                        rememberAppIcon(packageName)?.let { bitmap ->
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier.size(LayerReaderIconSize),
+                            )
+                        }
+                    }
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Spacer(Modifier.width(8.dp))
             Switch(

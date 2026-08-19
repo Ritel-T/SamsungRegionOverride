@@ -121,7 +121,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
      */
     fun openShizuku() {
         val context = getApplication<Application>()
-        val intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
+        val intent = context.packageManager.getLaunchIntentForPackage(KnownPackages.SHIZUKU)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (intent == null) {
             return fail(
@@ -204,16 +204,16 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         // layer and the actual state beats "the selected SIM is not READY yet", which left the user to
         // guess which of the two switches was the problem.
         if (layers.simIdentity && !sim.isReady) {
-            return fail("SIM identity needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.")
+            return fail("The Network layer needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.")
         }
 
         val mccMnc = current.mccMnc.trim()
         if (layers.simIdentity && !mccMnc.matches(MCC_MNC_PATTERN)) {
-            return fail("SIM identity needs an MCC/MNC of 5 or 6 digits.")
+            return fail("The Network layer needs an MCC/MNC of 5 or 6 digits.")
         }
         val iso = current.countryIso.trim().lowercase(Locale.ROOT)
         if (layers.appCountry && !iso.matches(ISO_PATTERN)) {
-            return fail("App country needs a two-letter country ISO.")
+            return fail("The Country layer needs a two-letter country ISO.")
         }
         val name = current.carrierName.trim()
         if ((layers.simIdentity || (layers.appCountry && layers.carrierNameOverride)) && name.isEmpty()) {
@@ -468,11 +468,16 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         val tone = when {
             partial -> ResultTone.PARTIAL
             isError -> ResultTone.ERROR
+            // Everything the user asked for landed, so this is not an error — but a green "Region
+            // applied" on a phone that can no longer take calls is a lie of omission. PARTIAL is the
+            // tone that means "it worked, and you still need to look at this".
+            voiceStopped -> ResultTone.PARTIAL
             else -> ResultTone.SUCCESS
         }
         val headline = when {
             partial -> "One layer failed"
             isError -> "Operation failed"
+            voiceStopped -> "Applied — calls and SMS stopped"
             kind == OperationKind.APPLY -> "Region applied"
             kind == OperationKind.RESTORE -> "Restored this tool's overrides"
             kind == OperationKind.REFRESH_APPS -> "Target apps refreshed"
@@ -482,9 +487,6 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     private companion object {
-        /** Also listed in the manifest's `<queries>`, or the launch intent would never resolve. */
-        const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
-
         val MCC_MNC_PATTERN = Regex("[0-9]{5,6}")
         val ISO_PATTERN = Regex("[a-z]{2}")
         const val MAX_MCC_MNC = 6

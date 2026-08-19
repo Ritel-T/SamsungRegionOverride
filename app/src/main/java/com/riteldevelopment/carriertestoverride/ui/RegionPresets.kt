@@ -31,6 +31,9 @@ data class RegionPreset(
 
     val label: String get() = "$country · $carrier"
 
+    /** The country's flag, so a row or chip can be recognised without being read word by word. */
+    val flag: String get() = flagEmoji(countryIso)
+
     private val haystack: String by lazy(LazyThreadSafetyMode.NONE) {
         "$country $carrier $countryIso $mccMnc $aliases".lowercase(Locale.ROOT)
     }

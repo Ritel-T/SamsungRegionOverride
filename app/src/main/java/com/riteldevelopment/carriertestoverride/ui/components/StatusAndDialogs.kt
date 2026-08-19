@@ -199,7 +199,7 @@ fun OverrideDialogs(
                     Text(
                         "Restoring anyway uses the layer switches as they stand. Clearing app country " +
                             "removes every transient CarrierConfig test value on this subId, and with no " +
-                            "snapshot the SIM identity falls back to the real records — a reboot is surer."
+                            "snapshot the network identity falls back to the real records — a reboot is surer."
                     )
                 },
                 confirmButton = {
@@ -281,24 +281,25 @@ private fun applyDialogBody(request: DialogRequest.ConfirmApply): AnnotatedStrin
     // `requestApply()` refuses an empty selection before this dialog can be raised, so at least one of
     // the two branches always runs and the line is never left dangling.
     var wrote = false
-    if (layers.simIdentity) {
-        append("SIM identity ")
-        appendFigures(target.mccMnc)
+    if (layers.appCountry) {
+        append("Country ${target.countryIso}")
         wrote = true
     }
-    if (layers.appCountry) {
+    if (layers.simIdentity) {
         if (wrote) append("  +  ")
-        append("App country ${target.countryIso}")
+        append("Network ")
+        appendFigures(target.mccMnc)
     }
 
     append("\nName: ${target.carrierName}")
     append("\n\nThe radio keeps its real network; only what the framework reports changes.")
-    // The app country layer makes the IMS stack re-register under the overridden identity, which the
-    // real network rejects. Data survives, voice and SMS do not. Saying "only what the framework
-    // reports changes" and stopping there would be a comfortable half-truth, so the cost is stated
-    // where the user is deciding rather than discovered afterwards on a call that will not connect.
+    // Stated where the user is deciding rather than discovered afterwards on a call that will not
+    // connect. Hedged deliberately: the deregistration reproduces often but not every time, and the
+    // apply now reports which way it went, so this promises a possibility and the result reports the
+    // fact. Only raised for Country — a Network-only apply has never been seen to touch IMS.
     if (layers.appCountry) {
-        append("\n\nCalls and SMS stop on this SIM while App country is live. Restore brings them back.")
+        append("\n\nCountry can stop calls and SMS on this SIM until you Restore. The result will say")
+        append(" whether it did.")
     }
 }
 
@@ -306,7 +307,7 @@ private fun clearAllDialogBody(sim: SimInfo): AnnotatedString = buildAnnotatedSt
     append("Removes the transient and persistent CarrierConfig test values on sub ")
     appendFigures(sim.subId.toString())
     append(
-        ", including any written by other tools. It does not restore the SIM identity layer, and it " +
+        ", including any written by other tools. It does not restore the Network layer, and it " +
             "cannot rebuild what another tool had set."
     )
 }
