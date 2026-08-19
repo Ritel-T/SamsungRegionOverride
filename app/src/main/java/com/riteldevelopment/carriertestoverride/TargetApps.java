@@ -67,9 +67,15 @@ public final class TargetApps {
     private TargetApps() {
     }
 
-    /** Stops the default targets. Runs after every successful apply/restore. */
-    static String forceStopDefaults() {
-        return refresh(DEFAULT_PACKAGES, WIPE_NONE, false);
+    /**
+     * Stops the given targets without touching their storage. Runs after every successful
+     * apply/restore, so the apps re-read the region on their next start.
+     *
+     * <p>Null means the built-in defaults, matching {@link #refresh}. An empty array stops nothing,
+     * which is what a user who has deselected every target has asked for.</p>
+     */
+    static String forceStop(String[] packages) {
+        return refresh(packages, WIPE_NONE, false);
     }
 
     static String refresh(String[] packages, int wipeMode, boolean relaunch) {
@@ -91,7 +97,7 @@ public final class TargetApps {
                 report.append("not installed");
                 continue;
             }
-            report.append(describe(forceStop(packageName)));
+            report.append(describe(forceStop(packageName, userId)));
             if (wipeMode != WIPE_NONE) {
                 report.append(", ").append(wipeName(wipeMode)).append(' ')
                         .append(describe(wipe(packageName, userId, wipeMode)));
@@ -110,11 +116,31 @@ public final class TargetApps {
     }
 
     /**
-     * The user this shell is running as. {@code uid / 100000} is {@code UserHandle.getUserId} without
-     * the hidden API; the literal is the platform's {@code PER_USER_RANGE}. Needed because {@code pm}
-     * only accepts a numeric {@code --user}, unlike {@code am}, which understands {@code current}.
+     * The user every command in this class targets.
+     *
+     * Asks the platform which user is actually in the foreground, rather than assuming it is the one
+     * this shell runs as. Those differ whenever a secondary user or work profile is in front, and the
+     * two halves of a wipe used to disagree about it: {@code pm} takes only a numeric {@code --user}
+     * and got {@code uid / 100000} — always 0 for a shell — while {@code am} was passed
+     * {@code current}. On a secondary user that meant clearing the data of the owner's copy of an app
+     * and force-stopping a different copy, with the report claiming both had worked.
+     *
+     * Falls back to {@code uid / 100000} — {@code UserHandle.getUserId} without the hidden API, where
+     * the literal is the platform's {@code PER_USER_RANGE} — if the query fails, which restores the old
+     * behaviour rather than refusing to run.
      */
     private static int currentUserId() {
+        Result result = run(QUERY_TIMEOUT_SECONDS, "/system/bin/am", "get-current-user");
+        if (!result.timedOut && result.exitCode == 0) {
+            String reported = firstLine(result.output);
+            if (reported != null) {
+                try {
+                    return Integer.parseInt(reported.trim());
+                } catch (NumberFormatException notANumber) {
+                    // Fall through to the uid-derived answer below.
+                }
+            }
+        }
         return Process.myUid() / 100000;
     }
 
@@ -124,9 +150,9 @@ public final class TargetApps {
         return result.exitCode == 0 && result.output.contains("package:");
     }
 
-    private static Result forceStop(String packageName) {
+    private static Result forceStop(String packageName, int userId) {
         return run(STOP_TIMEOUT_SECONDS,
-                "/system/bin/am", "force-stop", "--user", "current", packageName);
+                "/system/bin/am", "force-stop", "--user", String.valueOf(userId), packageName);
     }
 
     private static Result wipe(String packageName, int userId, int wipeMode) {
@@ -155,11 +181,29 @@ public final class TargetApps {
             return "no launcher activity";
         }
         Result started = run(LAUNCH_TIMEOUT_SECONDS, "/system/bin/am", "start",
-                "--user", "current",
+                "--user", String.valueOf(userId),
                 "-a", "android.intent.action.MAIN",
                 "-c", "android.intent.category.LAUNCHER",
                 "-n", component);
+        // `am start` exits 0 even when it refuses to start anything, printing the reason to stdout
+        // instead — "Error: Activity not started, unable to resolve Intent" is the common one. Reading
+        // only the exit code reported a relaunch that never happened as "launch ok".
+        String failure = errorLine(started.output);
+        if (failure != null) {
+            return failure;
+        }
         return describe(started);
+    }
+
+    /** The {@code Error:} line {@code am} prints while still exiting 0, or null if there is none. */
+    private static String errorLine(String output) {
+        for (String line : output.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("Error:")) {
+                return trimmed.length() <= 120 ? trimmed : trimmed.substring(0, 120);
+            }
+        }
+        return null;
     }
 
     private static String lastLine(String output) {

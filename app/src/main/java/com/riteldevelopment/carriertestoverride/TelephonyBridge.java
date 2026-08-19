@@ -48,7 +48,7 @@ final class TelephonyBridge {
         Method method = findCarrierOverrideMethod();
         Object telephony = getTelephonyProxy();
         invoke(method, telephony, buildCarrierOverrideArguments(
-                method, subId, numeric, testImsi, name));
+                method, subId, numeric, testImsi, name, name));
         return "SIM identity: called " + signature(method)
                 + "\nsubId=" + subId + ", MCC/MNC=" + numeric + ", SPN/PNN=" + name
                 + "\nIMSI=" + testImsi + "; ICCID/GID/APN/privilege rules left untouched";
@@ -63,11 +63,11 @@ final class TelephonyBridge {
         Method method = findCarrierOverrideMethod();
         Object telephony = getTelephonyProxy();
         invoke(method, telephony, buildCarrierOverrideArguments(
-                method, subId, numeric, null, name));
+                method, subId, numeric, null, null, name));
         return "SIM identity: restored the visible operator info to the saved values"
                 + "\nsubId=" + subId + ", MCC/MNC=" + valueOrNull(numeric)
-                + ", SPN/PNN=" + valueOrNull(name)
-                + "\nIMSI/ICCID/GID/APN/privilege rules fall back to the real SIM records"
+                + ", SPN=" + valueOrNull(name)
+                + "\nPNN, IMSI, ICCID, GID, APN and privilege rules fall back to the real SIM records"
                 + "\nNote: AOSP has no separate clear API, so a reboot is the definitive restore.";
     }
 
@@ -101,7 +101,8 @@ final class TelephonyBridge {
         requireValidSubId(subId);
         Method method = findCarrierOverrideMethod();
         Object telephony = getTelephonyProxy();
-        invoke(method, telephony, buildCarrierOverrideArguments(method, subId, mccMnc, imsi, name));
+        invoke(method, telephony, buildCarrierOverrideArguments(
+                method, subId, mccMnc, imsi, name, name));
         return "raw override: subId=" + subId + ", MCC/MNC=" + valueOrNull(mccMnc)
                 + ", IMSI=" + valueOrNull(imsi) + ", SPN/PNN=" + valueOrNull(name);
     }
@@ -166,6 +167,103 @@ final class TelephonyBridge {
             return new Object[]{enabled, subId};
         }
         return new Object[]{subId, enabled};
+    }
+
+    /** Passed as the calling package for ISub reads; this code runs as uid 2000, which is that package. */
+    private static final String SHELL_PACKAGE = "com.android.shell";
+
+    /** No display name was captured, so there is nothing to restore. Mirrors the AIDL constant. */
+    static final int DISPLAY_NAME_SOURCE_NONE = -1;
+
+    /**
+     * Reads a subscription's display name and the source that set it.
+     *
+     * <p>This is the half of "restore" that used to be missing. The app country layer's name override
+     * does not only live in the transient CarrierConfig — the framework copies it into the subscription
+     * database as {@code displayName} with {@code displayNameSource=CARRIER}, which is why a foreign
+     * operator name survived both restore and reboot. Putting it back means knowing what it was, and
+     * the only honest moment to learn that is before the first override.</p>
+     *
+     * <p>Read here rather than in the app process because it needs {@code READ_PHONE_STATE}, which the
+     * app does not hold and this shell-uid service does.</p>
+     *
+     * @return {@code {name, source}}, or null when the name is unreadable on this build — in which case
+     *         the caller stores nothing and restore later skips the name entirely.
+     */
+    static String[] readDisplayName(int subId) throws Exception {
+        requireValidSubId(subId);
+        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
+        Method getter = null;
+        for (Method candidate : iface.getMethods()) {
+            if (!"getActiveSubscriptionInfo".equals(candidate.getName())) {
+                continue;
+            }
+            Class<?>[] params = candidate.getParameterTypes();
+            if (params.length >= 1 && params[0] == int.class) {
+                getter = candidate;
+                break;
+            }
+        }
+        if (getter == null) {
+            return null;
+        }
+        // The trailing parameters are the calling package and feature id, and their count varies by
+        // version — filling every String slot with the shell package works for both known shapes.
+        Class<?>[] params = getter.getParameterTypes();
+        Object[] args = new Object[params.length];
+        args[0] = subId;
+        for (int i = 1; i < args.length; i++) {
+            args[i] = params[i] == String.class ? SHELL_PACKAGE : null;
+        }
+
+        Object info = invokeForResult(getter, getProxy("isub", SUB_INTERFACE_NAME), args);
+        if (info == null) {
+            return null;
+        }
+        Object name = invokeForResult(info.getClass().getMethod("getDisplayName"), info, new Object[0]);
+        if (name == null) {
+            return null;
+        }
+        int source = DISPLAY_NAME_SOURCE_NONE;
+        try {
+            Object reported = invokeForResult(
+                    info.getClass().getMethod("getDisplayNameSource"), info, new Object[0]);
+            if (reported instanceof Integer) {
+                source = (Integer) reported;
+            }
+        } catch (Throwable unavailable) {
+            // getDisplayNameSource is not public API. Without it the name is still worth keeping, but
+            // restore will decline to write it rather than guess a priority — see restoreDisplayName.
+        }
+        return new String[]{name.toString(), Integer.toString(source)};
+    }
+
+    /**
+     * Writes a captured display name back onto the subscription record.
+     *
+     * <p>Deliberately refuses to run without the original source. The platform ranks name sources and
+     * ignores a write that would downgrade one, so an invented source either silently does nothing or
+     * pins the name at the wrong priority. Leaving a stale name is a cosmetic defect; writing a wrong
+     * one at the wrong priority is a worse and stickier one.</p>
+     *
+     * <p>Never fatal — this runs inside a restore that has already succeeded.</p>
+     */
+    static String restoreDisplayName(int subId, String name, int source) throws Exception {
+        requireValidSubId(subId);
+        String normalized = normalizeName(name);
+        if (normalized == null || source == DISPLAY_NAME_SOURCE_NONE) {
+            return "Display name: nothing was captured for this SIM, so it was left alone";
+        }
+        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
+        Method setter;
+        try {
+            setter = iface.getMethod("setDisplayNameUsingSrc", String.class, int.class, int.class);
+        } catch (NoSuchMethodException missing) {
+            return "Display name: setDisplayNameUsingSrc is unavailable on this build";
+        }
+        invoke(setter, getProxy("isub", SUB_INTERFACE_NAME),
+                new Object[]{normalized, subId, source});
+        return "Display name: restored to " + normalized + " (source=" + source + ")";
     }
 
     /** Whether IMS is registered for this subscription. False here is what "cannot call" looks like. */
@@ -256,8 +354,13 @@ final class TelephonyBridge {
                 "Expected setCarrierTestOverride(int + 7/9 Strings); runtime candidates=" + found);
     }
 
+    /**
+     * PNN and SPN are separate parameters because restore must treat them differently: only the SPN was
+     * ever captured, so writing that same string into the PNN slot would leave a fake network name in
+     * place instead of letting the SIM's own EF_PNN record answer again.
+     */
     private static Object[] buildCarrierOverrideArguments(Method method, int subId,
-            String mccMnc, String imsi, String name) {
+            String mccMnc, String imsi, String pnn, String spn) {
         Object[] args = new Object[method.getParameterCount()];
         args[0] = subId;
         args[1] = mccMnc;
@@ -265,8 +368,8 @@ final class TelephonyBridge {
         args[3] = null; // ICCID
         args[4] = null; // GID1
         args[5] = null; // GID2
-        args[6] = name; // PNN
-        args[7] = name; // SPN
+        args[6] = pnn;
+        args[7] = spn;
         if (args.length == 10) {
             args[8] = null; // carrier privilege rules
             args[9] = null; // APN
@@ -275,8 +378,14 @@ final class TelephonyBridge {
     }
 
     private static void invoke(Method method, Object target, Object[] args) throws Exception {
+        invokeForResult(method, target, args);
+    }
+
+    /** Same call and same unwrapping as {@link #invoke}, for the reads whose return value is the point. */
+    private static Object invokeForResult(Method method, Object target, Object[] args)
+            throws Exception {
         try {
-            method.invoke(target, args);
+            return method.invoke(target, args);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             if (cause instanceof Exception) {

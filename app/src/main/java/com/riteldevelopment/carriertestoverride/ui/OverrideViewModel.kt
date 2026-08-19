@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride.ui
 
 import android.app.Application
+import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,7 +42,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private val store = OverrideStore(application)
     private val sims = SimRepository(application, store)
-    private val apps = TargetAppRepository(application)
+    private val apps = TargetAppRepository(application, store)
     private val shizuku = ShizukuController()
     private val host = InstrumentationHost(application)
     private val repository = OverrideRepository(shizuku, host, store)
@@ -66,6 +67,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             shizuku.status.collect { status -> _state.update { it.copy(shizuku = status) } }
         }
+        _state.update { it.copy(recentPresetIds = store.recentPresetIds()) }
         refreshSims()
         refreshTargetApps()
     }
@@ -105,7 +107,31 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** A target app can be installed or removed while this screen is backgrounded. */
-    fun refreshTargetApps() = _state.update { it.copy(targetApps = apps.scan()) }
+    fun refreshTargetApps() = _state.update {
+        it.copy(targetApps = apps.scan(), targetAppsAreDefault = apps.usingDefaults())
+    }
+
+    /**
+     * Opens Shizuku, which is the answer to most of the states this screen can be stuck in.
+     *
+     * Resolving a launch intent rather than naming an activity: Shizuku's entry point has moved between
+     * releases, and a hardcoded component would break on the next one while still looking installed.
+     * A missing intent is reported as advice, not as an [android.content.ActivityNotFoundException] —
+     * "not installed" is a thing a user can act on.
+     */
+    fun openShizuku() {
+        val context = getApplication<Application>()
+        val intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
+            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (intent == null) {
+            return fail(
+                "Shizuku is not installed. Get it from shizuku.rikka.app, start it, then come back."
+            )
+        }
+        runCatching { context.startActivity(intent) }.onFailure { throwable ->
+            fail("Could not open Shizuku: ${throwable.javaClass.simpleName}")
+        }
+    }
 
     /**
      * Telephony state settles asynchronously after an override, so poll for a few seconds instead of
@@ -171,10 +197,15 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     fun requestApply() {
         val current = _state.value
         val sim = current.selectedSim ?: return fail("No usable SIM is selected.")
-        if (!sim.isReady) return fail("The selected SIM is not READY yet.")
 
         val layers = current.layers
         if (layers.none) return fail("Enable at least one layer.")
+        // Only the SIM identity layer needs loaded IccRecords, so only it needs a READY card. Naming the
+        // layer and the actual state beats "the selected SIM is not READY yet", which left the user to
+        // guess which of the two switches was the problem.
+        if (layers.simIdentity && !sim.isReady) {
+            return fail("SIM identity needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.")
+        }
 
         val mccMnc = current.mccMnc.trim()
         if (layers.simIdentity && !mccMnc.matches(MCC_MNC_PATTERN)) {
@@ -235,6 +266,67 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         startRefreshApps(listOf(app))
     }
 
+    /**
+     * Opens the target-app chooser, then fills it in.
+     *
+     * The dialog is shown before its contents exist. Labelling every launchable app takes long enough
+     * to notice, and a button that does nothing for a second reads as broken — so the dialog opens
+     * immediately and says it is still reading.
+     */
+    fun requestChooseTargetApps() {
+        if (_state.value.isBusy) return
+        _state.update {
+            it.copy(
+                dialog = DialogRequest.ChooseTargetApps(
+                    available = emptyList(),
+                    selected = apps.selectedPackages().toSet(),
+                    loading = true,
+                )
+            )
+        }
+        viewModelScope.launch {
+            val available = apps.installedApps()
+            _state.update { current ->
+                // The user may have dismissed it, or opened a different dialog, while this loaded.
+                val dialog = current.dialog as? DialogRequest.ChooseTargetApps ?: return@update current
+                current.copy(dialog = dialog.copy(available = available, loading = false))
+            }
+        }
+    }
+
+    fun toggleTargetApp(packageName: String) = _state.update { current ->
+        val dialog = current.dialog as? DialogRequest.ChooseTargetApps ?: return@update current
+        val selected = if (packageName in dialog.selected) {
+            dialog.selected - packageName
+        } else {
+            dialog.selected + packageName
+        }
+        current.copy(dialog = dialog.copy(selected = selected))
+    }
+
+    /**
+     * Saves the choice, ordered as the picker showed it so the panel does not reshuffle on save.
+     *
+     * An empty selection is saved as an empty selection. It means "stop nothing", and answering it by
+     * quietly falling back to the defaults would be the tool overruling the user.
+     */
+    fun confirmTargetApps(dialog: DialogRequest.ChooseTargetApps) {
+        dismissDialog()
+        val ordered = dialog.available.map { it.packageName }.filter { it in dialog.selected }
+        // available unions the current selection in, so this should always be empty. Appending rather
+        // than dropping means that if it ever is not, the tool keeps acting on what the user ticked.
+        val unlisted = dialog.selected - ordered.toSet()
+        apps.select(ordered + unlisted)
+        refreshTargetApps()
+    }
+
+    /** Forgets the custom list so the built-in defaults apply again. */
+    fun resetTargetApps() {
+        dismissDialog()
+        apps.resetToDefaults()
+        refreshTargetApps()
+    }
+
     fun dismissDialog() = _state.update { it.copy(dialog = null) }
 
     /**
@@ -257,8 +349,13 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     fun confirmApply(request: DialogRequest.ConfirmApply) {
         dismissDialog()
+        // Both read here rather than inside the coroutine, so the operation acts on the selection as it
+        // stood when the user confirmed — not on whatever it might be by the time the binder answers.
+        val packages = apps.selectedPackages()
+        val presetId = _state.value.presetId
         runOperation {
-            repository.apply(request.sim, request.target, request.layers, ::reportStage)
+            repository.apply(request.sim, request.target, request.layers, packages, ::reportStage)
+                .also { outcome -> if (!outcome.isError) rememberApplied(presetId) }
         }
     }
 
@@ -281,7 +378,21 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private fun startRestore(sim: SimInfo, restoreSim: Boolean, clearCountry: Boolean) {
         if (!restoreSim && !clearCountry) return fail("Enable at least one layer.")
-        runOperation { repository.restore(sim, restoreSim, clearCountry, ::reportStage) }
+        val packages = apps.selectedPackages()
+        runOperation { repository.restore(sim, restoreSim, clearCountry, packages, ::reportStage) }
+    }
+
+    /**
+     * Records an applied region for the chip row.
+     *
+     * Presets only: a chip renders a country, a carrier and a code, and a hand-typed target has no
+     * catalog entry to render from. Successful applies only: the row is a shortcut to things that
+     * worked, not a log of what was attempted.
+     */
+    private fun rememberApplied(presetId: String?) {
+        if (presetId == null) return
+        store.rememberPreset(presetId)
+        _state.update { it.copy(recentPresetIds = store.recentPresetIds()) }
     }
 
     private fun startRefreshApps(targets: List<TargetApp>) {
@@ -349,14 +460,19 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private fun OperationOutcome.toResultState(): ResultState {
         val partial = simLayerFailed || countryLayerFailed
+        // `partial` is tested first, and that order is the whole point. Every per-layer failure is
+        // reported with an "ERROR: " prefix, so `isError` is always true when one layer failed too —
+        // testing it first made PARTIAL unreachable and told the user "Operation failed" after a run
+        // where the other layer had in fact been written. That is the one wrong answer here, because a
+        // user who believes nothing landed never runs a restore.
         val tone = when {
-            isError -> ResultTone.ERROR
             partial -> ResultTone.PARTIAL
+            isError -> ResultTone.ERROR
             else -> ResultTone.SUCCESS
         }
         val headline = when {
-            isError -> "Operation failed"
             partial -> "One layer failed"
+            isError -> "Operation failed"
             kind == OperationKind.APPLY -> "Region applied"
             kind == OperationKind.RESTORE -> "Restored this tool's overrides"
             kind == OperationKind.REFRESH_APPS -> "Target apps refreshed"
@@ -366,6 +482,9 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     private companion object {
+        /** Also listed in the manifest's `<queries>`, or the launch intent would never resolve. */
+        const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
+
         val MCC_MNC_PATTERN = Regex("[0-9]{5,6}")
         val ISO_PATTERN = Regex("[a-z]{2}")
         const val MAX_MCC_MNC = 6

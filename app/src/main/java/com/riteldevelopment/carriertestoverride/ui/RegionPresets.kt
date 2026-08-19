@@ -16,6 +16,13 @@ data class RegionPreset(
     val mccMnc: String,
     /** True only where this exact triple has been applied and restored on real hardware. */
     val verified: Boolean = false,
+    /**
+     * Offered as a one-tap chip above the picker.
+     *
+     * A flag on the entry rather than a separate list of ids elsewhere: a list would be a second place
+     * to keep the same facts, and a typo in it would drop a chip silently instead of failing.
+     */
+    val common: Boolean = false,
     /** Extra search terms: what people actually type, which is rarely the formal country name. */
     val aliases: String = "",
 ) {
@@ -102,13 +109,13 @@ object RegionPresets {
         RegionPreset("France", "fr", "SFR", "20810"),
         RegionPreset("France", "fr", "Free", "20815"),
         RegionPreset("France", "fr", "Bouygues", "20820"),
-        RegionPreset("Germany", "de", "Telekom", "26201", aliases = "deutschland"),
+        RegionPreset("Germany", "de", "Telekom", "26201", common = true, aliases = "deutschland"),
         RegionPreset("Germany", "de", "Vodafone", "26202", aliases = "deutschland"),
         RegionPreset("Germany", "de", "O2", "26203", aliases = "deutschland"),
         RegionPreset("Greece", "gr", "Cosmote", "20201"),
         RegionPreset("Greece", "gr", "Vodafone", "20205"),
         RegionPreset("Greece", "gr", "Nova", "20210"),
-        RegionPreset("Hong Kong", "hk", "CSL", "45400", aliases = "hk"),
+        RegionPreset("Hong Kong", "hk", "CSL", "45400", common = true, aliases = "hk"),
         RegionPreset("Hong Kong", "hk", "3 HK", "45403", aliases = "hk"),
         RegionPreset("Hong Kong", "hk", "SmarTone", "45406", aliases = "hk"),
         RegionPreset("Hungary", "hu", "Yettel", "21601"),
@@ -131,7 +138,7 @@ object RegionPresets {
         RegionPreset("Italy", "it", "TIM", "22201", aliases = "italia"),
         RegionPreset("Italy", "it", "Vodafone", "22210", aliases = "italia"),
         RegionPreset("Italy", "it", "WindTre", "22288", aliases = "italia"),
-        RegionPreset("Japan", "jp", "NTT Docomo", "44010"),
+        RegionPreset("Japan", "jp", "NTT Docomo", "44010", common = true),
         RegionPreset("Japan", "jp", "Rakuten", "44011"),
         RegionPreset("Japan", "jp", "SoftBank", "44020"),
         RegionPreset("Japan", "jp", "au KDDI", "44051"),
@@ -202,7 +209,7 @@ object RegionPresets {
         RegionPreset("Saudi Arabia", "sa", "Zain", "42004", aliases = "ksa"),
         RegionPreset("Serbia", "rs", "Telekom Srbija", "22003"),
         RegionPreset("Serbia", "rs", "A1", "22005"),
-        RegionPreset("Singapore", "sg", "Singtel", "52501"),
+        RegionPreset("Singapore", "sg", "Singtel", "52501", common = true),
         RegionPreset("Singapore", "sg", "M1", "52503"),
         RegionPreset("Singapore", "sg", "StarHub", "52505"),
         RegionPreset("Slovakia", "sk", "Orange", "23101"),
@@ -212,7 +219,7 @@ object RegionPresets {
         RegionPreset("Slovenia", "si", "Telekom Slovenije", "29341"),
         RegionPreset("South Africa", "za", "Vodacom", "65501"),
         RegionPreset("South Africa", "za", "MTN", "65510"),
-        RegionPreset("South Korea", "kr", "SKT", "45005", aliases = "korea"),
+        RegionPreset("South Korea", "kr", "SKT", "45005", common = true, aliases = "korea"),
         RegionPreset("South Korea", "kr", "LG U+", "45006", aliases = "korea"),
         RegionPreset("South Korea", "kr", "KT", "45008", aliases = "korea"),
         RegionPreset("Spain", "es", "Vodafone", "21401", aliases = "espana"),
@@ -227,7 +234,7 @@ object RegionPresets {
         RegionPreset("Switzerland", "ch", "Sunrise", "22802"),
         RegionPreset("Switzerland", "ch", "Salt", "22803"),
         RegionPreset("Taiwan", "tw", "FarEasTone", "46601"),
-        RegionPreset("Taiwan", "tw", "Chunghwa", "46692"),
+        RegionPreset("Taiwan", "tw", "Chunghwa", "46692", common = true),
         RegionPreset("Taiwan", "tw", "Taiwan Mobile", "46697"),
         RegionPreset("Thailand", "th", "TrueMove H", "52000"),
         RegionPreset("Thailand", "th", "AIS", "52003"),
@@ -240,11 +247,14 @@ object RegionPresets {
         RegionPreset("Ukraine", "ua", "lifecell", "25506"),
         RegionPreset("United Arab Emirates", "ae", "Etisalat", "42402", aliases = "uae dubai"),
         RegionPreset("United Arab Emirates", "ae", "du", "42403", aliases = "uae dubai"),
-        RegionPreset("United Kingdom", "gb", "EE", "23430", verified = true, aliases = "uk britain england"),
+        RegionPreset(
+            "United Kingdom", "gb", "EE", "23430",
+            verified = true, common = true, aliases = "uk britain england",
+        ),
         RegionPreset("United Kingdom", "gb", "O2", "23410", aliases = "uk britain england"),
         RegionPreset("United Kingdom", "gb", "Vodafone", "23415", aliases = "uk britain england"),
         RegionPreset("United Kingdom", "gb", "Three", "23420", aliases = "uk britain england"),
-        RegionPreset("United States", "us", "T-Mobile", "310260", aliases = "usa america"),
+        RegionPreset("United States", "us", "T-Mobile", "310260", common = true, aliases = "usa america"),
         RegionPreset("United States", "us", "AT&T", "310410", aliases = "usa america"),
         RegionPreset("United States", "us", "Verizon", "311480", aliases = "usa america"),
         RegionPreset("Vietnam", "vn", "MobiFone", "45201"),
@@ -254,6 +264,15 @@ object RegionPresets {
 
     /** What a fresh install starts on: the only entry proven end to end on real hardware. */
     val DEFAULT: RegionPreset = ALL.first { it.verified }
+
+    /**
+     * The one-tap set, in catalog order.
+     *
+     * Chosen for how often people target them rather than by subscriber count, and held to one carrier
+     * per country: the chips exist so the common case skips the search box, and two carriers from the
+     * same country would spend a row on a distinction the region checks do not make.
+     */
+    val COMMON: List<RegionPreset> = ALL.filter { it.common }
 
     fun byId(id: String?): RegionPreset? = id?.let { wanted -> ALL.firstOrNull { it.id == wanted } }
 

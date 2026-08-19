@@ -50,7 +50,13 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         int resultCode = Activity.RESULT_CANCELED;
         UiAutomation automation = null;
         try {
-            automation = getUiAutomation();
+            // FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES matters here. The no-argument overload connects
+            // with flags 0, which registers this as a UI-test automation service and suppresses every
+            // other bound accessibility service for the life of the connection — so a TalkBack user
+            // would go silent twice per operation (the capability probe runs one instrumentation and the
+            // real work runs another). Nothing here needs any accessibility capability; only
+            // adoptShellPermissionIdentity is wanted, and that is unaffected by the flag.
+            automation = getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
             if (automation == null) {
                 throw new IllegalStateException("UiAutomation connection is unavailable");
             }
@@ -128,6 +134,12 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             }
             values.putBoolean(KEY_OVERRIDE_NAME, true);
             values.putString(KEY_CARRIER_NAME, carrierName);
+        } else {
+            // Written explicitly rather than left out. CarrierConfigLoader *merges* a non-null override
+            // bundle into whatever is already in place — only a null bundle resets it — so omitting the
+            // key does not switch a previous apply's name override off. It silently keeps it, while this
+            // run's success message, built from the local bundle, reports no display name at all.
+            values.putBoolean(KEY_OVERRIDE_NAME, false);
         }
         return values;
     }

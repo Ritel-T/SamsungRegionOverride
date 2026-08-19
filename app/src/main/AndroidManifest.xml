@@ -9,15 +9,27 @@
         android:targetPackage="${applicationId}" />
 
     <!--
-      Package visibility for the apps whose cached region this tool resets. Without these the UI could
-      not tell installed from missing on API 30+, and the target list would claim every app is absent.
-      Stopping and wiping happen as the shell UID, which sees everything, so this is purely so the
-      screen can label the rows honestly.
+      Package visibility. Stopping and wiping happen as the shell UID, which sees everything, so none of
+      this grants power — it exists so the screen can tell installed from missing, draw real icons, and
+      offer a list to choose from instead of claiming every app is absent.
+
+      The <intent> filter is what makes a user-chosen target list possible: it reveals every launchable
+      app without QUERY_ALL_PACKAGES, which is a policy-restricted permission this tool has no business
+      holding just to populate a picker.
+
+      The named packages stay anyway. <intent> only matches apps with a LAUNCHER entry, and a default
+      target that ships without one would otherwise vanish from its own list. Shizuku is named so the
+      top-bar shortcut can resolve a launch intent and tell "not installed" apart from "no launcher".
     -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <package android:name="com.sec.android.app.samsungapps" />
         <package android:name="com.samsung.android.voc" />
         <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="moe.shizuku.privileged.api" />
     </queries>
 
     <application

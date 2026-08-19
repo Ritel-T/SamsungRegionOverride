@@ -42,7 +42,31 @@ sealed interface DialogRequest {
 
     /** Erasing an app's data signs the user out of it, so it is never one tap away. */
     data class ConfirmWipeData(val apps: List<TargetApp>) : DialogRequest
+
+    /**
+     * Choosing which apps apply, restore and the panel act on.
+     *
+     * [available] arrives asynchronously — enumerating and labelling every launchable app is too slow
+     * for the main thread — so the dialog opens empty with [loading] set and fills in. Opening it
+     * immediately and admitting it is still reading beats a button that appears dead for a second.
+     *
+     * [selected] is the working set, not the saved one: it changes as boxes are ticked and is only
+     * written to storage when the user confirms, so dismissing the dialog changes nothing.
+     */
+    data class ChooseTargetApps(
+        val available: List<TargetApp>,
+        val selected: Set<String>,
+        val loading: Boolean,
+    ) : DialogRequest
 }
+
+/**
+ * A one-tap region above the picker.
+ *
+ * [recent] separates "you applied this before" from "this is a common destination", which the chip row
+ * shows differently — the first is the user's own history and earns the front of the row.
+ */
+data class QuickPick(val preset: RegionPreset, val recent: Boolean)
 
 /** Progress narration while an operation walks through its preconditions. */
 data class BusyState(val stage: OverrideRepository.Stage) {
@@ -86,7 +110,11 @@ data class OverrideUiState(
         appCountry = true,
         carrierNameOverride = true,
     ),
+    /** Preset ids applied before, newest first. Hand-typed targets have no id and are not recorded. */
+    val recentPresetIds: List<String> = emptyList(),
     val targetApps: List<TargetApp> = emptyList(),
+    /** False once the user has chosen their own target list, which is when "reset" starts meaning something. */
+    val targetAppsAreDefault: Boolean = true,
     val wipeMode: WipeMode = WipeMode.NONE,
     val relaunchApps: Boolean = true,
     val busy: BusyState? = null,
@@ -98,10 +126,38 @@ data class OverrideUiState(
 
     val preset: RegionPreset? get() = RegionPresets.byId(presetId)
 
+    /**
+     * The chip row: what this user reached for last, then the common destinations they have not.
+     *
+     * History wins the front of the row and the duplicates, because a region you have already applied
+     * is a region you are more likely to want again than one the catalog merely thinks is popular. A
+     * recent id that no longer resolves — a catalog entry removed between versions — is dropped rather
+     * than rendered as a dead chip.
+     */
+    val quickPicks: List<QuickPick>
+        get() {
+            val recent = recentPresetIds.mapNotNull(RegionPresets::byId)
+            val recentIds = recent.mapTo(HashSet()) { it.id }
+            return recent.map { QuickPick(it, recent = true) } +
+                RegionPresets.COMMON
+                    .filterNot { it.id in recentIds }
+                    .map { QuickPick(it, recent = false) }
+        }
+
     val isBusy: Boolean get() = busy != null
 
-    /** The SIM identity layer rewrites IccRecords, which only exist once the SIM is fully loaded. */
-    val canApply: Boolean get() = !isBusy && selectedSim?.isReady == true
+    /**
+     * The SIM identity layer rewrites IccRecords, which only exist once the SIM is fully loaded — so
+     * READY is required only when that layer is actually part of the operation. The app country layer
+     * writes CarrierConfig against a subId and does not care what state the card is in.
+     *
+     * This used to demand READY unconditionally, which blocked a legitimate App-country-only apply on a
+     * PIN-locked SIM and explained itself only inside the SIM identity section, which is collapsed
+     * whenever that switch is off.
+     */
+    val canApply: Boolean
+        get() = !isBusy && selectedSim != null &&
+            (!layers.simIdentity || selectedSim?.isReady == true)
 
     val canRestore: Boolean get() = !isBusy && selectedSim != null
 

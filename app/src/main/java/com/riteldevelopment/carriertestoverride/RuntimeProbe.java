@@ -73,6 +73,21 @@ public final class RuntimeProbe {
             System.out.println(TelephonyBridge.restartIms(Integer.parseInt(args[1])));
             return;
         }
+        if ("display-read".equals(command) && args.length == 2) {
+            String[] captured = TelephonyBridge.readDisplayName(Integer.parseInt(args[1]));
+            System.out.println(captured == null
+                    ? "displayName: unreadable on this build"
+                    : "displayName=" + captured[0] + " source=" + captured[1]);
+            return;
+        }
+        // The repair hatch for a SIM whose name was already overridden before this tool learned to
+        // capture it. Nothing in the UI can fix that case: the capture is write-once and would record
+        // the overridden name as the original, so the real one has to come from the user.
+        if ("display-set".equals(command) && args.length == 4) {
+            System.out.println(TelephonyBridge.restoreDisplayName(
+                    Integer.parseInt(args[1]), args[2], Integer.parseInt(args[3])));
+            return;
+        }
         if ("uicc-refresh".equals(command) && args.length == 2) {
             System.out.println(TelephonyBridge.refreshUiccProfile(Integer.parseInt(args[1])));
             return;
@@ -96,6 +111,7 @@ public final class RuntimeProbe {
                 + " | sim-restore SUB_ID MCCMNC|- NAME|-"
                 + " | ims-state SUB_ID | ims-restart SLOT_INDEX"
                 + " | uicc-cycle SUB_ID | uicc-refresh SUB_ID"
+                + " | display-read SUB_ID | display-set SUB_ID NAME SOURCE"
                 + " | country-apply SUB_ID ISO NAME"
                 + " | country-clear SUB_ID [RESTORE_ISO]]");
     }

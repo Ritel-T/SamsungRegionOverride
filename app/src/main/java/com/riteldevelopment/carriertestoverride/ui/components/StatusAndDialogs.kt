@@ -151,14 +151,28 @@ fun ShizukuStatusRow(
 @Composable
 fun OverrideDialogs(
     dialog: DialogRequest?,
+    targetAppsAreDefault: Boolean,
     onDismiss: () -> Unit,
     onConfirmApply: (DialogRequest.ConfirmApply) -> Unit,
     onConfirmRestore: (SimInfo) -> Unit,
     onConfirmClearAll: (SimInfo) -> Unit,
     onConfirmWipeData: (List<TargetApp>) -> Unit,
+    onToggleTargetApp: (String) -> Unit,
+    onConfirmTargetApps: (DialogRequest.ChooseTargetApps) -> Unit,
+    onResetTargetApps: () -> Unit,
 ) {
     when (dialog) {
         null -> Unit
+
+        is DialogRequest.ChooseTargetApps -> TargetAppPickerDialog(
+            request = dialog,
+            // Offered only once there is a custom list to revert, so the control is never a no-op.
+            showReset = !targetAppsAreDefault,
+            onToggle = onToggleTargetApp,
+            onConfirm = onConfirmTargetApps,
+            onReset = onResetTargetApps,
+            onDismiss = onDismiss,
+        )
 
         is DialogRequest.ConfirmApply -> AlertDialog(
             onDismissRequest = onDismiss,

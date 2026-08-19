@@ -18,6 +18,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +55,7 @@ fun TargetAppsPanel(
     onWipeModeChange: (WipeMode) -> Unit,
     onRelaunchChange: (Boolean) -> Unit,
     onRun: (TargetApp) -> Unit,
+    onChoose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -64,8 +66,24 @@ fun TargetAppsPanel(
             .background(scheme.surfaceContainerLow)
             .padding(14.dp),
     ) {
-        MicroLabel(text = "TARGET APPS")
-        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MicroLabel(text = "TARGET APPS", modifier = Modifier.weight(1f))
+            TextButton(onClick = onChoose, enabled = enabled) { Text("Choose") }
+        }
+        Spacer(Modifier.height(4.dp))
+
+        // An empty list is a real choice, not a failure to load, and it changes what Apply does — so it
+        // says what will happen rather than leaving a blank space where the rows were.
+        if (apps.isEmpty()) {
+            Text(
+                text = "No apps selected. The region still changes; nothing gets stopped or wiped.",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+            )
+        }
 
         apps.forEach { app ->
             Row(
@@ -74,6 +92,8 @@ fun TargetAppsPanel(
                     .padding(vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                AppIcon(app.packageName)
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = app.label,
                     modifier = Modifier.weight(1f),

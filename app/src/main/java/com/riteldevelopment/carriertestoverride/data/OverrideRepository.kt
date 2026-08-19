@@ -4,6 +4,7 @@ import com.riteldevelopment.carriertestoverride.CarrierOverrideUserService
 import com.riteldevelopment.carriertestoverride.ICarrierOverrideService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
@@ -56,7 +57,18 @@ data class OperationOutcome(
     val isError: Boolean,
     val simLayerFailed: Boolean,
     val countryLayerFailed: Boolean,
-)
+) {
+    /**
+     * Whether the privileged service ran far enough to report on the layers at all.
+     *
+     * Layer flags may only be reconciled when this is true. A failure *before* the service runs — a
+     * dead binder, a refused bind, an exception on the way in — carries no per-layer marker, and
+     * "no failure marker" must not be read as "that layer succeeded". Read that way, a restore that
+     * never happened clears the flags and the tool forgets a live override is still on the SIM.
+     */
+    val reportedLayers: Boolean
+        get() = !isError || simLayerFailed || countryLayerFailed
+}
 
 /**
  * Runs the privileged operations end to end: hold up the instrumented process, wait for Shizuku, get
@@ -76,6 +88,7 @@ class OverrideRepository(
         sim: SimInfo,
         target: RegionTarget,
         layers: LayerSelection,
+        refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
         // Capture the SIM's real identity before the first override, never after.
@@ -86,8 +99,25 @@ class OverrideRepository(
             store.captureCountrySnapshot(sim.subId, sim.countryIso)
         }
         val service = connect(onStage)
+        // The display name is the one original this app cannot read for itself — it needs
+        // READ_PHONE_STATE, which only the shell service holds. So it is captured here: after the
+        // service exists, and still before a single byte of override has been written.
+        captureDisplayName(service, sim.subId)
         onStage(Stage.RUNNING)
-        return runOperation(OperationKind.APPLY, sim.subId, service) {
+        return runOperation(
+            kind = OperationKind.APPLY,
+            subId = sim.subId,
+            service = service,
+            reconcile = { outcome ->
+                if (outcome.reportedLayers) {
+                    store.setFlags(
+                        subId = sim.subId,
+                        simIdentity = if (layers.simIdentity && !outcome.simLayerFailed) true else null,
+                        appCountry = if (layers.appCountry && !outcome.countryLayerFailed) true else null,
+                    )
+                }
+            },
+        ) {
             it.applyRegionOverride(
                 sim.subId,
                 target.mccMnc,
@@ -97,12 +127,7 @@ class OverrideRepository(
                 layers.simIdentity,
                 layers.appCountry,
                 layers.carrierNameOverride,
-            )
-        }.also { outcome ->
-            store.setFlags(
-                subId = sim.subId,
-                simIdentity = if (layers.simIdentity && !outcome.simLayerFailed) true else null,
-                appCountry = if (layers.appCountry && !outcome.countryLayerFailed) true else null,
+                refreshPackages.toTypedArray(),
             )
         }
     }
@@ -111,12 +136,28 @@ class OverrideRepository(
         sim: SimInfo,
         restoreSimIdentity: Boolean,
         clearAppCountry: Boolean,
+        refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
         val snapshot = store.snapshot(sim.subId)
         val service = connect(onStage)
         onStage(Stage.RUNNING)
-        return runOperation(OperationKind.RESTORE, sim.subId, service) {
+        return runOperation(
+            kind = OperationKind.RESTORE,
+            subId = sim.subId,
+            service = service,
+            reconcile = { outcome ->
+                // Guarded: a binder-level failure reports no layer at all, and clearing the flags on
+                // that would make the tool forget live overrides are still on the SIM.
+                if (outcome.reportedLayers) {
+                    store.setFlags(
+                        subId = sim.subId,
+                        simIdentity = if (restoreSimIdentity && !outcome.simLayerFailed) false else null,
+                        appCountry = if (clearAppCountry && !outcome.countryLayerFailed) false else null,
+                    )
+                }
+            },
+        ) {
             it.restoreTransient(
                 sim.subId,
                 snapshot.mccMnc,
@@ -124,14 +165,13 @@ class OverrideRepository(
                 // With no snapshot, fall back to what the SIM reports now; the instrumentation uses this
                 // only to warm Samsung's country cache before dropping the override.
                 snapshot.countryIso ?: sim.countryIso,
+                // No fallback for these two. An un-captured display name is left alone rather than
+                // guessed at, because the only value available to guess with is the overridden one.
+                snapshot.displayName,
+                snapshot.displayNameSource,
                 restoreSimIdentity,
                 clearAppCountry,
-            )
-        }.also { outcome ->
-            store.setFlags(
-                subId = sim.subId,
-                simIdentity = if (restoreSimIdentity && !outcome.simLayerFailed) false else null,
-                appCountry = if (clearAppCountry && !outcome.countryLayerFailed) false else null,
+                refreshPackages.toTypedArray(),
             )
         }
     }
@@ -139,12 +179,17 @@ class OverrideRepository(
     suspend fun clearAllCarrierConfig(sim: SimInfo, onStage: (Stage) -> Unit): OperationOutcome {
         val service = connect(onStage)
         onStage(Stage.RUNNING)
-        return runOperation(OperationKind.CLEAR_ALL, sim.subId, service) {
+        return runOperation(
+            kind = OperationKind.CLEAR_ALL,
+            subId = sim.subId,
+            service = service,
+            reconcile = { outcome ->
+                if (!outcome.isError) {
+                    store.setFlags(subId = sim.subId, appCountry = false)
+                }
+            },
+        ) {
             it.clearAllCarrierConfigOverrides(sim.subId)
-        }.also { outcome ->
-            if (!outcome.isError) {
-                store.setFlags(subId = sim.subId, appCountry = false)
-            }
         }
     }
 
@@ -172,6 +217,26 @@ class OverrideRepository(
         }
     }
 
+    /**
+     * Records the subscription's display name and name source, unless one is already on file.
+     *
+     * Failures are swallowed deliberately. This is the cosmetic half of restore, and a build that will
+     * not surrender the name should cost the user a wrong SIM label at worst — never a refused apply.
+     * The store is write-once, so a second apply over a live override cannot replace a good capture
+     * with the overridden name.
+     */
+    private suspend fun captureDisplayName(service: ICarrierOverrideService, subId: Int) {
+        if (store.hasDisplayNameSnapshot(subId)) return
+        val captured = withContext(io) {
+            runCatching { service.readDisplayName(subId) }.getOrNull()
+        } ?: return
+        store.captureDisplayNameSnapshot(
+            subId = subId,
+            displayName = captured.getOrNull(0),
+            source = captured.getOrNull(1)?.toIntOrNull() ?: OverrideStore.DISPLAY_NAME_SOURCE_NONE,
+        )
+    }
+
     private suspend fun connect(onStage: (Stage) -> Unit): ICarrierOverrideService {
         onStage(Stage.HOST)
         host.ensureBound()
@@ -189,13 +254,27 @@ class OverrideRepository(
         return shizuku.bindService()
     }
 
+    /**
+     * Runs one privileged call and records what it did.
+     *
+     * `NonCancellable` is load-bearing, not caution. The privileged call is an uninterruptible binder
+     * round trip: cancelling the coroutine never stops the write, it only discards the answer. Under a
+     * plain `withContext(io)` a cancellation arriving mid-call — the screen being closed is enough,
+     * since `onCleared` cancels the job — threw away the outcome *after* the override had landed on the
+     * device, so nothing was ever written to the store and the tool forgot a live override existed.
+     *
+     * [reconcile] runs inside that same region for the same reason. Recording what landed has to be
+     * exactly as uncancellable as the landing was, and a caller doing it afterwards is a caller that
+     * can be cancelled in between.
+     */
     private suspend fun runOperation(
         kind: OperationKind,
         subId: Int,
         service: ICarrierOverrideService,
         withProbe: Boolean = true,
+        reconcile: (OperationOutcome) -> Unit = {},
         call: (ICarrierOverrideService) -> String,
-    ): OperationOutcome = withContext(io) {
+    ): OperationOutcome = withContext(io + NonCancellable) {
         val probe = if (!withProbe) null else {
             runCatching { service.inspectRuntime() }.getOrElse { "<binder call failed>" }
         }
@@ -204,7 +283,7 @@ class OverrideRepository(
         } catch (throwable: Throwable) {
             "ERROR: ${throwable.javaClass.name}: ${throwable.message.orEmpty()}"
         }
-        OperationOutcome(
+        val outcome = OperationOutcome(
             kind = kind,
             subId = subId,
             message = message,
@@ -213,6 +292,8 @@ class OverrideRepository(
             simLayerFailed = LAYER_FAILURE_MARKERS.sim.any(message::contains),
             countryLayerFailed = LAYER_FAILURE_MARKERS.country.any(message::contains),
         )
+        reconcile(outcome)
+        outcome
     }
 
     private companion object {

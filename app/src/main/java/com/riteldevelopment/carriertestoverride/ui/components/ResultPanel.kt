@@ -83,7 +83,11 @@ fun ResultPanel(
 
     // Nothing has run yet. A tinted box with an icon here would claim an outcome that does not exist, so
     // the initial state gets no container at all.
-    if (detail == null && probe == null) {
+    //
+    // Keyed on tone, not on emptiness. Every validation refusal — "No usable SIM is selected", "Shizuku
+    // is not installed" — is an ERROR with a headline and nothing else, and testing emptiness alone
+    // rendered those as quiet grey prose indistinguishable from the idle state.
+    if (detail == null && probe == null && result.tone == ResultTone.IDLE) {
         Text(
             text = result.headline,
             modifier = modifier.fillMaxWidth(),

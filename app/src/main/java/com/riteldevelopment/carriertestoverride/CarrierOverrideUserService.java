@@ -55,10 +55,27 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
         return result.toString();
     }
 
+    /**
+     * Reads the subscription display name and its source, for the caller to keep until restore.
+     *
+     * <p>Returns null rather than throwing when the platform will not give it up: a name that cannot be
+     * read is a name that will not be restored, and that is a documented cosmetic shortfall — not a
+     * reason to fail an apply that is otherwise fine.</p>
+     */
+    @Override
+    public String[] readDisplayName(int subId) {
+        try {
+            return TelephonyBridge.readDisplayName(subId);
+        } catch (Throwable throwable) {
+            Log.w(TAG, "Reading the subscription display name failed", throwable);
+            return null;
+        }
+    }
+
     @Override
     public String applyRegionOverride(int subId, String mccMnc, String imsi,
             String carrierName, String countryIso, boolean overrideSimIdentity,
-            boolean overrideAppCountry, boolean overrideCarrierName) {
+            boolean overrideAppCountry, boolean overrideCarrierName, String[] refreshPackages) {
         StringBuilder result = new StringBuilder();
         int attempted = 0;
         int succeeded = 0;
@@ -83,7 +100,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
         }
         if (succeeded > 0) {
-            appendSection(result, TargetApps.forceStopDefaults());
+            appendSection(result, TargetApps.forceStop(refreshPackages));
         }
         appendSection(result, "Layers: " + succeeded + "/" + attempted + " succeeded");
         return result.toString();
@@ -91,7 +108,8 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
 
     @Override
     public String restoreTransient(int subId, String originalMccMnc, String originalSpn,
-            String originalCountryIso, boolean restoreSimIdentity, boolean clearAppCountry) {
+            String originalCountryIso, String originalDisplayName, int originalDisplayNameSource,
+            boolean restoreSimIdentity, boolean clearAppCountry, String[] refreshPackages) {
         StringBuilder result = new StringBuilder();
         int attempted = 0;
         int succeeded = 0;
@@ -116,8 +134,13 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
         }
         if (succeeded > 0) {
+            // IMS first, then the name. Cycling the UICC applications makes the framework re-read the
+            // subscription, so a name written before the cycle is a name the cycle can overwrite;
+            // writing after it means this tool has the last word on the record it damaged.
             appendSection(result, recoverIms(subId));
-            appendSection(result, TargetApps.forceStopDefaults());
+            appendSection(result, recoverDisplayName(
+                    subId, originalDisplayName, originalDisplayNameSource));
+            appendSection(result, TargetApps.forceStop(refreshPackages));
         }
         appendSection(result, "Layers: " + succeeded + "/" + attempted + " succeeded");
         return result.toString();
@@ -127,7 +150,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
     public String clearAllCarrierConfigOverrides(int subId) {
         try {
             return CarrierConfigBridge.clearAll(subId)
-                    + "\n" + TargetApps.forceStopDefaults();
+                    + "\n" + TargetApps.forceStop(null);
         } catch (Throwable throwable) {
             return failure("Clearing CarrierConfig overrides failed", throwable);
         }
@@ -167,6 +190,24 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             return "IMS recovery unavailable: " + throwable.getClass().getSimpleName()
                     + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage())
                     + "\nIf calls or SMS do not work, turn this SIM off and on in Settings, or reboot.";
+        }
+    }
+
+    /**
+     * Puts the subscription's display name back, when one was captured before the first override.
+     *
+     * <p>Also never fatal, and for the same reason as {@link #recoverIms}: this is the cosmetic tail of
+     * a restore whose telephony work has already landed. A failure here leaves a wrong SIM label, which
+     * is worth reporting and not worth failing over.</p>
+     */
+    private static String recoverDisplayName(int subId, String name, int source) {
+        try {
+            return TelephonyBridge.restoreDisplayName(subId, name, source);
+        } catch (Throwable throwable) {
+            Log.w(TAG, "Display name restore failed", throwable);
+            return "Display name restore failed: " + throwable.getClass().getSimpleName()
+                    + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage())
+                    + "\nThe SIM's label may still show the overridden operator; nothing else is affected.";
         }
     }
 

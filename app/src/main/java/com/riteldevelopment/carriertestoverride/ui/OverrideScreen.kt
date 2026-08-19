@@ -52,6 +52,7 @@ import com.riteldevelopment.carriertestoverride.ui.components.LayerSection
 import com.riteldevelopment.carriertestoverride.ui.components.MicroLabel
 import com.riteldevelopment.carriertestoverride.ui.components.OverrideDialogs
 import com.riteldevelopment.carriertestoverride.ui.components.PresetField
+import com.riteldevelopment.carriertestoverride.ui.components.QuickPickRow
 import com.riteldevelopment.carriertestoverride.ui.components.ResultPanel
 import com.riteldevelopment.carriertestoverride.ui.components.ShizukuStatusRow
 import com.riteldevelopment.carriertestoverride.ui.components.SimSelector
@@ -75,6 +76,11 @@ data class OverrideActions(
     val onRefreshApps: (TargetApp) -> Unit,
     val onRescan: () -> Unit,
     val onCancel: () -> Unit,
+    val onOpenShizuku: () -> Unit,
+    val onChooseTargetApps: () -> Unit,
+    val onToggleTargetApp: (String) -> Unit,
+    val onConfirmTargetApps: (DialogRequest.ChooseTargetApps) -> Unit,
+    val onResetTargetApps: () -> Unit,
     val onDismissDialog: () -> Unit,
     val onConfirmApply: (DialogRequest.ConfirmApply) -> Unit,
     val onConfirmRestoreWithoutMarkers: (SimInfo) -> Unit,
@@ -107,7 +113,13 @@ fun OverrideScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Region Override") },
-                actions = { OverflowMenu(state = state, actions = actions) },
+                actions = {
+                    // Named rather than iconised. Nothing in the icon set means "Shizuku", and a guessed
+                    // glyph would be a control the user has to press once to find out what it does —
+                    // for the one destination this screen sends people to when it cannot proceed.
+                    TextButton(onClick = actions.onOpenShizuku) { Text("Shizuku") }
+                    OverflowMenu(state = state, actions = actions)
+                },
             )
         },
         bottomBar = { ActionBar(state = state, actions = actions) },
@@ -170,6 +182,7 @@ fun OverrideScreen(
                     onWipeModeChange = actions.onWipeModeChange,
                     onRelaunchChange = actions.onRelaunchChange,
                     onRun = actions.onRefreshApps,
+                    onChoose = actions.onChooseTargetApps,
                 )
             }
 
@@ -189,11 +202,15 @@ fun OverrideScreen(
 
     OverrideDialogs(
         dialog = state.dialog,
+        targetAppsAreDefault = state.targetAppsAreDefault,
         onDismiss = actions.onDismissDialog,
         onConfirmApply = actions.onConfirmApply,
         onConfirmRestore = actions.onConfirmRestoreWithoutMarkers,
         onConfirmClearAll = actions.onConfirmClearAll,
         onConfirmWipeData = actions.onConfirmWipeData,
+        onToggleTargetApp = actions.onToggleTargetApp,
+        onConfirmTargetApps = actions.onConfirmTargetApps,
+        onResetTargetApps = actions.onResetTargetApps,
     )
 }
 
@@ -246,6 +263,14 @@ private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
         Spacer(Modifier.height(8.dp))
         PresetField(
             preset = state.preset,
+            enabled = !state.isBusy,
+            onSelect = actions.onSelectPreset,
+        )
+        // Under the field they fill, so tapping one shows its effect in the line directly above.
+        Spacer(Modifier.height(10.dp))
+        QuickPickRow(
+            quickPicks = state.quickPicks,
+            selectedId = state.presetId,
             enabled = !state.isBusy,
             onSelect = actions.onSelectPreset,
         )
