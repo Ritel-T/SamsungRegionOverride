@@ -5,7 +5,13 @@ import android.os.Build
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 
-/** One selectable SIM/modem slot that currently carries a valid subscription. */
+/**
+ * One selectable SIM/modem slot that currently carries a valid subscription.
+ *
+ * The four identity fields are what the subscription reports *right now*, which is the disguise once a
+ * layer is live. [original] is what it reported before this tool first touched it, so the two together
+ * are the whole "real versus disguise" comparison the screen is built around.
+ */
 data class SimInfo(
     val slotIndex: Int,
     val subId: Int,
@@ -14,6 +20,7 @@ data class SimInfo(
     val operatorName: String,
     val countryIso: String,
     val flags: OverrideStore.Flags,
+    val original: OverrideStore.Snapshot,
 ) {
     /** Only a fully loaded SIM exposes the IccRecords the SIM identity layer rewrites. */
     val isReady: Boolean get() = simState == TelephonyManager.SIM_STATE_READY
@@ -22,6 +29,36 @@ data class SimInfo(
 
     val displayName: String
         get() = "SIM ${slotIndex + 1}"
+
+    /** The SIM's true MCC/MNC: the snapshot if one layer is rewriting it, otherwise what it reports. */
+    val realOperatorNumeric: String get() = original.mccMnc ?: operatorNumeric
+
+    val realOperatorName: String get() = original.operatorName ?: operatorName
+
+    val realCountryIso: String get() = original.countryIso ?: countryIso
+
+    /**
+     * Whether each layer is *still* rewriting this subscription, rather than merely having been applied.
+     *
+     * The stored flag alone cannot answer this. Every override here is transient, so a reboot silently
+     * undoes all of them while the flag stays set — and the screen's headline block, the per-layer
+     * badges and the ongoing notification all key off this, so a flag believed blindly would have the
+     * tool insisting the phone is disguised when it has been telling the truth since the last restart.
+     *
+     * So the flag is confirmed against the SIM: a layer counts as live only if what the subscription
+     * reports still differs from what was captured before the first override. With no snapshot there is
+     * nothing to compare and the flag is trusted, which errs toward warning about an override that is
+     * already gone rather than staying quiet about one that is not.
+     */
+    val simLayerLive: Boolean get() = flags.simIdentity && diverged(original.mccMnc, operatorNumeric)
+
+    val countryLayerLive: Boolean get() = flags.appCountry && diverged(original.countryIso, countryIso)
+
+    /** True when this subscription is presenting something other than its own identity. */
+    val disguised: Boolean get() = simLayerLive || countryLayerLive
+
+    private fun diverged(captured: String?, reported: String): Boolean =
+        captured == null || !captured.equals(reported, ignoreCase = true)
 
     companion object {
         fun simStateName(state: Int): String = when (state) {
@@ -93,6 +130,7 @@ class SimRepository(context: Context, private val store: OverrideStore) {
             operatorName = forSub.simOperatorName.orEmpty(),
             countryIso = forSub.simCountryIso.orEmpty(),
             flags = store.flags(subId),
+            original = store.snapshot(subId),
         )
     }
 

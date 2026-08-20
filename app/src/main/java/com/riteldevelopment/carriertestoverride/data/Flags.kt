@@ -1,4 +1,4 @@
-package com.riteldevelopment.carriertestoverride.ui
+package com.riteldevelopment.carriertestoverride.data
 
 /**
  * The flag for a two-letter country code.
@@ -15,6 +15,24 @@ package com.riteldevelopment.carriertestoverride.ui
  * reads as a row with no flag; a row with a tofu box reads as a bug.
  */
 private const val REGIONAL_INDICATOR_A = 0x1F1E6
+
+/**
+ * Flag, country code and operator name — "GB · EE" with the flag ahead of it.
+ *
+ * Shared rather than written twice, because the screen and the ongoing notification describe the same
+ * two identities and are read seconds apart; the same region formatted two ways in two places reads as
+ * two different facts. Returns empty when the platform reported neither half, leaving each caller to
+ * supply the wording for that, which is the one part they genuinely differ on.
+ */
+fun describeRegion(countryIso: String, operatorName: String): String {
+    val country = listOf(flagEmoji(countryIso), countryIso.uppercase())
+        .filter { it.isNotEmpty() }
+        .joinToString(" ")
+    return listOf(country, operatorName)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .joinToString(" · ")
+}
 
 fun flagEmoji(countryIso: String): String {
     if (countryIso.length != 2) return ""

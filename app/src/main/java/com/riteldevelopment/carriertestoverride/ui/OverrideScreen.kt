@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -51,12 +50,12 @@ import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 import com.riteldevelopment.carriertestoverride.ui.components.BlockGap
 import com.riteldevelopment.carriertestoverride.ui.components.HazardNote
-import com.riteldevelopment.carriertestoverride.ui.components.IdentityDiff
 import com.riteldevelopment.carriertestoverride.ui.components.LayerSection
 import com.riteldevelopment.carriertestoverride.ui.components.MicroLabel
 import com.riteldevelopment.carriertestoverride.ui.components.OverrideDialogs
 import com.riteldevelopment.carriertestoverride.ui.components.PresetField
 import com.riteldevelopment.carriertestoverride.ui.components.QuickPickRow
+import com.riteldevelopment.carriertestoverride.ui.components.RealVersusDisguise
 import com.riteldevelopment.carriertestoverride.ui.components.ResultPanel
 import com.riteldevelopment.carriertestoverride.ui.components.ShizukuStatusRow
 import com.riteldevelopment.carriertestoverride.ui.components.SimSelector
@@ -156,8 +155,8 @@ fun OverrideScreen(
             }
 
             item("diff") {
-                IdentityDiff(
-                    current = state.selectedSim,
+                RealVersusDisguise(
+                    sim = state.selectedSim,
                     targetMccMnc = state.mccMnc,
                     targetCountryIso = state.countryIso,
                     targetCarrierName = state.carrierName,
@@ -223,31 +222,32 @@ fun OverrideScreen(
 /**
  * The one place this screen sends people when it cannot proceed.
  *
- * Shizuku's own launcher icon, next to a leave-the-app glyph. The icon carries the identity — it is the
- * thing the user will look for on their home screen — and the glyph carries the verb, which an app icon
- * alone never does: a bare icon in an app bar reads as a status light as easily as a button.
+ * Shizuku's own launcher icon and nothing else. It sat next to a leave-the-app glyph for one revision,
+ * on the reasoning that an app icon states an identity but not a verb; in the bar it just read as two
+ * marks for one control. An app icon in an app bar is already a recognised idiom for "go to that app",
+ * and the status line directly below says whether Shizuku is running, so the verb was never carrying
+ * the weight the extra glyph cost.
  *
- * Falls back to the glyph alone when Shizuku is not installed. The action still has somewhere useful to
- * go in that case, because the view model answers a missing package with an install hint rather than
- * silence, and a control that vanishes would leave that hint unreachable.
+ * The glyph survives as the fallback for a phone with no Shizuku installed, where there is no icon to
+ * draw. The action still leads somewhere useful there — the view model answers a missing package with
+ * an install hint rather than silence — so the control must not vanish, or that hint is unreachable.
  */
 @Composable
 private fun ShizukuButton(onClick: () -> Unit) {
     val icon = rememberAppIcon(KnownPackages.SHIZUKU)
-    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 10.dp)) {
+    IconButton(onClick = onClick) {
         if (icon != null) {
             Image(
                 bitmap = icon,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
+                contentDescription = "Open Shizuku",
+                modifier = Modifier.size(24.dp),
             )
-            Spacer(Modifier.width(5.dp))
+        } else {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                contentDescription = "Open Shizuku",
+            )
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-            contentDescription = "Open Shizuku",
-            modifier = Modifier.size(if (icon == null) 22.dp else 15.dp),
-        )
     }
 }
 
@@ -336,7 +336,7 @@ private fun CountryLayer(state: OverrideUiState, actions: OverrideActions) {
         title = "Country",
         subtitle = "TikTok and most apps read this",
         enabled = state.layers.appCountry,
-        applied = sim?.flags?.appCountry == true,
+        applied = sim?.countryLayerLive == true,
         accent = MaterialTheme.colorScheme.secondary,
         controlsEnabled = !state.isBusy,
         onEnabledChange = actions.onAppCountryLayerChange,
@@ -393,7 +393,7 @@ private fun NetworkLayer(state: OverrideUiState, actions: OverrideActions) {
         title = "Network",
         subtitle = "Galaxy Store and Samsung apps read this",
         enabled = state.layers.simIdentity,
-        applied = sim?.flags?.simIdentity == true,
+        applied = sim?.simLayerLive == true,
         accent = MaterialTheme.colorScheme.primary,
         controlsEnabled = !state.isBusy,
         onEnabledChange = actions.onSimIdentityLayerChange,

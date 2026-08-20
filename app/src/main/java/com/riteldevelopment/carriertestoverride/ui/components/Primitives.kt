@@ -2,7 +2,6 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -145,8 +144,15 @@ fun HazardNote(text: String, modifier: Modifier = Modifier) {
  * One override layer.
  *
  * The two layers are intentionally *not* two identical cards — a reader stops distinguishing repeated
- * chrome. Each is a flat block with a left rail whose colour and length encode state: a short grey stub
- * when off, a full accented rail when armed, success-coloured once the layer is actually applied.
+ * chrome. Each is a flat block with a left rail whose colour encodes state: quiet grey when off,
+ * accented when armed, success-coloured once the layer is actually applied.
+ *
+ * The rail used to encode the same state a second time in its *length*, running only 22dp down the edge
+ * while the block was collapsed. On an expanded block that read as intended; on a collapsed one the
+ * block is barely taller than the stub itself, so the rail arrived a quarter drawn and looked like a
+ * clipping bug rather than a signal. Length is now constant and colour carries the state alone, which
+ * costs nothing legible: armed is already stated by the switch's own position and applied by the LIVE
+ * badge's fill, both of which survive a grayscale screenshot.
  *
  * The rail is painted rather than laid out, because a `fillMaxHeight` child inside a Row that lives in a
  * scrollable parent has an unbounded height constraint.
@@ -182,11 +188,6 @@ fun LayerSection(
         },
         label = "layerRailColor",
     )
-    // 1f = the rail runs the full height of the block; the stub is a fixed 22dp.
-    val railFraction by animateFloatAsState(
-        targetValue = if (enabled) 1f else 0f,
-        label = "layerRailExtent",
-    )
 
     Column(
         modifier = modifier
@@ -194,13 +195,10 @@ fun LayerSection(
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .drawBehind {
-                val width = 3.dp.toPx()
-                val stub = 22.dp.toPx()
-                val height = stub + (size.height - stub) * railFraction
                 drawRect(
                     color = railColor,
                     topLeft = Offset.Zero,
-                    size = Size(width, height.coerceAtMost(size.height)),
+                    size = Size(3.dp.toPx(), size.height),
                 )
             }
             .padding(start = 17.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)

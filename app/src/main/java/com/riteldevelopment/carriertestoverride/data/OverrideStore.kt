@@ -167,6 +167,20 @@ class OverrideStore(context: Context) {
         prefs.edit().remove(TARGET_PACKAGES).apply()
     }
 
+    /**
+     * Whether the notification permission has ever been asked for.
+     *
+     * Persisted rather than kept in memory so a refusal survives the process. The ongoing notice is
+     * useful but optional, and re-asking on every cold start would be the app pestering the user for
+     * something it can do without — the system stops showing the dialog after two refusals in any case,
+     * so the extra prompts would achieve nothing but noise.
+     */
+    fun notificationPromptShown(): Boolean = prefs.getBoolean(NOTIFICATION_PROMPT_SHOWN, false)
+
+    fun markNotificationPromptShown() {
+        prefs.edit().putBoolean(NOTIFICATION_PROMPT_SHOWN, true).apply()
+    }
+
     companion object {
         /**
          * No display name source was captured. Mirrors the sentinel the AIDL surface documents and
@@ -181,6 +195,7 @@ class OverrideStore(context: Context) {
         private const val LIST_SEPARATOR = ","
         private const val RECENT_PRESETS = "recent_presets"
         private const val TARGET_PACKAGES = "target_packages"
+        private const val NOTIFICATION_PROMPT_SHOWN = "notification_prompt_shown"
         private const val MAX_RECENT_PRESETS = 6
 
         private val MCC_MNC = Regex("[0-9]{5,6}")

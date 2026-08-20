@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The status bar masks a small icon down to its alpha channel, so this is one solid shape and the fill
+  colour is irrelevant: a SIM card with the notched corner, its contact pad cut out with evenOdd so the
+  silhouette still reads as a card rather than as a plain tag at 24dp.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M7,2h7l4,4v14a2,2 0 0 1 -2,2h-12a2,2 0 0 1 -2,-2v-16a2,2 0 0 1 2,-2zM9,12h6v7h-6z" />
+</vector>

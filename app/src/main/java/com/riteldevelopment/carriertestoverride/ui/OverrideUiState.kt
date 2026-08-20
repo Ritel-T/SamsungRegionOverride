@@ -117,6 +117,14 @@ data class OverrideUiState(
     val targetAppsAreDefault: Boolean = true,
     val wipeMode: WipeMode = WipeMode.NONE,
     val relaunchApps: Boolean = true,
+    /**
+     * A SIM is disguised, the ongoing notice cannot be posted, and the user has never been asked.
+     *
+     * Carried in state rather than checked when the screen resumes, because the moment it first becomes
+     * true is usually an apply performed with the screen already open — no resume follows it, so a
+     * resume-driven prompt would never fire on the run that needed it.
+     */
+    val notificationPromptDue: Boolean = false,
     val busy: BusyState? = null,
     val result: ResultState = ResultState.Initial,
     val dialog: DialogRequest? = null,

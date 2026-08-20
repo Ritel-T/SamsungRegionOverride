@@ -110,8 +110,10 @@ bytes that have been run on hardware.
 ## Using it
 
 1. Start Shizuku. The status row at the top must read `Connected · uid 2000 · granted`.
-2. Pick a SIM. The panel below the selector diffs what it reports now against what you are about to
-   make it report.
+2. Pick a SIM. The panel below the selector puts **REAL** against **DISGUISE** — the SIM's own identity
+   on the left, the mask on the right — and a `LIVE` badge sits on whichever of the two is currently in
+   force. With nothing applied the right side is a preview of what Apply would do; once a layer lands
+   the highlight slides across and the right side becomes what apps are actually being told.
 3. Pick a target region — search the preset list, or type the MCC/MNC, country ISO and carrier name by
    hand. A preset only fills those three fields; nothing consults it afterwards.
 4. Choose your layers. Both are on by default. If only TikTok-style apps matter to you, turn **Network**
@@ -123,6 +125,34 @@ bytes that have been run on hardware.
 
 The overflow menu also holds *Clear all CarrierConfig overrides*, which removes every transient **and
 persistent** test value on that subId — including ones written by other tools, which it cannot rebuild.
+
+## While an override is live
+
+An override is invisible from outside this app. Nothing in the system UI says the phone is reporting a
+foreign network, and the consequence that matters — calls and SMS stopping — is indistinguishable from
+poor coverage. So while any layer is live there is an ongoing notification per disguised SIM:
+
+```
+Samsung Region Override · Country + Network
+Pretending to be 🇬🇧 GB · EE
+SIM 1 is really 🇨🇳 CN · China Unicom
+[====== real ======][==== disguise ====]          [ Restore ]
+```
+
+**Restore** on it runs the same restore as the button in the app, with no confirmation — restore only
+ever takes state away, and the person pressing it has just noticed their phone is disguised. It opens
+the screen with the operation already running, rather than working headlessly: restore needs Shizuku,
+whose binder and permission prompt live behind an activity, and it is an operation that can fail.
+
+On Android 16 the notification asks to be a **Live Update**, which is what puts the country in the
+status bar chip — a two-letter answer to "what is my phone claiming right now" without opening
+anything. On this device One UI files it under *Live notifications* in the shade and mirrors it into the
+Now Bar. The request is not a guarantee: the platform decides, it can be turned off per app, and older
+releases have no such concept, so everything above still works as an ordinary ongoing notification.
+
+The notice tracks the SIM scan rather than the operations, so it is right whatever put the phone in this
+state — an apply here, a restore from the notification itself, or a reboot that dropped every override
+while the app was closed.
 
 ## How it works
 
@@ -217,12 +247,17 @@ break that has genuinely killed calling. `isImsRegistered` is the observable tha
 
 ## Known limits
 
-- **The display name is not restored.** The App country layer's name override lands in the subscription
-  database (`displayName`, `displayNameSource=CARRIER`), not only in the transient config, so it
-  survives both restore and reboot. It is cosmetic — the SIM's label, not an input to region detection —
-  but it is real. Fixing it needs the original name captured at apply time.
+- **The display name is restored from a snapshot, or not at all.** The App country layer's name override
+  lands in the subscription database (`displayName`, `displayNameSource=CARRIER`), not only in the
+  transient config, so it outlives both restore and reboot on its own. Restore puts it back from a
+  write-once capture taken before the first override. A SIM whose name was already overridden when this
+  app first saw it has no capture to work from, and is left alone rather than guessed at.
 - **No layer survives a reboot.** That is the undo story and also the limit: a phone that reboots loses
   its override.
+- **The ongoing notice needs the notification permission**, and it is asked for at the moment a SIM
+  first goes live rather than on first launch. Refused, everything still works — the reminder and its
+  Restore shortcut are simply not there, and one line lands in logcat under `OverrideNotifier` saying
+  why. Force-stopping the app also clears the notice while leaving the override in place.
 - **Preset codes are one widely reported MNC per carrier.** Large networks own many, especially Indian
   circles and US regional codes. That is enough for checks that read the MCC and the country, which is
   nearly all of them. The catalog holds 204 entries across 74 countries, of which exactly one —
@@ -241,7 +276,7 @@ app/src/main/java/…/
   CarrierOverrideUserService.java   the AIDL service Shizuku hosts at uid 2000
   TargetApps.java                   stop / wipe / relaunch, every step bounded and reported verbatim
   RuntimeProbe.java                 shell entry point
-  data/                             Shizuku, SIMs, snapshots, and operation orchestration
+  data/                             Shizuku, SIMs, snapshots, the live notice, and orchestration
   ui/                               Compose screen, view model, and the region catalog
 ```
 

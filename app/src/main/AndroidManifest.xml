@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      Only for the ongoing notice that a SIM is currently disguised. Nothing else this app does posts a
+      notification, so a refusal costs the user the reminder and the shortcut back, never an operation.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <instrumentation
         android:name="com.riteldevelopment.carriertestoverride.CarrierConfigInstrumentation"
         android:functionalTest="true"
@@ -39,9 +45,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!--
+          singleTop so the ongoing notification's Restore button reaches the running screen through
+          onNewIntent, rather than tearing it down and building a second copy of it.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:process=":ui">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

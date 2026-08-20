@@ -13,8 +13,8 @@ android {
         applicationId = "com.riteldevelopment.carriertestoverride"
         minSdk = 29
         targetSdk = 37
-        versionCode = 8
-        versionName = "3.4.0"
+        versionCode = 9
+        versionName = "3.5.0"
     }
 
     buildFeatures {

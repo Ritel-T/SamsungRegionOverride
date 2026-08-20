@@ -10,6 +10,7 @@ import com.riteldevelopment.carriertestoverride.data.InstrumentationHost
 import com.riteldevelopment.carriertestoverride.data.OperationKind
 import com.riteldevelopment.carriertestoverride.data.OperationOutcome
 import com.riteldevelopment.carriertestoverride.data.OverrideException
+import com.riteldevelopment.carriertestoverride.data.OverrideNotifier
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import com.riteldevelopment.carriertestoverride.data.OverrideStore
 import com.riteldevelopment.carriertestoverride.data.RegionTarget
@@ -43,6 +44,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     private val store = OverrideStore(application)
     private val sims = SimRepository(application, store)
     private val apps = TargetAppRepository(application, store)
+    private val notifier = OverrideNotifier(application)
     private val shizuku = ShizukuController()
     private val host = InstrumentationHost(application)
     private val repository = OverrideRepository(shizuku, host, store)
@@ -88,18 +90,28 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     /** Re-reads what every SIM currently reports. Called on resume and repeatedly after an operation. */
     fun refreshSims() {
         when (val scan = sims.scan()) {
-            is SimScan.Success -> _state.update { current ->
-                val preferred = when {
-                    scan.sims.any { it.subId == current.selectedSubId } -> current.selectedSubId
-                    scan.sims.any { it.subId == sims.defaultDataSubId() } -> sims.defaultDataSubId()
-                    else -> scan.sims.firstOrNull()?.subId ?: -1
+            is SimScan.Success -> {
+                // The ongoing notice tracks the scan rather than the operations, so it stays right
+                // whatever put the phone in this state: an apply here, a restore from the notification
+                // itself, or a reboot that quietly dropped every override while the app was closed.
+                notifier.sync(scan.sims)
+                val promptDue = scan.sims.any { it.disguised } &&
+                    !notifier.canPost() &&
+                    !store.notificationPromptShown()
+                _state.update { current ->
+                    val preferred = when {
+                        scan.sims.any { it.subId == current.selectedSubId } -> current.selectedSubId
+                        scan.sims.any { it.subId == sims.defaultDataSubId() } -> sims.defaultDataSubId()
+                        else -> scan.sims.firstOrNull()?.subId ?: -1
+                    }
+                    current.copy(
+                        sims = scan.sims,
+                        slotCount = scan.slotCount,
+                        selectedSubId = preferred,
+                        simScanError = null,
+                        notificationPromptDue = promptDue,
+                    )
                 }
-                current.copy(
-                    sims = scan.sims,
-                    slotCount = scan.slotCount,
-                    selectedSubId = preferred,
-                    simScanError = null,
-                )
             }
 
             is SimScan.Failure -> _state.update { it.copy(simScanError = scan.message) }
@@ -249,6 +261,43 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             return
         }
         startRestore(sim, restoreSim = flags.simIdentity, clearCountry = flags.appCountry)
+    }
+
+    /**
+     * The Restore button on the ongoing notification.
+     *
+     * Runs without a confirmation, which every other privileged path here asks for. Restore is the one
+     * operation that only ever takes state away — it puts the SIM back to what was captured before the
+     * first override — so the thing a confirmation exists to prevent cannot happen, and the button is
+     * pressed precisely by someone who has just noticed their phone is disguised and wants it to stop.
+     *
+     * A stale notification is answered quietly. The layer flags, not the notification, decide what gets
+     * undone, so a button pressed after the override is already gone finds nothing to do and says
+     * nothing — rather than opening the "no markers on this SIM" dialog, which is a question about a
+     * situation the user did not create.
+     */
+    fun restoreFromNotification(subId: Int) {
+        // Not silent, unlike the stale case below: the SIM this notice was about is gone from the phone,
+        // so the override cannot be undone from here, and a button that does nothing at all would leave
+        // the user believing it had been.
+        val sim = _state.value.sims.firstOrNull { it.subId == subId }
+            ?: return fail("The SIM that override was applied to is no longer in this phone.")
+        _state.update { it.copy(selectedSubId = subId) }
+        val flags = store.flags(subId)
+        if (!flags.any) return
+        startRestore(sim, restoreSim = flags.simIdentity, clearCountry = flags.appCountry)
+    }
+
+    /**
+     * Records that the notification permission has been asked for, and stops asking.
+     *
+     * Called by the screen as it launches the system dialog rather than when the answer comes back. A
+     * refusal and a grant are the same thing here — the app asked once, and the flag has to be set
+     * before the state next recomputes, or the same dialog is requested again on the next scan.
+     */
+    fun markNotificationPromptShown() {
+        store.markNotificationPromptShown()
+        _state.update { it.copy(notificationPromptDue = false) }
     }
 
     fun requestClearAll() {
