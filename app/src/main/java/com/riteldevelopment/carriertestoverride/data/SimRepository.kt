@@ -35,7 +35,34 @@ data class SimInfo(
 
     val realOperatorName: String get() = original.operatorName ?: operatorName
 
-    val realCountryIso: String get() = original.countryIso ?: countryIso
+    /**
+     * Falls back to the MCC when the platform reports no country at all, which some SIMs do. The
+     * operator numeric is present in that case and carries the same fact, so there is no reason to
+     * show a blank where the country is known.
+     */
+    val realCountryIso: String
+        get() = (original.countryIso ?: countryIso).ifEmpty { countryIsoForMccMnc(realOperatorNumeric) }
+
+    /**
+     * The country this subscription is currently claiming to be in.
+     *
+     * Not simply [countryIso]. The two layers assert a region in different ways: the country layer
+     * writes an ISO code the platform hands straight back, while the SIM identity layer rewrites only
+     * MCC/MNC — so after a network-only apply `getSimCountryIso()` still returns the real country, and
+     * reading it would have the screen and the notification announce "23430" and "CN" side by side.
+     * That is not an identity anyone is presenting. MCC 234 *is* the United Kingdom, it is what the
+     * region checks this tool exists to influence actually read, and a network-only override has
+     * therefore already achieved what it was applied for.
+     *
+     * The explicit override wins where there is one: it is the more specific assertion, and it is what
+     * `getSimCountryIso()` reports to anything that asks.
+     */
+    val disguiseCountryIso: String
+        get() = if (countryLayerLive) {
+            countryIso
+        } else {
+            countryIsoForMccMnc(operatorNumeric).ifEmpty { countryIso }
+        }
 
     /**
      * Whether each layer is *still* rewriting this subscription, rather than merely having been applied.

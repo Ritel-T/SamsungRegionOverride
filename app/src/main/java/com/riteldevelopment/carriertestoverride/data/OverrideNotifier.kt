@@ -25,10 +25,17 @@ import com.riteldevelopment.carriertestoverride.R
  * no way to tell the two apart. So while any layer is live there is an ongoing notification saying so,
  * and it carries the undo, because the undo is what the user will be reaching for.
  *
- * On Android 16 it asks to be a Live Update, which is what puts the country code in the status bar
- * chip. That request is not a guarantee: the platform decides, the user can turn promotion off per app,
- * and older releases have no such concept — so the notification is written to be complete and useful as
- * an ordinary ongoing notification, with promotion as an addition rather than the mechanism.
+ * On Android 16 it asks to be a Live Update, which is what puts the flag in the status bar chip. That
+ * request is not a guarantee: the platform decides, the user can turn promotion off per app, and older
+ * releases have no such concept — so the notification is written to be complete and useful as an
+ * ordinary ongoing notification, with promotion as an addition rather than the mechanism.
+ *
+ * No style is set. `ProgressStyle` is the obvious candidate — it is on the short list of styles a
+ * promoted notification may carry — and an earlier revision used it to draw the same left-to-right
+ * transform the screen draws, as a grey half and a coloured half. That was worse than drawing nothing:
+ * a progress bar frozen at its midpoint reads as a stalled operation, and nothing here is in progress.
+ * Promotion turns out not to need it either. Measured on SM-S938B: with the style removed the chip
+ * still appears, so the bar was earning its place in neither meaning nor mechanism.
  *
  * One notification per subscription, keyed by subId, because two SIMs can be disguised independently
  * and a merged one could not carry a Restore button that means anything.
@@ -126,7 +133,7 @@ class OverrideNotifier(context: Context) {
      */
     @SuppressLint("MissingPermission")
     private fun post(sim: SimInfo) {
-        val disguise = describeRegion(sim.countryIso, sim.operatorName).ifEmpty { UNKNOWN_REGION }
+        val disguise = describeRegion(sim.disguiseCountryIso, sim.operatorName).ifEmpty { UNKNOWN_REGION }
         val real = describeRegion(sim.realCountryIso, sim.realOperatorName).ifEmpty { UNKNOWN_REGION }
 
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
@@ -134,15 +141,12 @@ class OverrideNotifier(context: Context) {
             .setContentTitle("Pretending to be $disguise")
             .setContentText("${sim.displayName} is really $real")
             .setSubText(layerSummary(sim))
-            // The status bar chip, which is all most people will ever see of this. Two letters and a
-            // flag is the whole message: your phone is currently claiming to be in this country.
             .setShortCriticalText(chipText(sim))
-            .setStyle(transformBar())
             .setRequestPromotedOngoing(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setColor(DISGUISE_COLOR)
+            .setColor(ACCENT_COLOR)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(activityIntent(sim.subId, restore = false))
             .addAction(
@@ -158,21 +162,6 @@ class OverrideNotifier(context: Context) {
             .onFailure { Log.w(TAG, "notify failed for sub ${sim.subId}", it) }
     }
 
-    /**
-     * The same left-to-right transform the screen draws, in the one widget a notification has for it.
-     *
-     * `ProgressStyle` is what makes an ongoing notification eligible for promotion on Android 16, so
-     * something had to fill it; a two-segment bar sitting at its far end happens to say exactly the
-     * right thing — you started at the identity on the left and you are now all the way over at the one
-     * on the right. `setStyledByProgress(false)` keeps each segment its own colour rather than having
-     * the platform grey out whatever the tracker has not reached yet, which would defeat the point.
-     */
-    private fun transformBar(): NotificationCompat.ProgressStyle = NotificationCompat.ProgressStyle()
-        .addProgressSegment(NotificationCompat.ProgressStyle.Segment(HALF).setColor(REAL_COLOR))
-        .addProgressSegment(NotificationCompat.ProgressStyle.Segment(HALF).setColor(DISGUISE_COLOR))
-        .setStyledByProgress(false)
-        .setProgress(HALF * 2)
-
     /** Which switches are in force, so the reader knows whether calls are at risk without opening the app. */
     private fun layerSummary(sim: SimInfo): String = when {
         sim.countryLayerLive && sim.simLayerLive -> "Country + Network"
@@ -181,15 +170,17 @@ class OverrideNotifier(context: Context) {
     }
 
     /**
-     * The promoted chip has room for a handful of characters. The country the phone is claiming is the
-     * most useful thing to spend them on — except when only the Network layer is live, where the country
-     * is still the real one and saying it would be actively misleading.
+     * What the status bar chip says, which is all most people will ever see of this.
+     *
+     * A flag alone. The chip has room for a handful of characters and a flag spends them better than
+     * any text can: it is legible at that size, it is the same mark the screen's own headline block
+     * carries, and it answers the only question the status bar can usefully answer — which country
+     * this phone is currently claiming to be in. The letters are there for a country whose flag the
+     * system font has no glyph for, where the alternative on screen would be a tofu box.
      */
     private fun chipText(sim: SimInfo): String {
-        if (!sim.countryLayerLive) return sim.operatorNumeric.ifBlank { "SIM" }
-        val iso = sim.countryIso.uppercase()
-        val flag = flagEmoji(sim.countryIso)
-        return if (flag.isEmpty()) iso.ifBlank { "SIM" } else "$flag $iso"
+        val iso = sim.disguiseCountryIso
+        return flagEmoji(iso).ifEmpty { iso.uppercase().ifBlank { "SIM" } }
     }
 
     /**
@@ -276,16 +267,20 @@ class OverrideNotifier(context: Context) {
         /** Marks the notifications this class owns, so it withdraws only its own. */
         const val NOTIFICATION_TAG = "override_live"
 
-        /** Halves, so the two segments meet in the middle and the bar's maximum is their sum. */
-        const val HALF = 50
-
         /**
-         * Fixed, unlike the in-app palette. A notification is drawn on the system's shade in whichever
-         * theme that is set to, so these have to hold up on both; the app's own light-mode amber and
-         * green are too dark to read on a dark shade.
+         * The tint the platform gives the small icon, the app name, and — on One UI — the whole
+         * background of the status bar chip.
+         *
+         * One fixed mid-tone, unlike the in-app palette, because a notification is drawn on the
+         * system's shade in whichever theme *that* is set to: the app's own light and dark petrols are
+         * each unreadable against the other theme, so this sits between them and holds up on both.
+         *
+         * It is the app's accent rather than a warning colour. The notification's job is to be
+         * recognisably this tool while a disguise is live; what the disguise costs is said in words,
+         * where it can be said precisely, and a shouting chip in the status bar all day would only
+         * teach the user to stop seeing it.
          */
-        const val DISGUISE_COLOR = 0xFFE8B057.toInt()
-        const val REAL_COLOR = 0xFF8A9497.toInt()
+        const val ACCENT_COLOR = 0xFF2F8C9E.toInt()
     }
 }
 

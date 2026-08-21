@@ -160,6 +160,8 @@ fun OverrideScreen(
                     targetMccMnc = state.mccMnc,
                     targetCountryIso = state.countryIso,
                     targetCarrierName = state.carrierName,
+                    countryLayerArmed = state.layers.appCountry,
+                    networkLayerArmed = state.layers.simIdentity,
                 )
             }
 

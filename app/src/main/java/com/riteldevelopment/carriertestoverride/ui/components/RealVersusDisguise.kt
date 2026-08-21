@@ -36,15 +36,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.data.SimInfo
+import com.riteldevelopment.carriertestoverride.data.countryIsoForMccMnc
 import com.riteldevelopment.carriertestoverride.data.describeRegion
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
 
 /**
- * The lane the arrow sits in. The label, numeric and detail rows all reserve exactly the same gap, so
- * the three rows stay in the same two columns and the numerals of the two sides line up digit for digit.
+ * The gutter between the two columns. The label, numeric and detail rows all reserve exactly the same
+ * gap, so the three rows stay in the same two columns and the numerals of the two sides line up digit
+ * for digit.
  */
-private val ArrowLane: Dp = 34.dp
+private val Gutter: Dp = 26.dp
 
 /** Card padding, needed as a number because the sliding highlight is painted outside the padded area. */
 private val CardPadding: Dp = 14.dp
@@ -68,12 +70,12 @@ private const val UnknownLabel = "Unknown"
  *  * **A layer live** — left is the snapshot taken before the first override, right is what the SIM
  *    reports, which is what apps are actually being told.
  *
- * Which of the two is in force is the single most important fact on the screen, so it is stated four
- * ways over: a highlight that slides between the columns, a LIVE badge that travels with it, the
- * inactive side fading back, and the arrow taking the live colour and leaning with it. Position and
- * opacity survive a grayscale screenshot and a colour-blind reader, which colour alone would not.
+ * Which of the two is in force is the single most important fact on the screen, so it is stated three
+ * ways over: a highlight that slides between the columns, a LIVE badge that travels with it, and the
+ * inactive side fading back. Position and opacity survive a grayscale screenshot and a colour-blind
+ * reader, which colour alone would not.
  *
- * Only the values animate independently. The frame, labels and lane are static, so the caller's
+ * Only the values animate independently. The frame, labels and gutter are static, so the caller's
  * post-operation polling — it re-reads the SIMs several times over a few seconds — reads as the numbers
  * flipping and the highlight travelling, not as the whole block redrawing.
  */
@@ -83,6 +85,8 @@ fun RealVersusDisguise(
     targetMccMnc: String,
     targetCountryIso: String,
     targetCarrierName: String,
+    countryLayerArmed: Boolean,
+    networkLayerArmed: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val live = sim?.disguised == true
@@ -96,23 +100,40 @@ fun RealVersusDisguise(
     // still occupies a line, which keeps the block from changing height when a SIM appears.
     val realDetail = if (sim == null) "" else describe(sim.realCountryIso, sim.realOperatorName)
 
+    // What Apply would leave in force, switch by switch, rather than the whole target regardless. A
+    // disarmed layer writes nothing: with the network layer off the MCC stays as it is, and with the
+    // country layer off no ISO code is written at all, so the region is whatever the MCC then says.
+    // Previewing the full target either way would promise changes that are not going to happen.
+    val previewNumeric = if (networkLayerArmed) targetMccMnc else sim?.realOperatorNumeric.orEmpty()
+    val previewCountryIso = if (countryLayerArmed) {
+        targetCountryIso.ifEmpty { countryIsoForMccMnc(previewNumeric) }
+    } else {
+        countryIsoForMccMnc(previewNumeric).ifEmpty { sim?.realCountryIso.orEmpty() }
+    }
+
     // Live: what the modem reports, because that is what apps are being told right now — and if only one
-    // layer landed, showing it is how the user finds out. Not live: the target, as a preview of Apply.
+    // layer landed, showing it is how the user finds out. Not live: the preview of Apply.
     val disguiseNumeric = when {
         live -> sim.operatorNumeric.ifBlank { UnknownLabel }
-        else -> targetMccMnc.ifBlank { UnknownLabel }
+        else -> previewNumeric.ifBlank { UnknownLabel }
     }
+    // The country comes from [SimInfo.disguiseCountryIso], and from the same derivation on the preview
+    // side, rather than from `getSimCountryIso()` directly. A network-only override moves the MCC and
+    // nothing else, so reading the platform's country back would pair a British operator numeric with
+    // the real country beside it — a region nobody is pretending to be, on the one line whose whole job
+    // is to name the region being pretended.
     val disguiseDetail = when {
-        live -> describe(sim.countryIso, sim.operatorName)
-        else -> describe(targetCountryIso, targetCarrierName)
+        live -> describe(sim.disguiseCountryIso, sim.operatorName)
+        else -> describe(previewCountryIso, targetCarrierName)
     }
 
     val successColor = LocalOverrideColors.current.success
     val accentColor = MaterialTheme.colorScheme.primary
     val inkColor = MaterialTheme.colorScheme.onSurface
     val quietColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
-    // One driver for every part of the effect, so the highlight, the fades and the arrow can never
+    // One driver for every part of the effect, so the highlight, the fades and the values can never
     // disagree about which side is in force.
     val slide by animateFloatAsState(
         targetValue = if (live) 1f else 0f,
@@ -148,7 +169,7 @@ fun RealVersusDisguise(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SideLabel(text = "REAL", live = !live, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(ArrowLane))
+            Spacer(Modifier.width(Gutter))
             SideLabel(text = "DISGUISE", live = live, modifier = Modifier.weight(1f))
         }
 
@@ -171,10 +192,10 @@ fun RealVersusDisguise(
                 )
             }
             Box(
-                modifier = Modifier.width(ArrowLane),
+                modifier = Modifier.width(Gutter),
                 contentAlignment = Alignment.Center,
             ) {
-                TransformArrow(color = if (sim == null) quietColor else disguiseColor, slide = slide)
+                DirectionMark(color = outlineColor)
             }
             Crossfade(
                 targetState = disguiseNumeric,
@@ -201,7 +222,7 @@ fun RealVersusDisguise(
             ) { detail ->
                 DetailLine(text = detail, color = quietColor.fade(1f - slide))
             }
-            Spacer(Modifier.width(ArrowLane))
+            Spacer(Modifier.width(Gutter))
             Crossfade(
                 targetState = disguiseDetail,
                 modifier = Modifier.weight(1f),
@@ -235,11 +256,11 @@ private fun Color.fade(active: Float): Color =
 private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color) {
     val pad = CardPadding.toPx()
     val bleed = HighlightBleed.toPx()
-    val lane = ArrowLane.toPx()
-    val column = (size.width - 2 * pad - lane) / 2f
+    val gutter = Gutter.toPx()
+    val column = (size.width - 2 * pad - gutter) / 2f
     if (column <= 0f) return
     val left = pad - bleed
-    val right = pad + column + lane - bleed
+    val right = pad + column + gutter - bleed
     drawRoundRect(
         color = color,
         topLeft = Offset(left + (right - left) * slide, bleed),
@@ -283,38 +304,33 @@ private fun DetailLine(
 }
 
 /**
- * The mark in the lane, drawn rather than imported: only the core Material icon set is on the classpath
- * and it has no plain arrow, and a text glyph would be laid out by whichever fallback font the locale
- * supplies.
+ * The mark in the gutter: which way to read the two columns, and nothing else.
  *
- * It leans with the highlight — back over the real side while the SIM is itself, forward once the
- * disguise is in force. A few dp of travel is enough to make the block read as one moving thing rather
- * than a static frame with a highlight sliding underneath it.
+ * This was a full arrow that took the live colour and leaned with the highlight. It was the one thing
+ * on the block competing with the block — a shaft and a head wide enough to fill the gutter, drawn in
+ * an accent, shifting about between two columns of quiet figures. Four cues for one fact was one too
+ * many, and the one to drop is the one carrying least: direction never changes, so animating it bought
+ * nothing that position and opacity were not already saying.
+ *
+ * So, a bare chevron at outline weight, static. It reads as punctuation between the two columns rather
+ * than as a graphic sitting between them. Drawn rather than imported because only the core Material
+ * icon set is on the classpath, and a text glyph would be laid out by whichever fallback font the
+ * locale happened to supply.
  */
 @Composable
-private fun TransformArrow(
+private fun DirectionMark(
     color: Color,
-    slide: Float,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier.size(width = 22.dp, height = 12.dp)) {
+    Canvas(modifier = modifier.size(width = 5.dp, height = 10.dp)) {
         val stroke = 1.5.dp.toPx()
-        val head = 4.5.dp.toPx()
-        val lean = 3.dp.toPx() * (slide * 2f - 1f)
-        val midY = size.height / 2f
-        val tail = Offset(lean, midY)
-        val tip = Offset(size.width + lean, midY)
-        drawLine(color, tail, tip, strokeWidth = stroke, cap = StrokeCap.Round)
+        // Half a stroke in on every side, or the round caps would be clipped by the canvas bounds.
+        val inset = stroke / 2f
+        val tip = Offset(size.width - inset, size.height / 2f)
+        drawLine(color, Offset(inset, inset), tip, strokeWidth = stroke, cap = StrokeCap.Round)
         drawLine(
             color,
-            Offset(tip.x - head, midY - head),
-            tip,
-            strokeWidth = stroke,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color,
-            Offset(tip.x - head, midY + head),
+            Offset(inset, size.height - inset),
             tip,
             strokeWidth = stroke,
             cap = StrokeCap.Round,

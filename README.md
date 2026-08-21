@@ -34,6 +34,13 @@ internal names, which is what the code and the result reports use.
 The SIM identity layer writes only the four fields it needs. ICCID, GID1, GID2, APN and the carrier
 privilege rules go in as `null`, so the SIM keeps its real values for all of them.
 
+Either layer alone is enough to move the region, and the tool says so. The country layer writes an ISO
+code the platform hands straight back from `getSimCountryIso()`. The network layer writes no country at
+all — but the MCC *is* the country under ITU-T E.212, and 234 is the United Kingdom whether or not
+anything else on the phone has caught up. So where no ISO override is in force, the screen and the
+notification name the disguised region from the MCC rather than pairing a British operator numeric with
+the country the SIM really came from.
+
 ## What it costs
 
 **Applying the App country layer deregisters IMS on that subscription.** Mobile data is unaffected —
@@ -136,7 +143,7 @@ poor coverage. So while any layer is live there is an ongoing notification per d
 Samsung Region Override · Country + Network
 Pretending to be 🇬🇧 GB · EE
 SIM 1 is really 🇨🇳 CN · China Unicom
-[====== real ======][==== disguise ====]          [ Restore ]
+                                                  [ Restore ]
 ```
 
 **Restore** on it runs the same restore as the button in the app, with no confirmation — restore only
@@ -144,11 +151,12 @@ ever takes state away, and the person pressing it has just noticed their phone i
 the screen with the operation already running, rather than working headlessly: restore needs Shizuku,
 whose binder and permission prompt live behind an activity, and it is an operation that can fail.
 
-On Android 16 the notification asks to be a **Live Update**, which is what puts the country in the
-status bar chip — a two-letter answer to "what is my phone claiming right now" without opening
-anything. On this device One UI files it under *Live notifications* in the shade and mirrors it into the
-Now Bar. The request is not a guarantee: the platform decides, it can be turned off per app, and older
-releases have no such concept, so everything above still works as an ordinary ongoing notification.
+On Android 16 the notification asks to be a **Live Update**, which is what puts the disguised country's
+flag in the status bar chip — a one-glyph answer to "what is my phone claiming right now" without
+opening anything. On this device One UI files it under *Live notifications* in the shade and mirrors
+it into the Now Bar. The request is not a guarantee: the platform decides, it can be turned off per
+app, and older releases have no such concept, so everything above still works as an ordinary ongoing
+notification.
 
 The notice tracks the SIM scan rather than the operations, so it is right whatever put the phone in this
 state — an apply here, a restore from the notification itself, or a reboot that dropped every override
