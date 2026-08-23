@@ -34,13 +34,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.ui.RegionPreset
 import com.riteldevelopment.carriertestoverride.ui.RegionPresets
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
+import java.util.Locale
 
 /**
  * The catalog entry currently loaded into the three target fields.
@@ -59,6 +63,7 @@ fun PresetField(
 ) {
     var picking by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
+    val locale = LocalConfiguration.current.locales[0]
 
     Row(
         modifier = modifier
@@ -71,15 +76,17 @@ fun PresetField(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = preset?.let { "${it.flag} ${it.label}" } ?: "Custom",
+                text = preset?.let { "${it.flag} ${it.displayCountry(locale)} · ${it.carrier}" }
+                    ?: stringResource(R.string.preset_custom),
                 style = MaterialTheme.typography.bodyLarge,
                 color = scheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = preset?.let { "${it.mccMnc} · ${it.countryIso.uppercase()}" }
-                    ?: "Edited by hand",
+                text = preset?.let {
+                    "${it.mccMnc} · ${it.countryIso.uppercase(Locale.ROOT)}"
+                } ?: stringResource(R.string.preset_edited_by_hand),
                 style = MaterialTheme.typography.bodySmall.merge(TabularFigures),
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
@@ -87,7 +94,7 @@ fun PresetField(
         }
         Icon(
             imageVector = Icons.Filled.KeyboardArrowDown,
-            contentDescription = "Choose a region",
+            contentDescription = stringResource(R.string.preset_choose_region),
             tint = scheme.onSurfaceVariant,
         )
     }
@@ -124,7 +131,8 @@ private fun PresetPickerDialog(
     onPick: (RegionPreset) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    val results = remember(query) { RegionPresets.search(query) }
+    val locale = LocalConfiguration.current.locales[0]
+    val results = remember(query, locale) { RegionPresets.search(query, locale) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -141,14 +149,14 @@ private fun PresetPickerDialog(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     singleLine = true,
-                    label = { Text("Country, carrier or code") },
+                    label = { Text(stringResource(R.string.preset_search_label)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 )
                 Spacer(Modifier.height(8.dp))
 
                 if (results.isEmpty()) {
                     Text(
-                        text = "No match. Close this and type the values in directly.",
+                        text = stringResource(R.string.preset_no_match),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -174,7 +182,7 @@ private fun PresetPickerDialog(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Close") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                 }
             }
         }
@@ -212,7 +220,7 @@ private fun PresetRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = preset.country,
+                text = preset.displayCountry(LocalConfiguration.current.locales[0]),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
                 maxLines = 1,
@@ -229,7 +237,7 @@ private fun PresetRow(
                     color = if (selected) scheme.onSecondaryContainer else scheme.onSurface,
                 )
                 Text(
-                    text = preset.countryIso.uppercase(),
+                    text = preset.countryIso.uppercase(Locale.ROOT),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
                 )

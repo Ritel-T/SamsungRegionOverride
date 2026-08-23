@@ -30,7 +30,16 @@ data class RegionPreset(
     /** Stable across list reordering, unlike an index — the selection survives a filtered list. */
     val id: String get() = "$mccMnc@$countryIso"
 
-    val label: String get() = "$country · $carrier"
+    /** Country names come from ICU/Java locale data instead of maintaining 200 translated entries. */
+    fun displayCountry(locale: Locale = Locale.getDefault()): String = runCatching {
+        Locale.Builder()
+            .setRegion(countryIso.uppercase(Locale.ROOT))
+            .build()
+            .getDisplayCountry(locale)
+            .ifBlank { country }
+    }.getOrDefault(country)
+
+    val label: String get() = "${displayCountry()} · $carrier"
 
     /** The country's flag, so a row or chip can be recognised without being read word by word. */
     val flag: String get() = flagEmoji(countryIso)
@@ -40,9 +49,10 @@ data class RegionPreset(
     }
 
     /** Every whitespace-separated term must appear, so "uk ee" narrows instead of widening. */
-    fun matches(query: String): Boolean {
+    fun matches(query: String, locale: Locale = Locale.getDefault()): Boolean {
         val terms = query.lowercase(Locale.ROOT).split(' ').filter { it.isNotBlank() }
-        return terms.all { haystack.contains(it) }
+        val localized = "${displayCountry(locale)} $haystack".lowercase(Locale.ROOT)
+        return terms.all { localized.contains(it) }
     }
 }
 
@@ -280,6 +290,6 @@ object RegionPresets {
 
     fun byId(id: String?): RegionPreset? = id?.let { wanted -> ALL.firstOrNull { it.id == wanted } }
 
-    fun search(query: String): List<RegionPreset> =
-        if (query.isBlank()) ALL else ALL.filter { it.matches(query) }
+    fun search(query: String, locale: Locale = Locale.getDefault()): List<RegionPreset> =
+        if (query.isBlank()) ALL else ALL.filter { it.matches(query, locale) }
 }
