@@ -6,6 +6,8 @@ import android.os.Process;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -82,7 +84,8 @@ final class TelephonyBridge {
         Class<?> iface = Class.forName("sub".equals(scope) ? SUB_INTERFACE_NAME : INTERFACE_NAME);
         List<String> matches = new ArrayList<>();
         for (Method method : iface.getMethods()) {
-            if (method.getName().toLowerCase().contains(pattern.toLowerCase())) {
+            if (method.getName().toLowerCase(java.util.Locale.ROOT)
+                    .contains(pattern.toLowerCase(java.util.Locale.ROOT))) {
                 matches.add(signature(method));
             }
         }
@@ -139,15 +142,10 @@ final class TelephonyBridge {
     static String cycleUiccApplications(int subId) throws Exception {
         requireValidSubId(subId);
         Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
-        Method setter = null;
-        for (Method candidate : iface.getMethods()) {
-            if ("setUiccApplicationsEnabled".equals(candidate.getName())) {
-                setter = candidate;
-                break;
-            }
-        }
+        Method setter = findUiccToggleMethod(iface);
         if (setter == null) {
-            return "setUiccApplicationsEnabled: unavailable on this build";
+            throw new UnsupportedOperationException(
+                    "No supported setUiccApplicationsEnabled signature on this build");
         }
         Object sub = getProxy("isub", SUB_INTERFACE_NAME);
         invoke(setter, sub, buildToggleArgs(setter, subId, false));
@@ -158,6 +156,22 @@ final class TelephonyBridge {
         }
         invoke(setter, sub, buildToggleArgs(setter, subId, true));
         return "UICC applications cycled for subId=" + subId + " via " + signature(setter);
+    }
+
+    /** Only the two signatures observed in AOSP/vendor interfaces are safe to invoke. */
+    static Method findUiccToggleMethod(Class<?> iface) {
+        for (Method candidate : iface.getMethods()) {
+            if (!"setUiccApplicationsEnabled".equals(candidate.getName())) {
+                continue;
+            }
+            Class<?>[] params = candidate.getParameterTypes();
+            if (params.length == 2
+                    && ((params[0] == int.class && params[1] == boolean.class)
+                    || (params[0] == boolean.class && params[1] == int.class))) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     /** The two known argument orders for setUiccApplicationsEnabled differ by vendor and version. */
@@ -191,32 +205,7 @@ final class TelephonyBridge {
      *         the caller stores nothing and restore later skips the name entirely.
      */
     static String[] readDisplayName(int subId) throws Exception {
-        requireValidSubId(subId);
-        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
-        Method getter = null;
-        for (Method candidate : iface.getMethods()) {
-            if (!"getActiveSubscriptionInfo".equals(candidate.getName())) {
-                continue;
-            }
-            Class<?>[] params = candidate.getParameterTypes();
-            if (params.length >= 1 && params[0] == int.class) {
-                getter = candidate;
-                break;
-            }
-        }
-        if (getter == null) {
-            return null;
-        }
-        // The trailing parameters are the calling package and feature id, and their count varies by
-        // version — filling every String slot with the shell package works for both known shapes.
-        Class<?>[] params = getter.getParameterTypes();
-        Object[] args = new Object[params.length];
-        args[0] = subId;
-        for (int i = 1; i < args.length; i++) {
-            args[i] = params[i] == String.class ? SHELL_PACKAGE : null;
-        }
-
-        Object info = invokeForResult(getter, getProxy("isub", SUB_INTERFACE_NAME), args);
+        Object info = activeSubscriptionInfo(subId);
         if (info == null) {
             return null;
         }
@@ -236,6 +225,62 @@ final class TelephonyBridge {
             // restore will decline to write it rather than guess a priority — see restoreDisplayName.
         }
         return new String[]{name.toString(), Integer.toString(source)};
+    }
+
+    /**
+     * One-way card identity used only to prevent a saved snapshot being restored onto a replacement
+     * SIM that happened to inherit the same subId. The raw ICCID never leaves this method.
+     */
+    static String readSimFingerprint(int subId) throws Exception {
+        Object info = activeSubscriptionInfo(subId);
+        if (info == null) {
+            return null;
+        }
+        Method getter;
+        try {
+            getter = info.getClass().getMethod("getIccId");
+        } catch (NoSuchMethodException unavailable) {
+            return null;
+        }
+        Object raw = invokeForResult(getter, info, new Object[0]);
+        if (!(raw instanceof String) || ((String) raw).trim().isEmpty()) {
+            return null;
+        }
+        byte[] digest = MessageDigest.getInstance("SHA-256")
+                .digest(((String) raw).trim().getBytes(StandardCharsets.UTF_8));
+        StringBuilder encoded = new StringBuilder();
+        for (int index = 0; index < 16; index++) {
+            encoded.append(String.format(java.util.Locale.ROOT, "%02x", digest[index] & 0xff));
+        }
+        return encoded.toString();
+    }
+
+    private static Object activeSubscriptionInfo(int subId) throws Exception {
+        requireValidSubId(subId);
+        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
+        Method getter = null;
+        for (Method candidate : iface.getMethods()) {
+            if (!"getActiveSubscriptionInfo".equals(candidate.getName())) {
+                continue;
+            }
+            Class<?>[] params = candidate.getParameterTypes();
+            if (params.length >= 1 && params[0] == int.class) {
+                getter = candidate;
+                break;
+            }
+        }
+        if (getter == null) {
+            return null;
+        }
+        // The trailing parameters are the calling package and feature id, and their count varies by
+        // version. Filling every String slot with the shell package works for both known shapes.
+        Class<?>[] params = getter.getParameterTypes();
+        Object[] args = new Object[params.length];
+        args[0] = subId;
+        for (int i = 1; i < args.length; i++) {
+            args[i] = params[i] == String.class ? SHELL_PACKAGE : null;
+        }
+        return invokeForResult(getter, getProxy("isub", SUB_INTERFACE_NAME), args);
     }
 
     /**

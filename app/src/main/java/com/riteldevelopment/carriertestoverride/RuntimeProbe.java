@@ -11,10 +11,9 @@ package com.riteldevelopment.carriertestoverride;
  *     com.riteldevelopment.carriertestoverride.RuntimeProbe sim-probe
  * </pre>
  *
- * <p>The {@code sim-*} commands take one field at a time so the effect of each on the live IMS
- * registration can be measured separately. That is how the SIM identity layer — the fake IMSI first
- * among the suspects — was ruled out as the cause of the voice/SMS regression, leaving the app country
- * layer. {@code -} means "pass null for this field".</p>
+ * <p>The {@code sim-*} commands take one field at a time so the effect of each on live IMS can be
+ * measured separately. That isolated the fake MCC/MNC as the identity used on the next registration;
+ * CarrierConfig changes commonly trigger that registration. {@code -} means "pass null".</p>
  */
 public final class RuntimeProbe {
     private RuntimeProbe() {
@@ -69,6 +68,12 @@ public final class RuntimeProbe {
                     + TelephonyBridge.isImsRegistered(Integer.parseInt(args[1])));
             return;
         }
+        if ("sim-fingerprint".equals(command) && args.length == 2) {
+            String fingerprint = TelephonyBridge.readSimFingerprint(Integer.parseInt(args[1]));
+            System.out.println("simFingerprint(" + args[1] + ")="
+                    + (fingerprint == null ? "<unavailable>" : fingerprint));
+            return;
+        }
         if ("ims-restart".equals(command) && args.length == 2) {
             System.out.println(TelephonyBridge.restartIms(Integer.parseInt(args[1])));
             return;
@@ -109,7 +114,7 @@ public final class RuntimeProbe {
                 + " | methods NAME_SUBSTRING | sub-methods NAME_SUBSTRING"
                 + " | sim-set SUB_ID MCCMNC|- IMSI|- NAME|-"
                 + " | sim-restore SUB_ID MCCMNC|- NAME|-"
-                + " | ims-state SUB_ID | ims-restart SLOT_INDEX"
+                + " | ims-state SUB_ID | sim-fingerprint SUB_ID | ims-restart SLOT_INDEX"
                 + " | uicc-cycle SUB_ID | uicc-refresh SUB_ID"
                 + " | display-read SUB_ID | display-set SUB_ID NAME SOURCE"
                 + " | country-apply SUB_ID ISO NAME"
