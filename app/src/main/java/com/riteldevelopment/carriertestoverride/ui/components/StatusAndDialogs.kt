@@ -1,5 +1,6 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
+import android.icu.text.ListFormatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +21,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.ShizukuStatus
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.data.TargetApp
@@ -71,7 +75,7 @@ fun ShizukuStatusRow(
         ShizukuStatus.NotRunning -> ShizukuVisual(
             icon = Icons.Filled.Warning,
             tint = MaterialTheme.colorScheme.tertiary,
-            value = AnnotatedString("Not running — start Shizuku first"),
+            value = AnnotatedString(stringResource(R.string.shizuku_not_running)),
         )
 
         is ShizukuStatus.Connected -> ShizukuVisual(
@@ -81,18 +85,22 @@ fun ShizukuStatusRow(
             } else {
                 MaterialTheme.colorScheme.error
             },
-            value = buildAnnotatedString {
-                append("Connected · uid ")
-                appendFigures(status.uid.toString())
-                append(" · ")
-                append(if (status.granted) "granted" else "not granted")
-            },
+            value = AnnotatedString(
+                stringResource(
+                    R.string.shizuku_connected,
+                    status.uid,
+                    stringResource(
+                        if (status.granted) R.string.shizuku_granted
+                        else R.string.shizuku_not_granted
+                    ),
+                )
+            ),
         )
 
         is ShizukuStatus.Unavailable -> ShizukuVisual(
             icon = Icons.Filled.Warning,
             tint = MaterialTheme.colorScheme.error,
-            value = AnnotatedString("Unavailable: ${status.reason}"),
+            value = AnnotatedString(stringResource(R.string.shizuku_unavailable, status.reason)),
         )
     }
 
@@ -125,7 +133,7 @@ fun ShizukuStatusRow(
                 modifier = Modifier.size(16.dp),
             )
             // The label stays neutral: it names the field, and only the value carries state colour.
-            MicroLabel(text = "SHIZUKU")
+            MicroLabel(text = stringResource(R.string.label_shizuku))
         }
         Text(
             text = visual.value,
@@ -176,16 +184,16 @@ fun OverrideDialogs(
 
         is DialogRequest.ConfirmApply -> AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Apply this region?") },
+            title = { Text(stringResource(R.string.dialog_apply_title)) },
             text = { Text(applyDialogBody(dialog)) },
             confirmButton = {
                 TextButton(onClick = { onConfirmApply(dialog) }) {
-                    Text("Apply")
+                    Text(stringResource(R.string.action_start_disguise))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -194,22 +202,18 @@ fun OverrideDialogs(
             val sim = dialog.sim
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Nothing recorded for this SIM") },
+                title = { Text(stringResource(R.string.dialog_restore_without_markers_title)) },
                 text = {
-                    Text(
-                        "Restoring anyway uses the layer switches as they stand. Clearing app country " +
-                            "removes every transient CarrierConfig test value on this subId, and with no " +
-                            "snapshot the network identity falls back to the real records — a reboot is surer."
-                    )
+                    Text(stringResource(R.string.dialog_restore_without_markers_body))
                 },
                 confirmButton = {
                     TextButton(onClick = { onConfirmRestore(sim) }) {
-                        Text("Restore anyway")
+                        Text(stringResource(R.string.dialog_restore_anyway))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )
@@ -219,7 +223,7 @@ fun OverrideDialogs(
             val sim = dialog.sim
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Clear every CarrierConfig test override?") },
+                title = { Text(stringResource(R.string.dialog_clear_all_title)) },
                 text = { Text(clearAllDialogBody(sim)) },
                 confirmButton = {
                     TextButton(onClick = { onConfirmClearAll(sim) }) {
@@ -227,14 +231,14 @@ fun OverrideDialogs(
                         // label is tinted error. The button stays a TextButton: a filled destructive
                         // button would out-weight "Cancel" and make the safe choice the harder one to hit.
                         Text(
-                            text = "Clear",
+                            text = stringResource(R.string.action_clear),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )
@@ -244,24 +248,27 @@ fun OverrideDialogs(
             val apps = dialog.apps
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Erase app data?") },
+                title = { Text(stringResource(R.string.dialog_erase_data_title)) },
                 text = {
                     Text(
-                        "This erases all data for ${apps.joinToString { it.label }}. " +
-                            "You will be signed out of them and any downloads or local settings go with it."
+                        stringResource(
+                            R.string.dialog_erase_data_body,
+                            ListFormatter.getInstance(LocalConfiguration.current.locales[0])
+                                .format(apps.map { it.label }),
+                        )
                     )
                 },
                 confirmButton = {
                     TextButton(onClick = { onConfirmWipeData(apps) }) {
                         Text(
-                            text = "Erase",
+                            text = stringResource(R.string.action_erase),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 },
             )
@@ -269,45 +276,51 @@ fun OverrideDialogs(
     }
 }
 
-private fun applyDialogBody(request: DialogRequest.ConfirmApply): AnnotatedString = buildAnnotatedString {
+@Composable
+private fun applyDialogBody(request: DialogRequest.ConfirmApply): AnnotatedString {
     val sim = request.sim
     val target = request.target
     val layers = request.layers
-
-    append("${sim.displayName} · sub ")
-    appendFigures(sim.subId.toString())
-
-    append("\n")
-    // `requestApply()` refuses an empty selection before this dialog can be raised, so at least one of
-    // the two branches always runs and the line is never left dangling.
-    var wrote = false
-    if (layers.appCountry) {
-        append("Country ${target.countryIso}")
-        wrote = true
-    }
-    if (layers.simIdentity) {
-        if (wrote) append("  +  ")
-        append("Network ")
-        appendFigures(target.mccMnc)
-    }
-
-    append("\nName: ${target.carrierName}")
-    append("\n\nThe radio keeps its real network; only what the framework reports changes.")
-    // Stated where the user is deciding rather than discovered afterwards on a call that will not
-    // connect. Hedged deliberately: the deregistration reproduces often but not every time, and the
-    // apply now reports which way it went, so this promises a possibility and the result reports the
-    // fact. Only raised for Country — a Network-only apply has never been seen to touch IMS.
-    if (layers.appCountry) {
-        append("\n\nCountry can stop calls and SMS on this SIM until you Restore. The result will say")
-        append(" whether it did.")
-    }
-}
-
-private fun clearAllDialogBody(sim: SimInfo): AnnotatedString = buildAnnotatedString {
-    append("Removes the transient and persistent CarrierConfig test values on sub ")
-    appendFigures(sim.subId.toString())
-    append(
-        ", including any written by other tools. It does not restore the Network layer, and it " +
-            "cannot rebuild what another tool had set."
+    val simLine = stringResource(
+        R.string.dialog_apply_sim,
+        stringResource(R.string.sim_number, sim.slotIndex + 1),
+        sim.subId,
     )
+    val countryLine = stringResource(R.string.dialog_apply_country, target.countryIso)
+    val networkPrefix = stringResource(R.string.dialog_apply_network, "")
+    val nameLine = stringResource(R.string.dialog_apply_name, target.carrierName)
+    val framework = stringResource(R.string.dialog_apply_framework)
+    val risk = when {
+        (layers.simIdentity || sim.simLayerLive) && (layers.appCountry || sim.countryLayerLive) ->
+            stringResource(R.string.dialog_apply_risk_both)
+        layers.simIdentity || sim.simLayerLive -> stringResource(R.string.dialog_apply_risk_network)
+        else -> stringResource(R.string.dialog_apply_risk_country)
+    }
+
+    return buildAnnotatedString {
+        append(simLine)
+
+        append("\n")
+        var wrote = false
+        if (layers.appCountry) {
+            append(countryLine)
+            wrote = true
+        }
+        if (layers.simIdentity) {
+            if (wrote) append("  +  ")
+            append(networkPrefix)
+            appendFigures(target.mccMnc)
+        }
+
+        append("\n")
+        append(nameLine)
+        append("\n\n")
+        append(framework)
+        append("\n\n")
+        append(risk)
+    }
 }
+
+@Composable
+private fun clearAllDialogBody(sim: SimInfo): AnnotatedString =
+    AnnotatedString(stringResource(R.string.dialog_clear_all_body, sim.subId))

@@ -51,9 +51,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.ui.ResultState
 import com.riteldevelopment.carriertestoverride.ui.ResultTone
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
@@ -80,6 +82,7 @@ fun ResultPanel(
 ) {
     val detail = result.detail
     val probe = result.probe
+    val headline = result.headline.ifBlank { stringResource(R.string.result_nothing_run) }
 
     // Nothing has run yet. A tinted box with an icon here would claim an outcome that does not exist, so
     // the initial state gets no container at all.
@@ -89,7 +92,7 @@ fun ResultPanel(
     // rendered those as quiet grey prose indistinguishable from the idle state.
     if (detail == null && probe == null && result.tone == ResultTone.IDLE) {
         Text(
-            text = result.headline,
+            text = headline,
             modifier = modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -104,8 +107,8 @@ fun ResultPanel(
     val content by animateColorAsState(palette.content, label = "resultContent")
 
     val context = LocalContext.current
-    val clipText = remember(result) {
-        listOfNotNull(result.headline, detail, probe).joinToString("\n\n")
+    val clipText = remember(result, headline) {
+        listOfNotNull(headline, detail, probe).joinToString("\n\n")
     }
 
     var detailExpanded by remember(detail) { mutableStateOf(false) }
@@ -133,7 +136,7 @@ fun ResultPanel(
         Row(verticalAlignment = Alignment.CenterVertically) {
             ToneMark(tone = result.tone, tint = content)
             Text(
-                text = result.headline,
+                text = headline,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
                 color = content,
@@ -149,7 +152,9 @@ fun ResultPanel(
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
             ) {
                 Text(
-                    text = if (copied) "Copied" else "Copy",
+                    text = stringResource(
+                        if (copied) R.string.action_copied else R.string.action_copy
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -177,7 +182,9 @@ fun ResultPanel(
                     if (detailOverflows) {
                         DisableSelection {
                             InlineToggle(
-                                text = if (detailExpanded) "LESS" else "MORE",
+                                text = stringResource(
+                                    if (detailExpanded) R.string.action_less else R.string.action_more
+                                ),
                                 expanded = detailExpanded,
                                 tint = content,
                                 onClick = { detailExpanded = !detailExpanded },
@@ -189,7 +196,7 @@ fun ResultPanel(
                 if (probe != null) {
                     DisableSelection {
                         InlineToggle(
-                            text = "RUNTIME PROBE",
+                            text = stringResource(R.string.action_runtime_probe),
                             expanded = probeExpanded,
                             tint = content,
                             onClick = { probeExpanded = !probeExpanded },

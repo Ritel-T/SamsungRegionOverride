@@ -37,11 +37,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
+import java.util.Locale
 
 /**
  * Picking the subscription every later operation writes to.
@@ -110,7 +113,7 @@ fun SimSelector(
 
         if (sims.isEmpty() && scanError == null) {
             Text(
-                text = "No subscription found. Insert a SIM or enable an eSIM, then rescan.",
+                text = stringResource(R.string.no_subscription),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -165,7 +168,7 @@ private fun SimCard(
             .padding(CardPadding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MicroLabel(text = sim.displayName)
+            MicroLabel(text = stringResource(R.string.sim_number, sim.slotIndex + 1))
             Spacer(Modifier.weight(1f))
             SelectionMark(selected = selected)
         }
@@ -178,7 +181,7 @@ private fun SimCard(
             maxLines = 1,
         )
         Text(
-            text = sim.countryIso.uppercase().ifBlank { Absent } + " · " +
+            text = sim.countryIso.uppercase(Locale.ROOT).ifBlank { Absent } + " · " +
                 sim.operatorName.ifBlank { Absent },
             style = MaterialTheme.typography.bodySmall,
             color = scheme.onSurfaceVariant,
@@ -189,14 +192,14 @@ private fun SimCard(
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "sub ${sim.subId}",
+                text = stringResource(R.string.sub_id, sim.subId),
                 style = MaterialTheme.typography.labelSmall.merge(TabularFigures),
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = sim.stateLabel,
+                text = simStateLabel(sim.simState),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (sim.isReady) scheme.onSurfaceVariant else scheme.error,
                 maxLines = 1,
@@ -215,9 +218,9 @@ private fun SimCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            MicroLabel(text = "SET")
-            StateBadge(text = "ID", active = sim.flags.simIdentity)
-            StateBadge(text = "CTY", active = sim.flags.appCountry)
+            MicroLabel(text = stringResource(R.string.badge_set))
+            StateBadge(text = stringResource(R.string.badge_identity), active = sim.flags.simIdentity)
+            StateBadge(text = stringResource(R.string.badge_country), active = sim.flags.appCountry)
         }
     }
 }
@@ -256,10 +259,10 @@ private fun EmptySlotCard(
             .padding(CardPadding),
         verticalArrangement = Arrangement.Center,
     ) {
-        MicroLabel(text = "SIM ${slotIndex + 1}")
+        MicroLabel(text = stringResource(R.string.sim_number, slotIndex + 1))
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Empty slot",
+            text = stringResource(R.string.empty_slot),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -331,3 +334,8 @@ private fun ScanErrorBlock(message: String, modifier: Modifier = Modifier) {
 
 /** Shown when the platform reports an empty string, so a blank field never reads as a real value. */
 private const val Absent = "—"
+
+@Composable
+private fun simStateLabel(state: Int): String = stringResource(
+    SimInfo.simStateNameRes(state)
+)
