@@ -23,8 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 
@@ -70,8 +72,10 @@ fun TargetAppsPanel(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MicroLabel(text = "TARGET APPS", modifier = Modifier.weight(1f))
-            TextButton(onClick = onChoose, enabled = enabled) { Text("Choose") }
+            MicroLabel(text = stringResource(R.string.target_apps_heading), modifier = Modifier.weight(1f))
+            TextButton(onClick = onChoose, enabled = enabled) {
+                Text(stringResource(R.string.action_choose))
+            }
         }
         Spacer(Modifier.height(4.dp))
 
@@ -79,7 +83,7 @@ fun TargetAppsPanel(
         // says what will happen rather than leaving a blank space where the rows were.
         if (apps.isEmpty()) {
             Text(
-                text = "No apps selected. The region still changes; nothing gets stopped or wiped.",
+                text = stringResource(R.string.target_apps_none),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
             )
@@ -105,14 +109,19 @@ fun TargetAppsPanel(
                 // Only absence is badged. An installed app needs no marker — its live button says so —
                 // whereas a missing one has to explain why its button is dead.
                 if (!app.installed) {
-                    StateBadge(text = "ABSENT", active = false)
+                    StateBadge(text = stringResource(R.string.badge_absent), active = false)
                     Spacer(Modifier.width(8.dp))
                 }
                 FilledTonalButton(
                     onClick = { onRun(app) },
                     enabled = enabled && app.installed,
                 ) {
-                    Text(if (relaunch) "Stop & open" else "Force stop")
+                    Text(
+                        stringResource(
+                            if (relaunch) R.string.target_app_stop_open
+                            else R.string.target_app_force_stop
+                        )
+                    )
                 }
             }
         }
@@ -129,7 +138,7 @@ fun TargetAppsPanel(
                         count = WipeMode.entries.size,
                     ),
                 ) {
-                    Text(mode.label)
+                    Text(stringResource(mode.labelRes))
                 }
             }
         }
@@ -151,7 +160,7 @@ fun TargetAppsPanel(
                 enabled = enabled,
             )
             Text(
-                text = "Open it afterwards",
+                text = stringResource(R.string.target_app_open_after),
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurface,
             )
@@ -159,8 +168,11 @@ fun TargetAppsPanel(
     }
 }
 
-private fun wipeExplanation(mode: WipeMode): String = when (mode) {
-    WipeMode.NONE -> "Stop only, so the app re-reads the region on its next cold start."
-    WipeMode.CACHE -> "Cache clear returns nothing on some One UI builds; the report says which."
-    WipeMode.DATA -> "Erases app data. You will be signed out of that app."
-}
+@Composable
+private fun wipeExplanation(mode: WipeMode): String = stringResource(
+    when (mode) {
+        WipeMode.NONE -> R.string.wipe_keep_summary
+        WipeMode.CACHE -> R.string.wipe_cache_summary
+        WipeMode.DATA -> R.string.wipe_data_summary
+    }
+)

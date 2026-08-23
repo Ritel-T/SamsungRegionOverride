@@ -35,10 +35,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.ui.DialogRequest
 import java.util.Locale
@@ -119,7 +122,7 @@ fun TargetAppPickerDialog(
         ) {
             Column(modifier = Modifier.padding(top = 16.dp)) {
                 Text(
-                    text = "Target apps",
+                    text = stringResource(R.string.target_app_picker_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -141,7 +144,7 @@ fun TargetAppPickerDialog(
                         .padding(horizontal = 16.dp),
                     singleLine = true,
                     enabled = !request.loading,
-                    label = { Text("App name or package") },
+                    label = { Text(stringResource(R.string.target_app_search)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 )
                 Spacer(Modifier.height(8.dp))
@@ -156,14 +159,14 @@ fun TargetAppPickerDialog(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp))
                         Text(
-                            text = "Reading installed apps…",
+                            text = stringResource(R.string.target_app_loading),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 } else if (results.isEmpty()) {
                     Text(
-                        text = "No app matches that.",
+                        text = stringResource(R.string.target_app_no_match),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,15 +192,15 @@ fun TargetAppPickerDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     if (showReset) {
-                        TextButton(onClick = onReset) { Text("Reset") }
+                        TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
                         Spacer(Modifier.weight(1f))
                     }
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                     TextButton(
                         onClick = { onConfirm(request) },
                         enabled = !request.loading,
                     ) {
-                        Text("Save")
+                        Text(stringResource(R.string.action_save))
                     }
                 }
             }
@@ -212,11 +215,15 @@ fun TargetAppPickerDialog(
  * is worth spelling out, because a bare "0 selected" reads like a mistake the dialog is about to make
  * on the user's behalf.
  */
+@Composable
 private fun selectionSummary(request: DialogRequest.ChooseTargetApps): String = when {
-    request.loading -> "Apply and restore stop these apps so they re-read the region."
-    request.selected.isEmpty() -> "Nothing selected — apply and restore will not stop any app."
-    request.selected.size == 1 -> "1 app is stopped on apply and restore."
-    else -> "${request.selected.size} apps are stopped on apply and restore."
+    request.loading -> stringResource(R.string.target_apps_loading_summary)
+    request.selected.isEmpty() -> stringResource(R.string.target_apps_empty_summary)
+    else -> pluralStringResource(
+        R.plurals.target_apps_selected_summary,
+        request.selected.size,
+        request.selected.size,
+    )
 }
 
 @Composable
@@ -244,7 +251,9 @@ private fun AppPickerRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (app.installed) app.packageName else "${app.packageName} · not installed",
+                text = if (app.installed) app.packageName else {
+                    stringResource(R.string.target_app_not_installed, app.packageName)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,

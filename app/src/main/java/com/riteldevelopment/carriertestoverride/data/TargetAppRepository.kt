@@ -3,7 +3,9 @@ package com.riteldevelopment.carriertestoverride.data
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import androidx.annotation.StringRes
 import com.riteldevelopment.carriertestoverride.BuildConfig
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.TargetApps
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -16,15 +18,15 @@ import java.util.Locale
  * The ordinal is the wire value the AIDL carries, so it must stay aligned with `TargetApps.WIPE_*`.
  * [wireValue] states that dependency instead of relying on declaration order.
  */
-enum class WipeMode(val wireValue: Int, val label: String) {
+enum class WipeMode(val wireValue: Int, @get:StringRes val labelRes: Int) {
     /** Stop and relaunch only. Always safe, and enough for an app that re-reads region on cold start. */
-    NONE(TargetApps.WIPE_NONE, "Keep"),
+    NONE(TargetApps.WIPE_NONE, R.string.wipe_keep),
 
     /** Known no-op on One UI 8.5 — see `TargetApps.WIPE_CACHE`. Reported honestly rather than hidden. */
-    CACHE(TargetApps.WIPE_CACHE, "Cache"),
+    CACHE(TargetApps.WIPE_CACHE, R.string.wipe_cache),
 
     /** Signs the user out, and is the only wipe that reliably forces a region re-detect. */
-    DATA(TargetApps.WIPE_DATA, "Data");
+    DATA(TargetApps.WIPE_DATA, R.string.wipe_data);
 
     val destructive: Boolean get() = this == DATA
 }
