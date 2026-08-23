@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
                         onRescan = viewModel::refreshSims,
                         onCancel = viewModel::cancelOperation,
                         onOpenShizuku = viewModel::openShizuku,
+                        onOpenLanguageSettings = viewModel::openLanguageSettings,
                         onChooseTargetApps = viewModel::requestChooseTargetApps,
                         onToggleTargetApp = viewModel::toggleTargetApp,
                         onConfirmTargetApps = viewModel::confirmTargetApps,

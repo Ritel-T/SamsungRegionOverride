@@ -1,12 +1,15 @@
 package com.riteldevelopment.carriertestoverride.data
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.content.ServiceConnection
+import androidx.annotation.StringRes
 import com.riteldevelopment.carriertestoverride.BuildConfig
 import com.riteldevelopment.carriertestoverride.CarrierOverrideUserService
 import com.riteldevelopment.carriertestoverride.ICarrierOverrideService
+import com.riteldevelopment.carriertestoverride.R
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +21,25 @@ import rikka.shizuku.Shizuku
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/** A failure whose message is already written for the user. */
-class OverrideException(message: String) : Exception(message)
+/** A user-facing failure that can be resolved after the current app locale is known. */
+class OverrideException : Exception {
+    @get:StringRes
+    val messageRes: Int?
+    val formatArgs: Array<out Any>
+
+    constructor(message: String) : super(message) {
+        messageRes = null
+        formatArgs = emptyArray()
+    }
+
+    constructor(@StringRes messageRes: Int, vararg formatArgs: Any) : super() {
+        this.messageRes = messageRes
+        this.formatArgs = formatArgs
+    }
+
+    fun resolve(context: Context): String =
+        messageRes?.let { context.getString(it, *formatArgs) } ?: message.orEmpty()
+}
 
 /** What the UI shows in the Shizuku status slot. */
 sealed interface ShizukuStatus {
@@ -86,7 +106,7 @@ class ShizukuController {
         bound = false
         _status.value = ShizukuStatus.NotRunning
         serviceWaiter?.takeIf { it.isActive }
-            ?.resumeWithException(OverrideException("Shizuku disconnected. Restart it and try again."))
+            ?.resumeWithException(OverrideException(R.string.error_shizuku_disconnected))
         serviceWaiter = null
     }
 
@@ -112,7 +132,7 @@ class ShizukuController {
             if (waiter == null || !waiter.isActive) return
             if (remote == null) {
                 waiter.resumeWithException(
-                    OverrideException("Shizuku UserService returned an invalid binder.")
+                    OverrideException(R.string.error_invalid_user_service)
                 )
             } else {
                 waiter.resume(remote)
@@ -123,7 +143,7 @@ class ShizukuController {
             service = null
             bound = false
             serviceWaiter?.takeIf { it.isActive }
-                ?.resumeWithException(OverrideException("The Carrier Override UserService disconnected."))
+                ?.resumeWithException(OverrideException(R.string.error_user_service_disconnected))
             serviceWaiter = null
         }
     }
@@ -184,16 +204,14 @@ class ShizukuController {
     /** Throws if this Shizuku build predates the API 11 UserService support this app requires. */
     fun requireModernApi() {
         if (Shizuku.isPreV11()) {
-            throw OverrideException("Shizuku API 11 or newer is required.")
+            throw OverrideException(R.string.error_shizuku_api)
         }
     }
 
     suspend fun requestPermission(): Boolean {
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) return true
         if (Shizuku.shouldShowRequestPermissionRationale()) {
-            throw OverrideException(
-                "Shizuku permission was denied. Re-allow this app in Shizuku's authorised apps."
-            )
+            throw OverrideException(R.string.error_shizuku_denied)
         }
         return suspendCancellableCoroutine { continuation ->
             permissionWaiter = continuation
@@ -205,8 +223,9 @@ class ShizukuController {
                 if (continuation.isActive) {
                     continuation.resumeWithException(
                         OverrideException(
-                            "Could not reach Shizuku: ${throwable.javaClass.simpleName}: " +
-                                throwable.message.orEmpty()
+                            R.string.error_shizuku_unreachable,
+                            throwable.javaClass.simpleName,
+                            throwable.message.orEmpty(),
                         )
                     )
                 }
@@ -228,8 +247,9 @@ class ShizukuController {
                 if (continuation.isActive) {
                     continuation.resumeWithException(
                         OverrideException(
-                            "UserService failed to start: ${throwable.javaClass.simpleName}: " +
-                                throwable.message.orEmpty()
+                            R.string.error_user_service_start,
+                            throwable.javaClass.simpleName,
+                            throwable.message.orEmpty(),
                         )
                     )
                 }
