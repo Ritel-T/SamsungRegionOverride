@@ -1,6 +1,11 @@
 package com.riteldevelopment.carriertestoverride.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,8 +47,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.data.TargetApp
@@ -81,6 +88,7 @@ data class OverrideActions(
     val onRescan: () -> Unit,
     val onCancel: () -> Unit,
     val onOpenShizuku: () -> Unit,
+    val onOpenLanguageSettings: () -> Unit,
     val onChooseTargetApps: () -> Unit,
     val onToggleTargetApp: (String) -> Unit,
     val onConfirmTargetApps: (DialogRequest.ChooseTargetApps) -> Unit,
@@ -91,20 +99,6 @@ data class OverrideActions(
     val onConfirmClearAll: (SimInfo) -> Unit,
     val onConfirmWipeData: (List<TargetApp>) -> Unit,
 )
-
-/**
- * The standing note.
- *
- * Names Country rather than Network because that is what the measurements point at: with only Network
- * applied IMS stayed registered across every run, while Country live is what the deregistration tracks.
- * It says "can" rather than "will" for the same reason — the same build, run twice, went both ways, and
- * a warning that overstates its certainty is one the user catches out and then stops believing.
- */
-private const val RISK_TEXT =
-    "Country can stop calls and SMS on this SIM until you Restore; Network on its own has not. " +
-        "Cycling the SIM does not bring them back while the override is live. Restore also clears " +
-        "every transient CarrierConfig value on this SIM, including ones other tools wrote, and a " +
-        "reboot undoes everything."
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +111,7 @@ fun OverrideScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Region Override") },
+                title = { Text(stringResource(R.string.screen_title)) },
                 actions = {
                     ShizukuButton(onClick = actions.onOpenShizuku)
                     OverflowMenu(state = state, actions = actions)
@@ -165,6 +159,12 @@ fun OverrideScreen(
                 )
             }
 
+            if (state.selectedSim?.flags?.uncertain == true) {
+                item("pending-state") {
+                    HazardNote(text = stringResource(R.string.pending_state_warning))
+                }
+            }
+
             item("target") {
                 TargetBlock(state = state, actions = actions)
             }
@@ -198,7 +198,7 @@ fun OverrideScreen(
             }
 
             item("risk") {
-                HazardNote(text = RISK_TEXT)
+                HazardNote(text = stringResource(R.string.risk_notice))
             }
 
             item("device") {
@@ -241,13 +241,13 @@ private fun ShizukuButton(onClick: () -> Unit) {
         if (icon != null) {
             Image(
                 bitmap = icon,
-                contentDescription = "Open Shizuku",
+                contentDescription = stringResource(R.string.open_shizuku),
                 modifier = Modifier.size(24.dp),
             )
         } else {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                contentDescription = "Open Shizuku",
+                contentDescription = stringResource(R.string.open_shizuku),
             )
         }
     }
@@ -261,11 +261,11 @@ private fun ShizukuButton(onClick: () -> Unit) {
 private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
     var expanded by remember { mutableStateOf(false) }
     IconButton(onClick = { expanded = true }) {
-        Icon(Icons.Filled.MoreVert, contentDescription = "More")
+        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_options))
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         DropdownMenuItem(
-            text = { Text("Rescan SIMs") },
+            text = { Text(stringResource(R.string.menu_rescan_sims)) },
             enabled = !state.isBusy,
             onClick = {
                 expanded = false
@@ -273,9 +273,17 @@ private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
             },
         )
         DropdownMenuItem(
+            text = { Text(stringResource(R.string.menu_app_language)) },
+            enabled = !state.isBusy,
+            onClick = {
+                expanded = false
+                actions.onOpenLanguageSettings()
+            },
+        )
+        DropdownMenuItem(
             text = {
                 Text(
-                    text = "Clear all CarrierConfig overrides…",
+                    text = stringResource(R.string.menu_clear_all),
                     color = MaterialTheme.colorScheme.error,
                 )
             },
@@ -298,7 +306,7 @@ private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
 @Composable
 private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
     Column {
-        MicroLabel("PRETEND TO BE")
+        MicroLabel(stringResource(R.string.label_pretend_to_be))
         Spacer(Modifier.height(8.dp))
         PresetField(
             preset = state.preset,
@@ -319,7 +327,7 @@ private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
             onValueChange = actions.onCarrierNameChange,
             enabled = !state.isBusy,
             singleLine = true,
-            label = { Text("Carrier name") },
+            label = { Text(stringResource(R.string.carrier_name)) },
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -335,22 +343,23 @@ private fun TargetBlock(state: OverrideUiState, actions: OverrideActions) {
 private fun CountryLayer(state: OverrideUiState, actions: OverrideActions) {
     val sim = state.selectedSim
     LayerSection(
-        title = "Country",
-        subtitle = "TikTok and most apps read this",
+        title = stringResource(R.string.country_layer_title),
+        subtitle = stringResource(R.string.country_layer_subtitle),
         enabled = state.layers.appCountry,
         applied = sim?.countryLayerLive == true,
         accent = MaterialTheme.colorScheme.secondary,
         controlsEnabled = !state.isBusy,
         onEnabledChange = actions.onAppCountryLayerChange,
         readerPackages = KnownPackages.COUNTRY_READERS,
+        liveButDisarmedText = stringResource(R.string.layer_still_live),
     ) {
         OutlinedTextField(
             value = state.countryIso,
             onValueChange = actions.onCountryIsoChange,
             enabled = !state.isBusy,
             singleLine = true,
-            label = { Text("Country ISO") },
-            supportingText = { Text("Two letters, e.g. gb") },
+            label = { Text(stringResource(R.string.country_iso)) },
+            supportingText = { Text(stringResource(R.string.country_iso_hint)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(4.dp))
@@ -362,28 +371,35 @@ private fun CountryLayer(state: OverrideUiState, actions: OverrideActions) {
             )
             Column {
                 Text(
-                    text = "Rename the SIM too",
+                    text = stringResource(R.string.rename_sim_title),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 // The old label said "Also override the display name", which named a field rather than
                 // an effect and left people unable to guess what ticking it would do.
                 Text(
-                    text = "Shows the carrier name above in the status bar and Settings",
+                    text = stringResource(R.string.rename_sim_summary),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-        // The one fact that should reach someone who reads nothing else on this screen, kept to a
-        // single line and placed against the switch that causes it rather than in the standing note at
-        // the bottom, which is where a reader who has already decided will not look.
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "May stop calls and SMS until you Restore.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
+        // This changes with the Network switch while the Country section is already expanded. Animate
+        // both visibility and height so the card does not jump when the warning enters or leaves.
+        AnimatedVisibility(
+            visible = state.layers.simIdentity || sim?.simLayerLive == true,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            Column {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.country_network_trigger_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
     }
 }
 
@@ -392,33 +408,44 @@ private fun CountryLayer(state: OverrideUiState, actions: OverrideActions) {
 private fun NetworkLayer(state: OverrideUiState, actions: OverrideActions) {
     val sim = state.selectedSim
     LayerSection(
-        title = "Network",
-        subtitle = "Galaxy Store and Samsung apps read this",
+        title = stringResource(R.string.network_layer_title),
+        subtitle = stringResource(R.string.network_layer_subtitle),
         enabled = state.layers.simIdentity,
         applied = sim?.simLayerLive == true,
         accent = MaterialTheme.colorScheme.primary,
         controlsEnabled = !state.isBusy,
         onEnabledChange = actions.onSimIdentityLayerChange,
         readerPackages = KnownPackages.NETWORK_READERS,
+        liveButDisarmedText = stringResource(R.string.layer_still_live),
     ) {
         OutlinedTextField(
             value = state.mccMnc,
             onValueChange = actions.onMccMncChange,
             enabled = !state.isBusy,
             singleLine = true,
-            label = { Text("MCC/MNC") },
-            supportingText = { Text("5 or 6 digits") },
+            label = { Text(stringResource(R.string.mcc_mnc)) },
+            supportingText = { Text(stringResource(R.string.mcc_mnc_hint)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
         if (sim != null && !sim.isReady) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "This layer needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.",
+                text = stringResource(
+                    R.string.network_not_ready,
+                    stringResource(R.string.sim_number, sim.slotIndex + 1),
+                    stringResource(SimInfo.simStateNameRes(sim.simState)),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.network_reconnect_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }
 
@@ -431,25 +458,35 @@ private fun ActionBar(state: OverrideUiState, actions: OverrideActions) {
     Surface(tonalElevation = 3.dp) {
         Crossfade(targetState = state.busy, label = "actionBar") { busy ->
             if (busy == null) {
+                val live = state.selectedSim?.disguised == true
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Button(
-                        onClick = actions.onApply,
-                        enabled = state.canApply,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("Apply")
-                    }
-                    OutlinedButton(
-                        onClick = actions.onRestore,
-                        enabled = state.canRestore,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("Restore")
+                    if (live) {
+                        OutlinedButton(
+                            onClick = actions.onApply,
+                            enabled = state.canApply,
+                            modifier = Modifier.weight(1f),
+                        ) { Text(stringResource(R.string.action_update_disguise)) }
+                        Button(
+                            onClick = actions.onRestore,
+                            enabled = state.canRestore,
+                            modifier = Modifier.weight(1f),
+                        ) { Text(stringResource(R.string.action_end_restore)) }
+                    } else {
+                        Button(
+                            onClick = actions.onApply,
+                            enabled = state.canApply,
+                            modifier = Modifier.weight(1f),
+                        ) { Text(stringResource(R.string.action_start_disguise)) }
+                        OutlinedButton(
+                            onClick = actions.onRestore,
+                            enabled = state.canRestore,
+                            modifier = Modifier.weight(1f),
+                        ) { Text(stringResource(R.string.action_restore_saved)) }
                     }
                 }
             } else {
@@ -474,13 +511,18 @@ private fun BusyBar(busy: BusyState, onCancel: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "$step/${stages.size} · ${busy.label}",
+                text = stringResource(
+                    R.string.busy_step,
+                    step,
+                    stages.size,
+                    stringResource(busy.labelRes),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             if (busy.cancellable) {
-                TextButton(onClick = onCancel) { Text("Cancel") }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -491,7 +533,13 @@ private fun BusyBar(busy: BusyState, onCancel: () -> Unit) {
 @Composable
 private fun DeviceLine(device: DeviceInfo) {
     Text(
-        text = "${device.manufacturer} ${device.model} · API ${device.apiLevel} · v${device.appVersion}",
+        text = stringResource(
+            R.string.device_line,
+            device.manufacturer,
+            device.model,
+            device.apiLevel,
+            device.appVersion,
+        ),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
