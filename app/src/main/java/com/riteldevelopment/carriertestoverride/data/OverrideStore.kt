@@ -4,6 +4,32 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.util.Locale
 
+internal data class ApplyLayerState(
+    val live: Boolean,
+    val pending: Boolean,
+)
+
+/** Pure transition used by the persisted apply journal and its local regression tests. */
+internal fun resolveApplyLayer(
+    previous: ApplyLayerState,
+    attempted: Boolean,
+    succeeded: Boolean,
+): ApplyLayerState = when {
+    !attempted -> previous
+    succeeded -> ApplyLayerState(live = true, pending = false)
+    else -> ApplyLayerState(live = previous.live, pending = true)
+}
+
+/** Legacy recovery data cannot be attached to a newly observed card without user confirmation. */
+internal fun isLegacyUnboundState(
+    hasFingerprint: Boolean,
+    fingerprintWasUnavailable: Boolean,
+    hasSnapshot: Boolean,
+    hasLiveOrPendingFlag: Boolean,
+): Boolean = !hasFingerprint &&
+    !fingerprintWasUnavailable &&
+    (hasSnapshot || hasLiveOrPendingFlag)
+
 /**
  * Per-subscription record of what this tool changed, plus the few preferences that outlive a session.
  *
@@ -39,8 +65,11 @@ class OverrideStore(context: Context) {
     data class Flags(
         val simIdentity: Boolean,
         val appCountry: Boolean,
+        val simPending: Boolean = false,
+        val appCountryPending: Boolean = false,
     ) {
         val any: Boolean get() = simIdentity || appCountry
+        val uncertain: Boolean get() = simPending || appCountryPending
     }
 
     fun snapshot(subId: Int): Snapshot = Snapshot(
@@ -67,14 +96,14 @@ class OverrideStore(context: Context) {
         prefs.edit()
             .putString(originalNumericKey(subId), mccMnc)
             .putString(originalNameKey(subId), operatorName)
-            .apply()
+            .commitOrThrow("SIM identity snapshot")
     }
 
     fun captureCountrySnapshot(subId: Int, countryIso: String) {
         if (hasCountrySnapshot(subId) || !countryIso.matches(ISO)) return
         prefs.edit()
             .putString(originalCountryKey(subId), countryIso.lowercase(Locale.ROOT))
-            .apply()
+            .commitOrThrow("country snapshot")
     }
 
     /**
@@ -92,15 +121,71 @@ class OverrideStore(context: Context) {
         prefs.edit()
             .putString(originalDisplayNameKey(subId), displayName)
             .putInt(originalDisplaySourceKey(subId), source)
-            .apply()
+            .commitOrThrow("display-name snapshot")
     }
 
-    fun flags(subId: Int): Flags = Flags(
-        // `overridden_` is the pre-2.0 single-layer flag. Treat it as the SIM identity layer.
-        simIdentity = prefs.getBoolean(simLayerKey(subId), false) ||
-            prefs.getBoolean(legacyOverriddenKey(subId), false),
-        appCountry = prefs.getBoolean(countryLayerKey(subId), false),
-    )
+    fun flags(subId: Int): Flags {
+        val simPending = prefs.getBoolean(simPendingKey(subId), false)
+        val countryPending = prefs.getBoolean(countryPendingKey(subId), false)
+        return Flags(
+            // `overridden_` is the pre-2.0 single-layer flag. Treat it as the SIM identity layer.
+            // Pending is also treated as applied: if the process died after the framework write but
+            // before the Binder reply, Restore must err toward undoing a change rather than hiding it.
+            simIdentity = prefs.getBoolean(simLayerKey(subId), false) ||
+                prefs.getBoolean(legacyOverriddenKey(subId), false) || simPending,
+            appCountry = prefs.getBoolean(countryLayerKey(subId), false) || countryPending,
+            simPending = simPending,
+            appCountryPending = countryPending,
+        )
+    }
+
+    /** Synchronously journals the layers immediately before the first privileged write. */
+    fun markApplyPending(subId: Int, simIdentity: Boolean, appCountry: Boolean) {
+        prefs.edit().apply {
+            if (simIdentity) putBoolean(simPendingKey(subId), true)
+            if (appCountry) putBoolean(countryPendingKey(subId), true)
+        }.commitOrThrow("pending apply journal")
+    }
+
+    /** Resolves only outcomes that are certain; a failed reply leaves that layer pending. */
+    fun finishApply(
+        subId: Int,
+        simAttempted: Boolean,
+        simSucceeded: Boolean,
+        countryAttempted: Boolean,
+        countrySucceeded: Boolean,
+    ) {
+        val sim = resolveApplyLayer(
+            previous = ApplyLayerState(
+                live = prefs.getBoolean(simLayerKey(subId), false) ||
+                    prefs.getBoolean(legacyOverriddenKey(subId), false),
+                pending = prefs.getBoolean(simPendingKey(subId), false),
+            ),
+            attempted = simAttempted,
+            succeeded = simSucceeded,
+        )
+        val country = resolveApplyLayer(
+            previous = ApplyLayerState(
+                live = prefs.getBoolean(countryLayerKey(subId), false),
+                pending = prefs.getBoolean(countryPendingKey(subId), false),
+            ),
+            attempted = countryAttempted,
+            succeeded = countrySucceeded,
+        )
+        prefs.edit().apply {
+            if (simAttempted) {
+                putBoolean(simLayerKey(subId), sim.live)
+                putBoolean(legacyOverriddenKey(subId), sim.live)
+                if (sim.pending) putBoolean(simPendingKey(subId), true)
+                else remove(simPendingKey(subId))
+            }
+            if (countryAttempted) {
+                putBoolean(countryLayerKey(subId), country.live)
+                if (country.pending) putBoolean(countryPendingKey(subId), true)
+                else remove(countryPendingKey(subId))
+            }
+        }.commitOrThrow("apply result")
+    }
 
     /**
      * Updates layer flags after an operation. A `null` argument means "that layer was not part of this
@@ -112,11 +197,119 @@ class OverrideStore(context: Context) {
         if (simIdentity != null) {
             editor.putBoolean(simLayerKey(subId), simIdentity)
                 .putBoolean(legacyOverriddenKey(subId), simIdentity)
+                .remove(simPendingKey(subId))
         }
         if (appCountry != null) {
             editor.putBoolean(countryLayerKey(subId), appCountry)
+                .remove(countryPendingKey(subId))
         }
-        editor.apply()
+        editor.commitOrThrow("layer flags")
+    }
+
+    // ---------------------------------------------------------------- subscription identity and session
+
+    fun hasFingerprint(subId: Int): Boolean = prefs.contains(fingerprintKey(subId))
+
+    fun fingerprintWasUnavailable(subId: Int): Boolean =
+        prefs.getBoolean(fingerprintUnavailableKey(subId), false)
+
+    /** True for pre-fingerprint recovery state whose physical card can no longer be proven. */
+    fun hasLegacyUnboundState(subId: Int): Boolean = isLegacyUnboundState(
+        hasFingerprint = hasFingerprint(subId),
+        fingerprintWasUnavailable = fingerprintWasUnavailable(subId),
+        hasSnapshot = hasSimSnapshot(subId) ||
+            hasCountrySnapshot(subId) ||
+            hasDisplayNameSnapshot(subId),
+        hasLiveOrPendingFlag = prefs.getBoolean(simLayerKey(subId), false) ||
+            prefs.getBoolean(countryLayerKey(subId), false) ||
+            prefs.getBoolean(legacyOverriddenKey(subId), false) ||
+            prefs.getBoolean(simPendingKey(subId), false) ||
+            prefs.getBoolean(countryPendingKey(subId), false),
+    )
+
+    /**
+     * Binds saved telephony state to a physical card. A changed fingerprint means Android reused a
+     * subId for another SIM, so every per-subscription snapshot and flag is discarded before apply.
+     */
+    fun prepareForApply(subId: Int, fingerprint: String?): Boolean {
+        check(!hasLegacyUnboundState(subId)) {
+            "Legacy recovery state is not bound to a verified SIM"
+        }
+        if (fingerprint.isNullOrBlank()) return false
+        val stored = prefs.getString(fingerprintKey(subId), null)
+        if (stored == null) {
+            prefs.edit().putString(fingerprintKey(subId), fingerprint)
+                .remove(fingerprintUnavailableKey(subId))
+                .commitOrThrow("SIM fingerprint")
+            return false
+        }
+        if (stored == fingerprint) return false
+        clearSubscriptionState(subId, replacementFingerprint = fingerprint)
+        return true
+    }
+
+    fun markFingerprintUnavailable(subId: Int) {
+        if (hasFingerprint(subId) || fingerprintWasUnavailable(subId)) return
+        prefs.edit().putBoolean(fingerprintUnavailableKey(subId), true)
+            .commitOrThrow("unavailable SIM fingerprint marker")
+    }
+
+    /** Null is accepted only when this version recorded that card identity was unavailable. */
+    fun fingerprintMatches(subId: Int, fingerprint: String?): Boolean {
+        if (hasLegacyUnboundState(subId)) return false
+        if (fingerprintWasUnavailable(subId)) return fingerprint.isNullOrBlank()
+        val stored = prefs.getString(fingerprintKey(subId), null)
+        if (stored == null) {
+            if (fingerprint.isNullOrBlank()) return true
+            prefs.edit().putString(fingerprintKey(subId), fingerprint)
+                .commitOrThrow("SIM fingerprint")
+            return true
+        }
+        return !fingerprint.isNullOrBlank() && stored == fingerprint
+    }
+
+    fun sessionPackages(subId: Int): List<String> = prefs
+        .getString(sessionPackagesKey(subId), null)
+        .orEmpty()
+        .split(LIST_SEPARATOR)
+        .filter { it.isNotBlank() }
+
+    /** Keeps every app touched during this live disguise, even if the picker changes before restore. */
+    fun rememberSessionPackages(subId: Int, packages: List<String>) {
+        val combined = (sessionPackages(subId) + packages)
+            .filter { it.isNotBlank() }
+            .distinct()
+        prefs.edit().putString(sessionPackagesKey(subId), combined.joinToString(LIST_SEPARATOR))
+            .commitOrThrow("session app list")
+    }
+
+    fun clearSessionPackages(subId: Int) {
+        prefs.edit().remove(sessionPackagesKey(subId)).commitOrThrow("session app list")
+    }
+
+    private fun clearSubscriptionState(subId: Int, replacementFingerprint: String? = null) {
+        prefs.edit()
+            .remove(originalNumericKey(subId))
+            .remove(originalNameKey(subId))
+            .remove(originalCountryKey(subId))
+            .remove(originalDisplayNameKey(subId))
+            .remove(originalDisplaySourceKey(subId))
+            .remove(simLayerKey(subId))
+            .remove(countryLayerKey(subId))
+            .remove(legacyOverriddenKey(subId))
+            .remove(simPendingKey(subId))
+            .remove(countryPendingKey(subId))
+            .remove(fingerprintUnavailableKey(subId))
+            .remove(sessionPackagesKey(subId))
+            .apply {
+                if (replacementFingerprint == null) remove(fingerprintKey(subId))
+                else putString(fingerprintKey(subId), replacementFingerprint)
+            }
+            .commitOrThrow("subscription state")
+    }
+
+    private fun SharedPreferences.Editor.commitOrThrow(label: String) {
+        if (!commit()) throw IllegalStateException("Could not persist $label")
     }
 
     // ---------------------------------------------------------------- choices
@@ -209,5 +402,10 @@ class OverrideStore(context: Context) {
         private fun simLayerKey(subId: Int) = "sim_layer_applied_$subId"
         private fun countryLayerKey(subId: Int) = "country_layer_applied_$subId"
         private fun legacyOverriddenKey(subId: Int) = "overridden_$subId"
+        private fun simPendingKey(subId: Int) = "sim_layer_pending_$subId"
+        private fun countryPendingKey(subId: Int) = "country_layer_pending_$subId"
+        private fun fingerprintKey(subId: Int) = "sim_fingerprint_$subId"
+        private fun fingerprintUnavailableKey(subId: Int) = "sim_fingerprint_unavailable_$subId"
+        private fun sessionPackagesKey(subId: Int) = "session_packages_$subId"
     }
 }
