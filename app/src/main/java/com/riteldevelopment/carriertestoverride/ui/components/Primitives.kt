@@ -35,10 +35,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 
 /** Consistent gap between the screen's top-level blocks. */
@@ -176,6 +180,7 @@ fun LayerSection(
      * phone has an app it does not.
      */
     readerPackages: List<String> = emptyList(),
+    liveButDisarmedText: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val success = LocalOverrideColors.current.success
@@ -188,6 +193,7 @@ fun LayerSection(
         },
         label = "layerRailColor",
     )
+    val layoutDirection = LocalLayoutDirection.current
 
     Column(
         modifier = modifier
@@ -195,10 +201,14 @@ fun LayerSection(
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .drawBehind {
+                val width = 3.dp.toPx()
                 drawRect(
                     color = railColor,
-                    topLeft = Offset.Zero,
-                    size = Size(3.dp.toPx(), size.height),
+                    topLeft = Offset(
+                        if (layoutDirection == LayoutDirection.Ltr) 0f else size.width - width,
+                        0f,
+                    ),
+                    size = Size(width, size.height),
                 )
             }
             .padding(start = 17.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)
@@ -214,7 +224,10 @@ fun LayerSection(
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    if (applied) StateBadge(text = "LIVE", active = true)
+                    if (applied) StateBadge(
+                        text = stringResource(R.string.badge_live),
+                        active = true,
+                    )
                 }
                 Spacer(Modifier.height(3.dp))
                 Row(
@@ -242,6 +255,15 @@ fun LayerSection(
                 checked = enabled,
                 onCheckedChange = onEnabledChange,
                 enabled = controlsEnabled,
+            )
+        }
+
+        if (applied && !enabled && liveButDisarmedText != null) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = liveButDisarmedText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
 

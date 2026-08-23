@@ -32,9 +32,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.data.countryIsoForMccMnc
 import com.riteldevelopment.carriertestoverride.data.describeRegion
@@ -53,9 +57,6 @@ private val CardPadding: Dp = 14.dp
 
 /** How far the highlight extends past the text it sits behind, so the values do not touch its edge. */
 private val HighlightBleed: Dp = 7.dp
-
-private const val NoSimLabel = "No SIM"
-private const val UnknownLabel = "Unknown"
 
 /**
  * Who this SIM really is, against who it is pretending to be.
@@ -90,15 +91,20 @@ fun RealVersusDisguise(
     modifier: Modifier = Modifier,
 ) {
     val live = sim?.disguised == true
+    val noSimLabel = stringResource(R.string.no_sim)
+    val unknownLabel = stringResource(R.string.unknown)
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val realNumeric = when {
-        sim == null -> NoSimLabel
-        sim.realOperatorNumeric.isBlank() -> UnknownLabel
+        sim == null -> noSimLabel
+        sim.realOperatorNumeric.isBlank() -> unknownLabel
         else -> sim.realOperatorNumeric
     }
     // With no SIM the value line already says so; repeating it here would be noise. The empty string
     // still occupies a line, which keeps the block from changing height when a SIM appears.
-    val realDetail = if (sim == null) "" else describe(sim.realCountryIso, sim.realOperatorName)
+    val realDetail = if (sim == null) "" else {
+        describe(sim.realCountryIso, sim.realOperatorName, unknownLabel)
+    }
 
     // What Apply would leave in force, switch by switch, rather than the whole target regardless. A
     // disarmed layer writes nothing: with the network layer off the MCC stays as it is, and with the
@@ -114,8 +120,8 @@ fun RealVersusDisguise(
     // Live: what the modem reports, because that is what apps are being told right now — and if only one
     // layer landed, showing it is how the user finds out. Not live: the preview of Apply.
     val disguiseNumeric = when {
-        live -> sim.operatorNumeric.ifBlank { UnknownLabel }
-        else -> previewNumeric.ifBlank { UnknownLabel }
+        live -> sim.operatorNumeric.ifBlank { unknownLabel }
+        else -> previewNumeric.ifBlank { unknownLabel }
     }
     // The country comes from [SimInfo.disguiseCountryIso], and from the same derivation on the preview
     // side, rather than from `getSimCountryIso()` directly. A network-only override moves the MCC and
@@ -123,8 +129,8 @@ fun RealVersusDisguise(
     // the real country beside it — a region nobody is pretending to be, on the one line whose whole job
     // is to name the region being pretended.
     val disguiseDetail = when {
-        live -> describe(sim.disguiseCountryIso, sim.operatorName)
-        else -> describe(previewCountryIso, targetCarrierName)
+        live -> describe(sim.disguiseCountryIso, sim.operatorName, unknownLabel)
+        else -> describe(previewCountryIso, targetCarrierName, unknownLabel)
     }
 
     val successColor = LocalOverrideColors.current.success
@@ -164,13 +170,21 @@ fun RealVersusDisguise(
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             // Painted before the padding is applied, so the highlight can bleed out past the columns it
             // sits behind while staying inside the card's own clip.
-            .drawBehind { drawSlidingHighlight(slide, highlightColor) }
+            .drawBehind { drawSlidingHighlight(slide, highlightColor, rtl) }
             .padding(CardPadding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SideLabel(text = "REAL", live = !live, modifier = Modifier.weight(1f))
+            SideLabel(
+                text = stringResource(R.string.label_real),
+                live = !live,
+                modifier = Modifier.weight(1f),
+            )
             Spacer(Modifier.width(Gutter))
-            SideLabel(text = "DISGUISE", live = live, modifier = Modifier.weight(1f))
+            SideLabel(
+                text = stringResource(R.string.label_disguise),
+                live = live,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         Spacer(Modifier.height(4.dp))
@@ -185,7 +199,7 @@ fun RealVersusDisguise(
                     text = value,
                     // The no-SIM placeholder is prose, not a figure: at headline scale it would either
                     // dominate the block or get clipped, and it has no digits to align anyway.
-                    style = if (value == NoSimLabel) MaterialTheme.typography.titleMedium else numericStyle,
+                    style = if (value == noSimLabel) MaterialTheme.typography.titleMedium else numericStyle,
                     color = inkColor.fade(1f - slide),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -195,7 +209,7 @@ fun RealVersusDisguise(
                 modifier = Modifier.width(Gutter),
                 contentAlignment = Alignment.Center,
             ) {
-                DirectionMark(color = outlineColor)
+                DirectionMark(color = outlineColor, rtl = rtl)
             }
             Crossfade(
                 targetState = disguiseNumeric,
@@ -253,7 +267,7 @@ private fun Color.fade(active: Float): Color =
  * the rows above it and then offset, and its position would settle a frame behind them; taking the
  * geometry straight from the parent's own size keeps it locked to the columns at every frame.
  */
-private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color) {
+private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color, rtl: Boolean) {
     val pad = CardPadding.toPx()
     val bleed = HighlightBleed.toPx()
     val gutter = Gutter.toPx()
@@ -261,9 +275,11 @@ private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color) {
     if (column <= 0f) return
     val left = pad - bleed
     val right = pad + column + gutter - bleed
+    val start = if (rtl) right else left
+    val end = if (rtl) left else right
     drawRoundRect(
         color = color,
-        topLeft = Offset(left + (right - left) * slide, bleed),
+        topLeft = Offset(start + (end - start) * slide, bleed),
         size = Size(column + bleed * 2, size.height - bleed * 2),
         cornerRadius = CornerRadius(10.dp.toPx()),
     )
@@ -278,12 +294,12 @@ private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         MicroLabel(text = text)
-        if (live) StateBadge(text = "LIVE", active = true)
+        if (live) StateBadge(text = stringResource(R.string.badge_live), active = true)
     }
 }
 
-private fun describe(countryIso: String, operatorName: String): String =
-    describeRegion(countryIso, operatorName).ifEmpty { UnknownLabel }
+private fun describe(countryIso: String, operatorName: String, unknown: String): String =
+    describeRegion(countryIso, operatorName).ifEmpty { unknown }
 
 @Composable
 private fun DetailLine(
@@ -320,17 +336,20 @@ private fun DetailLine(
 @Composable
 private fun DirectionMark(
     color: Color,
+    rtl: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier.size(width = 5.dp, height = 10.dp)) {
         val stroke = 1.5.dp.toPx()
         // Half a stroke in on every side, or the round caps would be clipped by the canvas bounds.
         val inset = stroke / 2f
-        val tip = Offset(size.width - inset, size.height / 2f)
-        drawLine(color, Offset(inset, inset), tip, strokeWidth = stroke, cap = StrokeCap.Round)
+        val tipX = if (rtl) inset else size.width - inset
+        val baseX = if (rtl) size.width - inset else inset
+        val tip = Offset(tipX, size.height / 2f)
+        drawLine(color, Offset(baseX, inset), tip, strokeWidth = stroke, cap = StrokeCap.Round)
         drawLine(
             color,
-            Offset(inset, size.height - inset),
+            Offset(baseX, size.height - inset),
             tip,
             strokeWidth = stroke,
             cap = StrokeCap.Round,

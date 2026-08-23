@@ -149,11 +149,8 @@ val LocalOverrideColors: ProvidableCompositionLocal<OverrideColors> =
 /*
  * Type.
  *
- * The Material 3 defaults are kept as-is. An earlier revision widened every line height because the UI
- * was set in Simplified Chinese, which packs denser and has no ascender/descender variance to create
- * optical leading; the interface is now English throughout, so that tuning would only loosen text the
- * defaults already space correctly. No custom font is shipped — the system face is what the rest of the
- * phone uses, and this tool has no reason to look like it came from somewhere else.
+ * The Material 3 defaults are kept as-is. No custom font is shipped: the system face and its locale
+ * fallback cover every translated UI, and keep this tool visually consistent with the rest of the phone.
  */
 internal val OverrideTypography = Typography()
 
