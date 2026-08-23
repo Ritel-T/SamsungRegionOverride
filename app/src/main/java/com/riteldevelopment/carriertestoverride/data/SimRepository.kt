@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import androidx.annotation.StringRes
+import com.riteldevelopment.carriertestoverride.R
 
 /**
  * One selectable SIM/modem slot that currently carries a valid subscription.
@@ -41,7 +43,16 @@ data class SimInfo(
      * show a blank where the country is known.
      */
     val realCountryIso: String
-        get() = (original.countryIso ?: countryIso).ifEmpty { countryIsoForMccMnc(realOperatorNumeric) }
+        get() {
+            original.countryIso?.takeIf { it.isNotBlank() }?.let { return it }
+            // A Network-first session can make getSimCountryIso report the fake MCC's country before
+            // the Country layer is ever selected. In that state the saved real MCC is the trustworthy
+            // source; using the currently reported ISO would snapshot the disguise as the original.
+            if (simLayerLive) {
+                countryIsoForMccMnc(realOperatorNumeric).takeIf { it.isNotBlank() }?.let { return it }
+            }
+            return countryIso.ifEmpty { countryIsoForMccMnc(realOperatorNumeric) }
+        }
 
     /**
      * The country this subscription is currently claiming to be in.
@@ -88,6 +99,19 @@ data class SimInfo(
         captured == null || !captured.equals(reported, ignoreCase = true)
 
     companion object {
+        @StringRes
+        fun simStateNameRes(state: Int): Int = when (state) {
+            TelephonyManager.SIM_STATE_READY -> R.string.sim_state_ready
+            TelephonyManager.SIM_STATE_PIN_REQUIRED -> R.string.sim_state_pin
+            TelephonyManager.SIM_STATE_PUK_REQUIRED -> R.string.sim_state_puk
+            TelephonyManager.SIM_STATE_NETWORK_LOCKED -> R.string.sim_state_locked
+            TelephonyManager.SIM_STATE_NOT_READY -> R.string.sim_state_not_ready
+            TelephonyManager.SIM_STATE_PERM_DISABLED -> R.string.sim_state_disabled
+            TelephonyManager.SIM_STATE_CARD_IO_ERROR -> R.string.sim_state_io_error
+            TelephonyManager.SIM_STATE_CARD_RESTRICTED -> R.string.sim_state_restricted
+            else -> R.string.unknown
+        }
+
         fun simStateName(state: Int): String = when (state) {
             TelephonyManager.SIM_STATE_READY -> "READY"
             TelephonyManager.SIM_STATE_PIN_REQUIRED -> "PIN"
@@ -126,21 +150,31 @@ class SimRepository(context: Context, private val store: OverrideStore) {
 
     fun scan(): SimScan = try {
         val manager = appContext.getSystemService(TelephonyManager::class.java)
-            ?: return SimScan.Failure("The system did not provide a TelephonyManager.")
+            ?: return SimScan.Failure(appContext.getString(R.string.error_no_telephony_manager))
+        val subscriptions = appContext.getSystemService(SubscriptionManager::class.java)
+            ?: return SimScan.Failure(appContext.getString(R.string.error_no_subscription_manager))
         val declared = supportedSlotCount(manager)
-        val sims = (0 until declared).mapNotNull { slot -> readSlot(manager, slot) }
+        val sims = (0 until declared).mapNotNull { slot -> readSlot(manager, subscriptions, slot) }
         // A subscription reported at a slot beyond the declared count would otherwise be dropped
         // silently, so the count grows to cover it rather than the SIM disappearing from the screen.
         val highestUsed = (sims.maxOfOrNull { it.slotIndex } ?: -1) + 1
         SimScan.Success(sims, maxOf(declared, highestUsed))
     } catch (throwable: Throwable) {
         SimScan.Failure(
-            "Could not read SIM state: ${throwable.javaClass.simpleName}: ${throwable.message.orEmpty()}"
+            appContext.getString(
+                R.string.error_read_sim_state,
+                throwable.javaClass.simpleName,
+                throwable.message.orEmpty(),
+            )
         )
     }
 
-    private fun readSlot(manager: TelephonyManager, slot: Int): SimInfo? {
-        val subId = SubscriptionManager.getSubscriptionId(slot)
+    private fun readSlot(
+        manager: TelephonyManager,
+        subscriptions: SubscriptionManager,
+        slot: Int,
+    ): SimInfo? {
+        val subId = subscriptionId(subscriptions, slot)
         val state = manager.getSimState(slot)
         if (!SubscriptionManager.isValidSubscriptionId(subId) ||
             state == TelephonyManager.SIM_STATE_ABSENT ||
@@ -160,6 +194,15 @@ class SimRepository(context: Context, private val store: OverrideStore) {
             original = store.snapshot(subId),
         )
     }
+
+    @Suppress("DEPRECATION")
+    private fun subscriptionId(manager: SubscriptionManager, slot: Int): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            SubscriptionManager.getSubscriptionId(slot)
+        } else {
+            manager.getSubscriptionIds(slot)?.firstOrNull()
+                ?: SubscriptionManager.INVALID_SUBSCRIPTION_ID
+        }
 
     /**
      * How many SIM slots the hardware has.
