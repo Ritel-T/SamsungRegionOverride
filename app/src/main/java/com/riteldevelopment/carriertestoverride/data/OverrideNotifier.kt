@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.riteldevelopment.carriertestoverride.MainActivity
 import com.riteldevelopment.carriertestoverride.R
+import java.util.Locale
 
 /**
  * The standing reminder that a SIM is currently lying about where it is.
@@ -124,6 +125,7 @@ class OverrideNotifier(context: Context) {
         sim.realCountryIso,
         sim.simLayerLive,
         sim.countryLayerLive,
+        appContext.resources.configuration.locales.toLanguageTags(),
     ).joinToString("|")
 
     /**
@@ -133,13 +135,15 @@ class OverrideNotifier(context: Context) {
      */
     @SuppressLint("MissingPermission")
     private fun post(sim: SimInfo) {
-        val disguise = describeRegion(sim.disguiseCountryIso, sim.operatorName).ifEmpty { UNKNOWN_REGION }
-        val real = describeRegion(sim.realCountryIso, sim.realOperatorName).ifEmpty { UNKNOWN_REGION }
+        val unknown = appContext.getString(R.string.notification_unknown_region)
+        val disguise = describeRegion(sim.disguiseCountryIso, sim.operatorName).ifEmpty { unknown }
+        val real = describeRegion(sim.realCountryIso, sim.realOperatorName).ifEmpty { unknown }
+        val simName = appContext.getString(R.string.sim_number, sim.slotIndex + 1)
 
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Pretending to be $disguise")
-            .setContentText("${sim.displayName} is really $real")
+            .setContentTitle(appContext.getString(R.string.notification_title, disguise))
+            .setContentText(appContext.getString(R.string.notification_real_identity, simName, real))
             .setSubText(layerSummary(sim))
             .setShortCriticalText(chipText(sim))
             .setRequestPromotedOngoing(true)
@@ -152,7 +156,7 @@ class OverrideNotifier(context: Context) {
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_notification,
-                    "Restore",
+                    appContext.getString(R.string.action_restore_now),
                     activityIntent(sim.subId, restore = true),
                 ).build()
             )
@@ -164,9 +168,10 @@ class OverrideNotifier(context: Context) {
 
     /** Which switches are in force, so the reader knows whether calls are at risk without opening the app. */
     private fun layerSummary(sim: SimInfo): String = when {
-        sim.countryLayerLive && sim.simLayerLive -> "Country + Network"
-        sim.countryLayerLive -> "Country"
-        else -> "Network"
+        sim.countryLayerLive && sim.simLayerLive ->
+            appContext.getString(R.string.notification_layers_both)
+        sim.countryLayerLive -> appContext.getString(R.string.notification_layer_country)
+        else -> appContext.getString(R.string.notification_layer_network)
     }
 
     /**
@@ -180,7 +185,7 @@ class OverrideNotifier(context: Context) {
      */
     private fun chipText(sim: SimInfo): String {
         val iso = sim.disguiseCountryIso
-        return flagEmoji(iso).ifEmpty { iso.uppercase().ifBlank { "SIM" } }
+        return flagEmoji(iso).ifEmpty { iso.uppercase(Locale.ROOT).ifBlank { "SIM" } }
     }
 
     /**
@@ -239,13 +244,12 @@ class OverrideNotifier(context: Context) {
     private fun ensureChannel() {
         if (channelReady) return
         channelReady = true
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Active region override",
+            appContext.getString(R.string.notification_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "Shown while a SIM is reporting an overridden region."
+            description = appContext.getString(R.string.notification_channel_description)
             setSound(null, null)
             enableVibration(false)
             setShowBadge(false)
@@ -258,9 +262,6 @@ class OverrideNotifier(context: Context) {
 
     private companion object {
         const val TAG = "OverrideNotifier"
-
-        /** Both halves missing means the platform reported nothing, not that the region is blank. */
-        const val UNKNOWN_REGION = "an unknown region"
 
         const val CHANNEL_ID = "override_live"
 
@@ -283,4 +284,3 @@ class OverrideNotifier(context: Context) {
         const val ACCENT_COLOR = 0xFF2F8C9E.toInt()
     }
 }
-

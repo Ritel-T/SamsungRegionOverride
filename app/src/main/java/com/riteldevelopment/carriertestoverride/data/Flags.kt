@@ -1,5 +1,7 @@
 package com.riteldevelopment.carriertestoverride.data
 
+import java.util.Locale
+
 /**
  * The flag for a two-letter country code.
  *
@@ -25,7 +27,7 @@ private const val REGIONAL_INDICATOR_A = 0x1F1E6
  * supply the wording for that, which is the one part they genuinely differ on.
  */
 fun describeRegion(countryIso: String, operatorName: String): String {
-    val country = listOf(flagEmoji(countryIso), countryIso.uppercase())
+    val country = listOf(flagEmoji(countryIso), countryIso.uppercase(Locale.ROOT))
         .filter { it.isNotEmpty() }
         .joinToString(" ")
     return listOf(country, operatorName)
