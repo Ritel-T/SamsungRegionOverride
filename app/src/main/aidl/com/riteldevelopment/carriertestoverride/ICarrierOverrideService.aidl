@@ -21,7 +21,8 @@ interface ICarrierOverrideService {
      */
     String restoreTransient(int subId, String originalMccMnc, String originalSpn,
             String originalCountryIso, String originalDisplayName, int originalDisplayNameSource,
-            boolean restoreSimIdentity, boolean clearAppCountry, in String[] refreshPackages) = 3;
+            boolean networkWasLive, boolean restoreSimIdentity, boolean clearAppCountry,
+            in String[] refreshPackages) = 3;
     String clearAllCarrierConfigOverrides(int subId) = 4;
     /**
      * Force-stops the given packages, optionally wiping storage first and relaunching afterwards.
@@ -35,4 +36,9 @@ interface ICarrierOverrideService {
      * why this is on the privileged surface at all.
      */
     String[] readDisplayName(int subId) = 6;
+    /**
+     * Returns a one-way fingerprint of the physical SIM/card behind subId, or null when this build
+     * does not expose a stable card identifier. The raw ICCID never crosses this Binder surface.
+     */
+    String readSimFingerprint(int subId) = 7;
 }
