@@ -18,12 +18,12 @@ def releaseSigningConfigured = [
 
 android {
     namespace = "com.riteldevelopment.carriertestoverride"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.riteldevelopment.carriertestoverride"
         minSdk = 29
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 12
         versionName = "3.8.0"
         // Keep AGP's generated per-app language list to translations this project actually ships;
@@ -90,10 +90,10 @@ dependencies {
             "libs/provider-13.1.5.aar"
     )
 
-    implementation "androidx.core:core-ktx:1.19.0"
+    implementation "androidx.core:core-ktx:1.18.0"
     implementation "androidx.activity:activity-compose:1.13.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0"
-    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.11.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.10.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
     // Declared directly because the manifest intentionally moves InitializationProvider to :ui.
     // The same 1.1.1 is already selected transitively through Lifecycle/Emoji; this makes the class
