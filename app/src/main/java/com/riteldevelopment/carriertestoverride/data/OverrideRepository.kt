@@ -2,6 +2,7 @@ package com.riteldevelopment.carriertestoverride.data
 
 import com.riteldevelopment.carriertestoverride.CarrierOverrideUserService
 import com.riteldevelopment.carriertestoverride.ICarrierOverrideService
+import com.riteldevelopment.carriertestoverride.R
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -36,6 +37,10 @@ data class LayerSelection(
     val none: Boolean get() = !simIdentity && !appCountry
 }
 
+/** Stored live or pending state is authoritative when deciding whether a UICC cycle is safe. */
+internal fun networkMayBeLive(flags: OverrideStore.Flags): Boolean =
+    flags.simIdentity || flags.simPending
+
 /** What kind of privileged operation ran, used only for wording progress and results. */
 enum class OperationKind { APPLY, RESTORE, CLEAR_ALL, REFRESH_APPS }
 
@@ -58,13 +63,15 @@ data class OperationOutcome(
     val simLayerFailed: Boolean,
     val countryLayerFailed: Boolean,
     /**
-     * The apply landed but left the SIM unable to make calls.
+     * The apply landed and IMS was observed unregistered during the post-apply window.
      *
      * Not a failure — every layer the user asked for is in place — but the single most consequential
      * thing the operation can report, so it is lifted out of the detail text and into the headline
      * rather than left for whoever expands the report.
      */
-    val voiceStopped: Boolean = false,
+    val imsUnregistered: Boolean = false,
+    /** The overrides were removed, but automatic IMS recovery was skipped, unavailable or unconfirmed. */
+    val imsRecoveryUnconfirmed: Boolean = false,
 ) {
     /**
      * Whether the privileged service ran far enough to report on the layers at all.
@@ -99,18 +106,47 @@ class OverrideRepository(
         refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
-        // Capture the SIM's real identity before the first override, never after.
-        if (layers.simIdentity) {
-            store.captureSimSnapshot(sim.subId, sim.operatorNumeric, sim.operatorName)
-        }
-        if (layers.appCountry) {
-            store.captureCountrySnapshot(sim.subId, sim.countryIso)
+        if (store.hasLegacyUnboundState(sim.subId)) {
+            throw OverrideException(R.string.error_sim_identity_unbound)
         }
         val service = connect(onStage)
+        val fingerprint = withContext(io) {
+            runCatching { service.readSimFingerprint(sim.subId) }.getOrNull()
+        }
+        if (store.hasFingerprint(sim.subId) && fingerprint == null) {
+            throw OverrideException(R.string.error_sim_identity_unavailable)
+        }
+        if (store.fingerprintWasUnavailable(sim.subId) && fingerprint != null) {
+            throw OverrideException(R.string.error_sim_identity_unbound)
+        }
+        val replacedCard = store.prepareForApply(sim.subId, fingerprint)
+        // Bind the recovery state before writing any snapshot. Without this marker, a process death or
+        // validation failure between the first snapshot and the old marker position would make state
+        // created by this version indistinguishable from an unsafe legacy migration on the next run.
+        if (fingerprint == null) store.markFingerprintUnavailable(sim.subId)
+
+        // Capture every real field before the first layer, regardless of which layer this operation
+        // selects. Otherwise Network-first can make a later Country apply save the fake country as the
+        // original. A changed card intentionally starts from what the replacement reports now.
+        val realNumeric = if (replacedCard) sim.operatorNumeric else sim.realOperatorNumeric
+        val realName = if (replacedCard) sim.operatorName else sim.realOperatorName
+        val realCountry = if (replacedCard) sim.countryIso else sim.realCountryIso
+        store.captureSimSnapshot(sim.subId, realNumeric, realName)
+        store.captureCountrySnapshot(
+            sim.subId,
+            realCountry.ifEmpty { countryIsoForMccMnc(realNumeric) },
+        )
+        if (layers.simIdentity && !store.hasSimSnapshot(sim.subId)) {
+            throw OverrideException(R.string.error_real_sim_identity_unavailable)
+        }
         // The display name is the one original this app cannot read for itself — it needs
         // READ_PHONE_STATE, which only the shell service holds. So it is captured here: after the
         // service exists, and still before a single byte of override has been written.
-        captureDisplayName(service, sim.subId)
+        if (replacedCard || !sim.flags.any) captureDisplayName(service, sim.subId)
+        store.rememberSessionPackages(sim.subId, refreshPackages)
+        // Synchronous and immediately before the Binder write. If either process dies after a layer
+        // lands but before the long report returns, the next launch still errs toward Restore.
+        store.markApplyPending(sim.subId, layers.simIdentity, layers.appCountry)
         onStage(Stage.RUNNING)
         return runOperation(
             kind = OperationKind.APPLY,
@@ -118,11 +154,20 @@ class OverrideRepository(
             service = service,
             reconcile = { outcome ->
                 if (outcome.reportedLayers) {
-                    store.setFlags(
+                    val simSucceeded = layers.simIdentity && !outcome.simLayerFailed
+                    val countrySucceeded = layers.appCountry && !outcome.countryLayerFailed
+                    store.finishApply(
                         subId = sim.subId,
-                        simIdentity = if (layers.simIdentity && !outcome.simLayerFailed) true else null,
-                        appCountry = if (layers.appCountry && !outcome.countryLayerFailed) true else null,
+                        simAttempted = layers.simIdentity,
+                        simSucceeded = simSucceeded,
+                        countryAttempted = layers.appCountry,
+                        countrySucceeded = countrySucceeded,
                     )
+                    // Failed layers remain pending because a privileged write can land before its
+                    // reply is lost. Keep the session app list for that conservative Restore path.
+                    if (!store.flags(sim.subId).any) {
+                        store.clearSessionPackages(sim.subId)
+                    }
                 }
             },
         ) {
@@ -147,8 +192,25 @@ class OverrideRepository(
         refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
-        val snapshot = store.snapshot(sim.subId)
+        if (store.hasLegacyUnboundState(sim.subId)) {
+            throw OverrideException(R.string.error_sim_identity_unbound)
+        }
         val service = connect(onStage)
+        val fingerprint = withContext(io) {
+            runCatching { service.readSimFingerprint(sim.subId) }.getOrNull()
+        }
+        if (store.hasFingerprint(sim.subId) && fingerprint == null) {
+            throw OverrideException(R.string.error_sim_identity_unavailable)
+        }
+        if (store.fingerprintWasUnavailable(sim.subId) && fingerprint != null) {
+            throw OverrideException(R.string.error_sim_identity_unbound)
+        }
+        if (!store.fingerprintMatches(sim.subId, fingerprint)) {
+            throw OverrideException(R.string.error_sim_changed)
+        }
+        val snapshot = store.snapshot(sim.subId)
+        val flagsBefore = store.flags(sim.subId)
+        val allSessionPackages = (store.sessionPackages(sim.subId) + refreshPackages).distinct()
         onStage(Stage.RUNNING)
         return runOperation(
             kind = OperationKind.RESTORE,
@@ -163,6 +225,11 @@ class OverrideRepository(
                         simIdentity = if (restoreSimIdentity && !outcome.simLayerFailed) false else null,
                         appCountry = if (clearAppCountry && !outcome.countryLayerFailed) false else null,
                     )
+                    val simRemains = flagsBefore.simIdentity &&
+                        !(restoreSimIdentity && !outcome.simLayerFailed)
+                    val countryRemains = flagsBefore.appCountry &&
+                        !(clearAppCountry && !outcome.countryLayerFailed)
+                    if (!simRemains && !countryRemains) store.clearSessionPackages(sim.subId)
                 }
             },
         ) {
@@ -172,14 +239,15 @@ class OverrideRepository(
                 snapshot.operatorName,
                 // With no snapshot, fall back to what the SIM reports now; the instrumentation uses this
                 // only to warm Samsung's country cache before dropping the override.
-                snapshot.countryIso ?: sim.countryIso,
+                snapshot.countryIso ?: sim.realCountryIso,
                 // No fallback for these two. An un-captured display name is left alone rather than
                 // guessed at, because the only value available to guess with is the overridden one.
                 snapshot.displayName,
                 snapshot.displayNameSource,
+                networkMayBeLive(flagsBefore),
                 restoreSimIdentity,
                 clearAppCountry,
-                refreshPackages.toTypedArray(),
+                allSessionPackages.toTypedArray(),
             )
         }
     }
@@ -255,7 +323,7 @@ class OverrideRepository(
 
         onStage(Stage.PERMISSION)
         if (!shizuku.requestPermission()) {
-            throw OverrideException("Shizuku permission was not granted. Nothing was changed.")
+            throw OverrideException(R.string.error_shizuku_not_granted)
         }
 
         onStage(Stage.BINDING)
@@ -299,7 +367,10 @@ class OverrideRepository(
             isError = message.startsWith(ERROR_PREFIX) || message.contains("\n$ERROR_PREFIX"),
             simLayerFailed = LAYER_FAILURE_MARKERS.sim.any(message::contains),
             countryLayerFailed = LAYER_FAILURE_MARKERS.country.any(message::contains),
-            voiceStopped = message.contains(CarrierOverrideUserService.VOICE_STOPPED),
+            imsUnregistered = message.contains(CarrierOverrideUserService.VOICE_STOPPED),
+            imsRecoveryUnconfirmed = message.contains(
+                CarrierOverrideUserService.IMS_RECOVERY_UNCONFIRMED
+            ),
         )
         reconcile(outcome)
         outcome
