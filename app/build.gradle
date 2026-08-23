@@ -5,6 +5,17 @@ plugins {
     id "org.jetbrains.kotlin.plugin.compose"
 }
 
+def releaseStoreFile = providers.environmentVariable("SRO_RELEASE_STORE_FILE").orNull
+def releaseStorePassword = providers.environmentVariable("SRO_RELEASE_STORE_PASSWORD").orNull
+def releaseKeyAlias = providers.environmentVariable("SRO_RELEASE_KEY_ALIAS").orNull
+def releaseKeyPassword = providers.environmentVariable("SRO_RELEASE_KEY_PASSWORD").orNull
+def releaseSigningConfigured = [
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+].every { it != null && !it.isBlank() }
+
 android {
     namespace = "com.riteldevelopment.carriertestoverride"
     compileSdk = 37
@@ -13,8 +24,15 @@ android {
         applicationId = "com.riteldevelopment.carriertestoverride"
         minSdk = 29
         targetSdk = 37
-        versionCode = 10
-        versionName = "3.6.0"
+        versionCode = 12
+        versionName = "3.8.0"
+        // Keep AGP's generated per-app language list to translations this project actually ships;
+        // locale resources bundled inside dependencies must not appear as partially translated UI.
+        resourceConfigurations += [
+                "en", "zh-rCN", "zh-rTW", "ja", "ko",
+                "fr", "de", "es", "pt-rBR", "ru", "tr",
+                "ar", "in", "th", "vi"
+        ]
     }
 
     buildFeatures {
@@ -23,11 +41,26 @@ android {
         compose = true
     }
 
+    androidResources {
+        generateLocaleConfig true
+    }
+
     // Built-in Kotlin derives its jvmTarget from these, so setting jvmTarget separately is both
     // unnecessary and a common source of "Inconsistent JVM-target compatibility" failures.
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            release {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -38,6 +71,9 @@ android {
         release {
             minifyEnabled = false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.release
+            }
         }
     }
 }
@@ -59,6 +95,10 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0"
     implementation "androidx.lifecycle:lifecycle-runtime-compose:2.11.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
+    // Declared directly because the manifest intentionally moves InitializationProvider to :ui.
+    // The same 1.1.1 is already selected transitively through Lifecycle/Emoji; this makes the class
+    // visible to source-manifest lint without changing the resolved runtime version.
+    implementation "androidx.startup:startup-runtime:1.1.1"
 
     implementation platform("androidx.compose:compose-bom:2026.06.01")
     implementation "androidx.compose.ui:ui"
@@ -73,5 +113,6 @@ dependencies {
     // hazard hatching — are drawn locally.
     implementation "androidx.compose.material:material-icons-core"
 
+    testImplementation "junit:junit:4.13.2"
     debugImplementation "androidx.compose.ui:ui-tooling"
 }
