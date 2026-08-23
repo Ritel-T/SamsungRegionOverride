@@ -3,9 +3,15 @@ package com.riteldevelopment.carriertestoverride.ui
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.riteldevelopment.carriertestoverride.BuildConfig
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.InstrumentationHost
 import com.riteldevelopment.carriertestoverride.data.OperationKind
 import com.riteldevelopment.carriertestoverride.data.OperationOutcome
@@ -31,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Holds the whole screen's state and owns the single privileged operation that may be in flight.
@@ -63,6 +70,8 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private var operationJob: Job? = null
     private var refreshJob: Job? = null
+    private val resourcesReleased = AtomicBoolean(false)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
         shizuku.start()
@@ -75,11 +84,22 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
-        operationJob?.cancel()
+        val running = operationJob
+        running?.cancel()
         refreshJob?.cancel()
+        if (running != null && !running.isCompleted) {
+            // The Binder write and its flag reconciliation run in NonCancellable. Releasing either
+            // dependency here can kill the instrumentation host halfway through that protected tail.
+            running.invokeOnCompletion { mainHandler.post { releaseResources() } }
+        } else {
+            releaseResources()
+        }
+    }
+
+    private fun releaseResources() {
+        if (!resourcesReleased.compareAndSet(false, true)) return
         shizuku.stop()
         host.release()
-        super.onCleared()
     }
 
     // ---------------------------------------------------------------- environment
@@ -136,12 +156,25 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         val intent = context.packageManager.getLaunchIntentForPackage(KnownPackages.SHIZUKU)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (intent == null) {
-            return fail(
-                "Shizuku is not installed. Get it from shizuku.rikka.app, start it, then come back."
-            )
+            return fail(R.string.error_shizuku_missing)
         }
         runCatching { context.startActivity(intent) }.onFailure { throwable ->
-            fail("Could not open Shizuku: ${throwable.javaClass.simpleName}")
+            fail(R.string.error_open_shizuku, throwable.javaClass.simpleName)
+        }
+    }
+
+    /** Opens Android's per-app language page on 13+, and the system language page on older releases. */
+    fun openLanguageSettings() {
+        val context = getApplication<Application>()
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Intent(Settings.ACTION_APP_LOCALE_SETTINGS).setData(
+                "package:${context.packageName}".toUri()
+            )
+        } else {
+            Intent(Settings.ACTION_LOCALE_SETTINGS)
+        }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }.onFailure { throwable ->
+            fail(R.string.error_open_language_settings, throwable.javaClass.simpleName)
         }
     }
 
@@ -173,7 +206,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setMccMnc(value: String) = _state.update {
-        it.copy(mccMnc = value.filter(Char::isDigit).take(MAX_MCC_MNC), presetId = null)
+        it.copy(mccMnc = normalizeMccMncInput(value), presetId = null)
     }
 
     fun setCountryIso(value: String) = _state.update {
@@ -208,37 +241,38 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     /** Validates, then asks for confirmation. Nothing privileged happens here. */
     fun requestApply() {
         val current = _state.value
-        val sim = current.selectedSim ?: return fail("No usable SIM is selected.")
+        val sim = current.selectedSim ?: return fail(R.string.error_no_sim_selected)
 
         val layers = current.layers
-        if (layers.none) return fail("Enable at least one layer.")
+        if (layers.none) return fail(R.string.error_enable_layer)
         // Only the SIM identity layer needs loaded IccRecords, so only it needs a READY card. Naming the
         // layer and the actual state beats "the selected SIM is not READY yet", which left the user to
         // guess which of the two switches was the problem.
         if (layers.simIdentity && !sim.isReady) {
-            return fail("The Network layer needs a READY SIM; ${sim.displayName} is ${sim.stateLabel}.")
+            return fail(
+                R.string.error_network_needs_ready,
+                LocalizedText.resource(R.string.sim_number, sim.slotIndex + 1),
+                LocalizedText.resource(SimInfo.simStateNameRes(sim.simState)),
+            )
         }
 
         val mccMnc = current.mccMnc.trim()
-        if (layers.simIdentity && !mccMnc.matches(MCC_MNC_PATTERN)) {
-            return fail("The Network layer needs an MCC/MNC of 5 or 6 digits.")
+        if (layers.simIdentity && !isValidMccMnc(mccMnc)) {
+            return fail(R.string.error_invalid_mcc_mnc)
         }
         val iso = current.countryIso.trim().lowercase(Locale.ROOT)
         if (layers.appCountry && !iso.matches(ISO_PATTERN)) {
-            return fail("The Country layer needs a two-letter country ISO.")
+            return fail(R.string.error_invalid_iso)
         }
         val name = current.carrierName.trim()
         if ((layers.simIdentity || (layers.appCountry && layers.carrierNameOverride)) && name.isEmpty()) {
-            return fail("The selected layers need a carrier name.")
+            return fail(R.string.error_carrier_name_required)
         }
 
         // Applying the target MCC/MNC over a SIM that already reports it, with no snapshot on file,
         // would freeze the fake value in as the "original". Refuse rather than lose the real one.
         if (layers.simIdentity && mccMnc == sim.operatorNumeric && !store.hasSimSnapshot(sim.subId)) {
-            return fail(
-                "This SIM already reports the target MCC/MNC and no snapshot was taken before it did. " +
-                    "Reboot first so the real value can be recorded."
-            )
+            return fail(R.string.error_target_already_reported)
         }
 
         _state.update {
@@ -254,7 +288,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     fun requestRestore() {
         val current = _state.value
-        val sim = current.selectedSim ?: return fail("No usable SIM is selected.")
+        val sim = current.selectedSim ?: return fail(R.string.error_no_sim_selected)
         val flags = store.flags(sim.subId)
         if (!flags.any) {
             _state.update { it.copy(dialog = DialogRequest.RestoreWithoutMarkers(sim)) }
@@ -281,7 +315,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         // so the override cannot be undone from here, and a button that does nothing at all would leave
         // the user believing it had been.
         val sim = _state.value.sims.firstOrNull { it.subId == subId }
-            ?: return fail("The SIM that override was applied to is no longer in this phone.")
+            ?: return fail(R.string.error_sim_removed)
         _state.update { it.copy(selectedSubId = subId) }
         val flags = store.flags(subId)
         if (!flags.any) return
@@ -301,13 +335,13 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun requestClearAll() {
-        val sim = _state.value.selectedSim ?: return fail("No usable SIM is selected.")
+        val sim = _state.value.selectedSim ?: return fail(R.string.error_no_sim_selected)
         _state.update { it.copy(dialog = DialogRequest.ConfirmClearAll(sim)) }
     }
 
     /** Wiping data signs the user out of the app, so that one variant needs an answer first. */
     fun requestRefreshApps(app: TargetApp) {
-        if (!app.installed) return fail("${app.label} is not installed.")
+        if (!app.installed) return fail(R.string.error_app_not_installed, app.label)
         if (_state.value.wipeMode.destructive) {
             _state.update { it.copy(dialog = DialogRequest.ConfirmWipeData(listOf(app))) }
             return
@@ -390,7 +424,13 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         if (!job.isActive) return
         job.cancel()
         _state.update {
-            it.copy(busy = null, result = ResultState("Cancelled.", tone = ResultTone.IDLE))
+            it.copy(
+                busy = null,
+                result = ResultState(
+                    LocalizedText.resource(R.string.result_cancelled),
+                    tone = ResultTone.IDLE,
+                ),
+            )
         }
     }
 
@@ -426,7 +466,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun startRestore(sim: SimInfo, restoreSim: Boolean, clearCountry: Boolean) {
-        if (!restoreSim && !clearCountry) return fail("Enable at least one layer.")
+        if (!restoreSim && !clearCountry) return fail(R.string.error_enable_layer)
         val packages = apps.selectedPackages()
         runOperation { repository.restore(sim, restoreSim, clearCountry, packages, ::reportStage) }
     }
@@ -475,7 +515,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 _state.update {
                     it.copy(
                         busy = null,
-                        result = ResultState(expected.message.orEmpty(), tone = ResultTone.ERROR),
+                        result = ResultState(expected.localizedText(), tone = ResultTone.ERROR),
                     )
                 }
             } catch (throwable: Throwable) {
@@ -483,7 +523,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                     it.copy(
                         busy = null,
                         result = ResultState(
-                            headline = "Operation failed",
+                            headline = LocalizedText.resource(R.string.result_operation_failed),
                             detail = "${throwable.javaClass.name}: ${throwable.message.orEmpty()}",
                             tone = ResultTone.ERROR,
                         ),
@@ -503,8 +543,15 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         _state.update { it.copy(busy = BusyState(stage)) }
     }
 
-    private fun fail(message: String) {
-        _state.update { it.copy(result = ResultState(message, tone = ResultTone.ERROR)) }
+    private fun fail(@StringRes messageRes: Int, vararg args: Any) {
+        _state.update {
+            it.copy(
+                result = ResultState(
+                    LocalizedText.resource(messageRes, *args),
+                    tone = ResultTone.ERROR,
+                )
+            )
+        }
     }
 
     private fun OperationOutcome.toResultState(): ResultState {
@@ -520,28 +567,53 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             // Everything the user asked for landed, so this is not an error — but a green "Region
             // applied" on a phone that can no longer take calls is a lie of omission. PARTIAL is the
             // tone that means "it worked, and you still need to look at this".
-            voiceStopped -> ResultTone.PARTIAL
+            imsUnregistered || imsRecoveryUnconfirmed -> ResultTone.PARTIAL
             else -> ResultTone.SUCCESS
         }
-        val headline = when {
-            partial -> "One layer failed"
-            isError -> "Operation failed"
-            voiceStopped -> "Applied — calls and SMS stopped"
-            kind == OperationKind.APPLY -> "Region applied"
-            kind == OperationKind.RESTORE -> "Restored this tool's overrides"
-            kind == OperationKind.REFRESH_APPS -> "Target apps refreshed"
-            else -> "All CarrierConfig test overrides cleared"
+        val headlineRes = when {
+            partial -> R.string.result_one_layer_failed
+            isError -> R.string.result_operation_failed
+            imsUnregistered -> R.string.result_disguise_ims_unregistered
+            imsRecoveryUnconfirmed -> R.string.result_restore_unconfirmed
+            kind == OperationKind.APPLY -> R.string.result_disguise_active
+            kind == OperationKind.RESTORE -> R.string.result_restored
+            kind == OperationKind.REFRESH_APPS -> R.string.result_apps_refreshed
+            else -> R.string.result_all_carrier_config_cleared
         }
-        return ResultState(headline = headline, detail = message, probe = probe, tone = tone)
+        return ResultState(
+            headline = LocalizedText.resource(headlineRes),
+            detail = message,
+            probe = probe,
+            tone = tone,
+        )
     }
 
+    private fun OverrideException.localizedText(): LocalizedText =
+        messageRes?.let { LocalizedText.resource(it, *formatArgs) }
+            ?: LocalizedText.Literal(message.orEmpty())
+
     private companion object {
-        val MCC_MNC_PATTERN = Regex("[0-9]{5,6}")
         val ISO_PATTERN = Regex("[a-z]{2}")
-        const val MAX_MCC_MNC = 6
         const val MAX_ISO = 2
         const val MAX_NAME = 80
         const val SIM_REFRESH_ATTEMPTS = 7
         const val SIM_REFRESH_INTERVAL_MS = 800L
+    }
+}
+
+private val MCC_MNC_PATTERN = Regex("[0-9]{5,6}")
+private const val MAX_MCC_MNC = 6
+
+internal fun isValidMccMnc(value: String): Boolean = MCC_MNC_PATTERN.matches(value)
+
+/** Converts every Unicode decimal digit, including supplementary-plane digits, to ASCII. */
+internal fun normalizeMccMncInput(value: String): String = buildString(MAX_MCC_MNC) {
+    var offset = 0
+    while (offset < value.length && length < MAX_MCC_MNC) {
+        val codePoint = value.codePointAt(offset)
+        offset += Character.charCount(codePoint)
+        if (Character.getType(codePoint) != Character.DECIMAL_DIGIT_NUMBER.toInt()) continue
+        val digit = Character.digit(codePoint, 10)
+        if (digit in 0..9) append('0' + digit)
     }
 }

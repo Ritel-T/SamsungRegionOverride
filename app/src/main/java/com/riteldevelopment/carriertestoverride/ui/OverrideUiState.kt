@@ -1,5 +1,9 @@
 package com.riteldevelopment.carriertestoverride.ui
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.LayerSelection
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import com.riteldevelopment.carriertestoverride.data.ShizukuStatus
@@ -15,13 +19,67 @@ enum class ResultTone { IDLE, PROGRESS, SUCCESS, PARTIAL, ERROR }
  * service; [probe] is the runtime capability dump, kept separate so it can be collapsed.
  */
 data class ResultState(
-    val headline: String,
+    val headline: LocalizedText,
     val detail: String? = null,
     val probe: String? = null,
     val tone: ResultTone = ResultTone.IDLE,
 ) {
     companion object {
-        val Initial = ResultState("Nothing has run yet.", tone = ResultTone.IDLE)
+        val Initial = ResultState(LocalizedText.Empty, tone = ResultTone.IDLE)
+    }
+}
+
+/** Text that stays tied to a resource until Compose resolves it under the current app locale. */
+sealed interface LocalizedText {
+    @Composable
+    fun resolve(): String
+
+    @Composable
+    fun ifBlank(defaultValue: @Composable () -> String): String {
+        val resolved = resolve()
+        return if (resolved.isBlank()) defaultValue() else resolved
+    }
+
+    fun resolveWith(resolver: (id: Int, args: List<Any>) -> String): String
+
+    data class Resource(
+        @param:StringRes val id: Int,
+        val args: List<Any> = emptyList(),
+    ) : LocalizedText {
+        @Composable
+        override fun resolve(): String {
+            val resolvedArgs = ArrayList<Any>(args.size)
+            for (arg in args) {
+                resolvedArgs += if (arg is LocalizedText) arg.resolve() else arg
+            }
+            return stringResource(id, *resolvedArgs.toTypedArray())
+        }
+
+        override fun resolveWith(resolver: (id: Int, args: List<Any>) -> String): String {
+            val resolvedArgs = args.map { arg ->
+                if (arg is LocalizedText) arg.resolveWith(resolver) else arg
+            }
+            return resolver(id, resolvedArgs)
+        }
+    }
+
+    data class Literal(val value: String) : LocalizedText {
+        @Composable
+        override fun resolve(): String = value
+
+        override fun resolveWith(resolver: (id: Int, args: List<Any>) -> String): String = value
+    }
+
+    data object Empty : LocalizedText {
+        @Composable
+        override fun resolve(): String = ""
+
+        override fun resolveWith(resolver: (id: Int, args: List<Any>) -> String): String = ""
+    }
+
+    companion object {
+        fun resource(@StringRes id: Int, vararg args: Any): LocalizedText =
+            Resource(id, args.toList())
     }
 }
 
@@ -70,13 +128,14 @@ data class QuickPick(val preset: RegionPreset, val recent: Boolean)
 
 /** Progress narration while an operation walks through its preconditions. */
 data class BusyState(val stage: OverrideRepository.Stage) {
-    val label: String
+    @get:StringRes
+    val labelRes: Int
         get() = when (stage) {
-            OverrideRepository.Stage.HOST -> "Preparing the instrumentation host"
-            OverrideRepository.Stage.SHIZUKU -> "Waiting for Shizuku"
-            OverrideRepository.Stage.PERMISSION -> "Waiting for permission"
-            OverrideRepository.Stage.BINDING -> "Starting the shell service"
-            OverrideRepository.Stage.RUNNING -> "Running"
+            OverrideRepository.Stage.HOST -> R.string.busy_host
+            OverrideRepository.Stage.SHIZUKU -> R.string.busy_shizuku
+            OverrideRepository.Stage.PERMISSION -> R.string.busy_permission
+            OverrideRepository.Stage.BINDING -> R.string.busy_binding
+            OverrideRepository.Stage.RUNNING -> R.string.busy_running
         }
 
     /** Only the wait-for-Shizuku stage can last indefinitely, so only it offers a cancel affordance. */
@@ -165,6 +224,7 @@ data class OverrideUiState(
      */
     val canApply: Boolean
         get() = !isBusy && selectedSim != null &&
+            selectedSim?.flags?.uncertain != true &&
             (!layers.simIdentity || selectedSim?.isReady == true)
 
     val canRestore: Boolean get() = !isBusy && selectedSim != null
