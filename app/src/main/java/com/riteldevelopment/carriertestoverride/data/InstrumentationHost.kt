@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.InstrumentationHostService
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -51,7 +52,7 @@ class InstrumentationHost(context: Context) {
                 continuation.resume(Unit)
             } else {
                 continuation.resumeWithException(
-                    OverrideException("Could not start the CarrierConfig instrumentation host.")
+                    OverrideException(R.string.error_instrumentation_host)
                 )
             }
         }
@@ -79,7 +80,7 @@ class InstrumentationHost(context: Context) {
                 waiter = null
                 if (continuation.isActive) {
                     continuation.resumeWithException(
-                        OverrideException("Could not start the CarrierConfig instrumentation host.")
+                        OverrideException(R.string.error_instrumentation_host)
                     )
                 }
             }

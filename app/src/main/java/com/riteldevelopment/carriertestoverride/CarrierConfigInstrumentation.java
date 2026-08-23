@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.UiAutomation;
@@ -101,15 +102,21 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
                 } else if (ACTION_CLEAR_TRANSIENT.equals(action)) {
                     String restoredIso = restoreCountryCacheIfAvailable(
                             manager, subId, arguments);
-                    invokeOverride(manager, subId, null, false);
+                    boolean settled = writeAndAwaitReload(manager, subId, null, false);
                     result.putString("message", "App country: cleared the transient CarrierConfig override"
                             + (restoredIso == null ? ""
                             : "\nSamsung's SIM country cache was warmed back to " + restoredIso + " first")
+                            + (settled ? ""
+                            : "\nNote: the final clear was submitted, but no reload broadcast arrived"
+                            + " within the timeout")
                             + "\nPersistent overrides written by other tools were left alone");
                 } else if (ACTION_CLEAR_ALL.equals(action)) {
-                    invokeOverride(manager, subId, null, true);
+                    boolean settled = writeAndAwaitReload(manager, subId, null, true);
                     result.putString("message", "Cleared this subscription's transient and persistent"
-                            + " CarrierConfig test overrides, including values written by other tools");
+                            + " CarrierConfig test overrides, including values written by other tools"
+                            + (settled ? ""
+                            : "\nNote: the clear was submitted, but no reload broadcast arrived within"
+                            + " the timeout"));
                 } else {
                     throw new IllegalArgumentException("Unknown action: " + action);
                 }
@@ -165,9 +172,15 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         }
         PersistableBundle restore = new PersistableBundle();
         restore.putString(KEY_COUNTRY_ISO, iso);
+        // A timed-out warm is deliberately left in place rather than followed by a clear. Explicitly
+        // disable the name override so that safe fallback cannot keep re-applying the fake label.
+        restore.putBoolean(KEY_OVERRIDE_NAME, false);
         // Same wait as the apply path: the point of warming the cache is that the real ISO is in
         // effect *before* the override is dropped, and a write that has only been submitted is not.
-        writeAndAwaitReload(manager, subId, restore);
+        if (!writeAndAwaitReload(manager, subId, restore)) {
+            throw new IllegalStateException(
+                    "Real country cache reload was not confirmed; the transient override was not cleared");
+        }
         return iso;
     }
 
@@ -195,6 +208,11 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
      */
     private boolean writeAndAwaitReload(CarrierConfigManager manager, int subId,
             PersistableBundle values) throws Exception {
+        return writeAndAwaitReload(manager, subId, values, false);
+    }
+
+    private boolean writeAndAwaitReload(CarrierConfigManager manager, int subId,
+            PersistableBundle values, boolean persistent) throws Exception {
         CountDownLatch reloaded = new CountDownLatch(1);
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
@@ -214,7 +232,7 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         context.registerReceiver(receiver,
                 new IntentFilter(CarrierConfigManager.ACTION_CARRIER_CONFIG_CHANGED));
         try {
-            invokeOverride(manager, subId, values, false);
+            invokeOverride(manager, subId, values, persistent);
             observed = reloaded.await(SETTLE_CEILING_MILLIS, TimeUnit.MILLISECONDS);
         } finally {
             try {
@@ -254,6 +272,9 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         }
     }
 
+    // This app exists to exercise the platform's test-only override. Instrumentation starts with
+    // hidden-API checks disabled and the method is probed at runtime because vendor signatures differ.
+    @SuppressLint("BlockedPrivateApi")
     private static Method findOverrideMethod() throws NoSuchMethodException {
         try {
             return CarrierConfigManager.class.getDeclaredMethod(
