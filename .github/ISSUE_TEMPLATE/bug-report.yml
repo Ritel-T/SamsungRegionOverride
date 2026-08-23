@@ -1,0 +1,50 @@
+name: Bug report
+description: Report an app failure without publishing sensitive phone diagnostics.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not upload IMSI, ICCID, IMEI, EID, phone numbers, ADB serials, full logcat, dumpsys or bugreports.
+        If calling or messaging is affected, restore in the app first, then toggle the SIM or reboot.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: 3.8.0
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and software
+      placeholder: SM-S938B / Android 16 / One UI 8.5
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Include selected layers and target region, but no personal identifiers.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: recovery
+    attributes:
+      label: Restore and reboot result
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed all phone, SIM, account, network and device identifiers.
+          required: true

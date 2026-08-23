@@ -1,0 +1,61 @@
+name: Compatibility report
+description: Report a tested device/firmware combination without personal SIM identifiers.
+title: "[Compatibility]: "
+labels: [compatibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not upload IMSI, ICCID, IMEI, EID, phone numbers, ADB serials, full logcat, dumpsys or bugreports.
+        A reboot is the definitive reset for core overrides. Restore the real identity before reporting.
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: SM-S938B
+    validations:
+      required: true
+  - type: input
+    id: software
+    attributes:
+      label: Android / vendor software
+      placeholder: Android 16 / One UI 8.5
+    validations:
+      required: true
+  - type: input
+    id: carrier_country
+    attributes:
+      label: Real carrier country
+      description: Country only. Do not include a phone number or SIM/account identifier.
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Target app and version
+    validations:
+      required: true
+  - type: dropdown
+    id: layers
+    attributes:
+      label: Selected layers
+      options:
+        - Network only
+        - Country only
+        - Network and Country
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Apply, target-app and restore result
+      description: State whether IMS was registered before apply, after apply and after restore. Do not paste raw logs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed all phone, SIM, account, network and device identifiers.
+          required: true
