@@ -8,6 +8,11 @@
 
 它不需要 root，基带仍接入真实运营商，手机号也不会改变；但 Android 电话框架中的运营商身份、CarrierConfig、数据配置和 IMS 行为都会受到影响，因此不能把它当作纯显示修改。
 
+<p align="center">
+  <img src="docs/images/screenshot-main.png" width="380"
+       alt="应用界面：SIM 1 显示 46001 CN 中国联通，右侧为 23430 GB EE 的伪装目标，下方是地区选择和开始伪装按钮。">
+</p>
+
 ## 60 秒使用流程
 
 1. 启动 Shizuku，并向本应用授权。

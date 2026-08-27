@@ -14,6 +14,11 @@ No root is required. The radio remains attached to the real carrier and the phon
 change, but Android's carrier identity, CarrierConfig, data profiles and IMS behaviour can change. Do
 not treat this as a harmless cosmetic switch.
 
+<p align="center">
+  <img src="docs/images/screenshot-main.png" width="380"
+       alt="The app showing SIM 1 on 46001 CN China Unicom beside a 23430 GB EE disguise, with the region picker and Start disguise button below.">
+</p>
+
 ## The 60-second workflow
 
 1. Start Shizuku and grant this app access.
