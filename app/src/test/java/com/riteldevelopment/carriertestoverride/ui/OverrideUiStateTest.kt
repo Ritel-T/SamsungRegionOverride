@@ -29,15 +29,16 @@ class OverrideUiStateTest {
                 else -> error("Unexpected resource $id")
             }
         }
-        val chinese = headline.resolveWith { id, args ->
+        // Word order differs from English, so a cached format string would fail here.
+        val german = headline.resolveWith { id, args ->
             when (id) {
-                10 -> "${args.single()} 出错"
+                10 -> "${args.single()} meldet einen Fehler"
                 11 -> "SIM ${args.single()}"
                 else -> error("Unexpected resource $id")
             }
         }
 
         assertEquals("Error on SIM 1", english)
-        assertEquals("SIM 1 出错", chinese)
+        assertEquals("SIM 1 meldet einen Fehler", german)
     }
 }
