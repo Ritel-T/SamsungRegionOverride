@@ -7,15 +7,16 @@
   is the only nod to a SIM. Nothing is drawn twice: the void between the halves is real transparency, so
   the shape survives being tinted for a themed icon or masked down to alpha in the status bar.
 
-  The cut is itself bevelled at both ends, 3 against the card's 6, so the corner reads as machined rather
-  than snapped off. Sharp there was the one detail that made the whole mark look unfinished at size.
+  The cut is itself bevelled at both ends, 2.4 against the card's 4.8, so the corner reads as machined
+  rather than snapped off. Sharp there was the one detail that made the whole mark look unfinished.
 
   The dividing line runs to the opposite corner. Its 45 degrees pass exactly through the centre of that
   corner's radius, which is what makes it read as aimed at the corner rather than merely ending near it,
-  and it leaves the void a true half-square: 38 down the left edge, 38 along the bottom.
+  and it leaves the void a true half-square: 31 down the left edge, 31 along the bottom.
 
-  Sized to the adaptive-icon safe zone: 38 by 52 of the 108 viewport, centred, putting the far corners
-  32.2 from the middle and inside the 66 circle every launcher mask is guaranteed to show.
+  31 by 42 of the 108 viewport, centred. That is well inside the 66 circle a launcher mask is guaranteed
+  to show — the far corners sit 26.1 from the middle — and deliberately so: filling the safe zone is the
+  most a mark may occupy, not the size it should be. An icon wants visible ground around it.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -24,9 +25,9 @@
     android:viewportHeight="108">
     <path
         android:strokeColor="#E6EDEE"
-        android:strokeWidth="4.6"
-        android:pathData="M41,28 H58.76 A3,3 0 0 1 60.88,28.88 L72.12,40.12 A3,3 0 0 1 73,42.24 V74 A6,6 0 0 1 67,80 H41 A6,6 0 0 1 35,74 V34 A6,6 0 0 1 41,28 Z" />
+        android:strokeWidth="3.7"
+        android:pathData="M43.3,33 H58.01 A2.4,2.4 0 0 1 59.7,33.7 L68.8,42.8 A2.4,2.4 0 0 1 69.5,44.49 V70.2 A4.8,4.8 0 0 1 64.7,75 H43.3 A4.8,4.8 0 0 1 38.5,70.2 V37.8 A4.8,4.8 0 0 1 43.3,33 Z" />
     <path
         android:fillColor="#E6EDEE"
-        android:pathData="M35,42 V34 A6,6 0 0 1 41,28 H58.76 A3,3 0 0 1 60.88,28.88 L72.12,40.12 A3,3 0 0 1 73,42.24 V74 A6,6 0 0 1 71.24,78.24 L35,42 Z" />
+        android:pathData="M38.5,44 V37.8 A4.8,4.8 0 0 1 43.3,33 H58.01 A2.4,2.4 0 0 1 59.7,33.7 L68.8,42.8 A2.4,2.4 0 0 1 69.5,44.49 V70.2 A4.8,4.8 0 0 1 68.09,73.59 L38.5,44 Z" />
 </vector>
