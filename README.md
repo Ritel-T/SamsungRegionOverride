@@ -16,7 +16,7 @@ not treat this as a harmless cosmetic switch.
 
 <p align="center">
   <img src="docs/images/screenshot-main.png" width="380"
-       alt="The app showing SIM 1 on 46001 CN China Unicom beside a 23430 GB EE disguise, with the region picker and Start disguise button below.">
+       alt="The app: SIM 1 on 46001 CN China Unicom marked DATA and selected, SIM 2 on 23415 GB Vodafone, a 23430 GB EE disguise previewed below, and the region picker under that.">
 </p>
 
 ## The 60-second workflow
@@ -32,6 +32,23 @@ not treat this as a harmless cosmetic switch.
 Turning a layer switch off only excludes it from the next apply. It does **not** remove an already-live
 layer; Restore does that. While a disguise is live, Restore becomes the primary bottom-bar action and
 the notification keeps a one-tap **Restore now** shortcut available.
+
+## What it looks like
+
+Galaxy Store and Samsung Members both refuse to open on a mainland China SIM. The Network layer alone
+is enough for both — no country override, so IMS keeps its own carrier domain and calls stay up.
+
+| Before | Network layer live | After |
+|:--:|:--:|:--:|
+| <img src="docs/images/store-before.png" width="250" alt="Galaxy Store refusing to open, with a dialog reading that the Galaxy Store isn't supported in this country."> | <img src="docs/images/disguise-live.png" width="250" alt="The app showing a real 46001 CN China Unicom identity beside a live 45005 KR SKT disguise, with App country off and SIM operator on."> | <img src="docs/images/store-after.png" width="250" alt="Galaxy Store open on its Korean storefront, with the override's flag chip in the status bar."> |
+
+A live disguise stays on screen as a Live Update: a flag chip in the status bar, and a notification whose
+**Restore now** button ends the session from wherever you are.
+
+<p align="center">
+  <img src="docs/images/notification.png" width="560"
+       alt="An ongoing notification reading: Pretending to be KR SKT, SIM 1 is really CN China Unicom, with a Restore now button.">
+</p>
 
 ## The two layers
 

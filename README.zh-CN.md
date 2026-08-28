@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="docs/images/screenshot-main.png" width="380"
-       alt="应用界面：SIM 1 显示 46001 CN 中国联通，右侧为 23430 GB EE 的伪装目标，下方是地区选择和开始伪装按钮。">
+       alt="应用界面：SIM 1 为 46001 CN 中国联通，标记为 DATA 并被选中；SIM 2 为 23415 GB Vodafone；下方预览 23430 GB EE 的伪装目标，再下方是地区选择。">
 </p>
 
 ## 60 秒使用流程
@@ -23,6 +23,21 @@
 6. 确认移动服务恢复；如果 IMS 仍未注册，在系统设置中关闭再开启该 SIM，或重启手机。
 
 关闭某一层的开关，只表示“下一次应用时不写这一层”，**不会移除已经生效的层**。必须点击恢复。检测到当前 SIM 正在伪装时，底部主按钮会自动变成**结束并恢复**。
+
+## 实际效果
+
+在中国大陆的 SIM 上，Galaxy Store 和 Samsung Members 都会直接拒绝打开。只开 Network 一层就足以让两者正常使用——不动 Country，IMS 仍使用自己的运营商域名，通话不受影响。
+
+| 之前 | Network 层生效中 | 之后 |
+|:--:|:--:|:--:|
+| <img src="docs/images/store-before.png" width="250" alt="Galaxy Store 无法打开，弹窗提示该国家/地区不支持 Galaxy Store。"> | <img src="docs/images/disguise-live.png" width="250" alt="应用界面：真实身份 46001 CN 中国联通，旁边是生效中的 45005 KR SKT 伪装；App country 关闭，SIM operator 开启。"> | <img src="docs/images/store-after.png" width="250" alt="Galaxy Store 打开韩国商店首页，状态栏显示本工具的旗帜胶囊。"> |
+
+伪装生效期间会以 Live Update 常驻屏幕：状态栏上的旗帜胶囊，以及一条带**立即恢复**按钮的通知，可以在任何界面直接结束会话。
+
+<p align="center">
+  <img src="docs/images/notification.png" width="560"
+       alt="常驻通知：正在伪装成 KR SKT，SIM 1 实际是 CN 中国联通，下方为立即恢复按钮。">
+</p>
 
 ## 两层分别做什么
 
