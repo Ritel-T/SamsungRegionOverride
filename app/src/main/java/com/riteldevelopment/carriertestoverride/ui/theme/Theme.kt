@@ -1,9 +1,13 @@
 package com.riteldevelopment.carriertestoverride.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -11,19 +15,22 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 /*
- * Colour is fixed, not dynamic.
+ * Colour follows the system palette, with the roles that carry meaning held back.
  *
- * Dynamic colour would make this tool look like every other Material app, and — more importantly — it
- * would put the wallpaper in charge of hues that here carry meaning: "this layer landed", "one layer
- * failed", "this is destructive". Semantic roles must stay stable, so the palette is authored.
+ * Material You supplies the neutrals and the accent from API 31 on. What it must not supply is a hue
+ * that states an outcome: "this layer landed", "one landed and one did not", "this is destructive". A
+ * wallpaper that turned PARTIAL into the same family as the accent would leave two different results
+ * looking alike, so those roles stay authored and are laid back over the dynamic scheme.
  *
- * The accent is a petrol/instrument teal, and the neutrals are biased slightly toward it rather than
- * being pure grey — a pure mid-grey reads as unconsidered.
+ * The scheme below is still the whole palette on API 29 and 30, where there is no system source to draw
+ * from. Its accent is a petrol/instrument teal, and the neutrals are biased slightly toward it rather
+ * than being pure grey — a pure mid-grey reads as unconsidered.
  */
 
 private val Petrol10 = Color(0xFF00363D)
@@ -165,16 +172,49 @@ val TabularFigures: TextStyle = TextStyle(
     letterSpacing = 0.5.sp,
 )
 
+/**
+ * Puts the authored outcome hues back over a dynamic scheme.
+ *
+ * Only the tertiary roles: this app spends tertiary on the PARTIAL result — one layer landed, the other
+ * did not — where Material treats it as a free third accent and a dynamic scheme derives it from the
+ * same wallpaper source as primary. Left alone, PARTIAL and success would arrive as neighbouring hues
+ * and stop being distinguishable at a glance, which is the one thing that result exists to say.
+ *
+ * Error needs no such treatment; a dynamic scheme already holds it at red. Success and the hazard
+ * stripe live in [OverrideColors], outside Material's slots, so nothing overwrites them either.
+ */
+private fun ColorScheme.withAuthoredOutcomes(authored: ColorScheme): ColorScheme = copy(
+    tertiary = authored.tertiary,
+    onTertiary = authored.onTertiary,
+    tertiaryContainer = authored.tertiaryContainer,
+    onTertiaryContainer = authored.onTertiaryContainer,
+)
+
 @Composable
 fun CarrierOverrideTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    /** Off falls back to the authored palette on every release, which is also what API 29 and 30 get. */
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
+    val authored = if (darkTheme) DarkScheme else LightScheme
+    val scheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val dynamic = if (darkTheme) {
+            dynamicDarkColorScheme(context)
+        } else {
+            dynamicLightColorScheme(context)
+        }
+        dynamic.withAuthoredOutcomes(authored)
+    } else {
+        authored
+    }
+
     CompositionLocalProvider(
         LocalOverrideColors provides if (darkTheme) DarkOverrideColors else LightOverrideColors
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            colorScheme = scheme,
             typography = OverrideTypography,
             content = content,
         )

@@ -1,6 +1,11 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -24,6 +29,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -124,18 +132,32 @@ fun SimSelector(
         // off there is nothing to choose, so the same sentence would name a problem with no fix.
         val selected = sims.firstOrNull { it.subId == selectedSubId }
         val dataSim = sims.firstOrNull { it.isDefaultData }
-        if (selected != null && dataSim != null && selected.subId != dataSim.subId) {
-            Text(
-                text = stringResource(
-                    R.string.not_data_sim,
-                    // Via the resource, not SimInfo.displayName, so these can never name the slots
-                    // differently from the cards directly above them.
-                    stringResource(R.string.sim_number, dataSim.slotIndex + 1),
-                    stringResource(R.string.sim_number, selected.slotIndex + 1),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+        val mismatched = selected != null && dataSim != null && selected.subId != dataSim.subId
+
+        // The wording is held rather than read live, because by the time the exit animation runs the
+        // mismatch that produced it is already gone — recomputing would have the line name the same SIM
+        // twice on its way out. Held from the last frame it was true, it collapses saying what it said.
+        var wording by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+        if (mismatched) wording = dataSim.slotIndex to selected.slotIndex
+
+        AnimatedVisibility(
+            visible = mismatched,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            wording?.let { (dataSlot, selectedSlot) ->
+                Text(
+                    text = stringResource(
+                        R.string.not_data_sim,
+                        // Via the resource, not SimInfo.displayName, so these can never name the slots
+                        // differently from the cards directly above them.
+                        stringResource(R.string.sim_number, dataSlot + 1),
+                        stringResource(R.string.sim_number, selectedSlot + 1),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
