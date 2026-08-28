@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The status bar masks a small icon down to its alpha channel, so this is one solid shape and the fill
-  colour is irrelevant: a SIM card with the notched corner, its contact pad cut out with evenOdd so the
-  silhouette still reads as a card rather than as a plain tag at 24dp.
+  The launcher mark at status-bar size.
+
+  Not a scaled copy: the status bar masks a small icon down to its alpha channel and draws it around
+  24dp, where the 108dp stroke would thin to a hairline. The proportions are held instead — stroke,
+  bevels and corner radii all stay the same fraction of the card — while the card itself is drawn larger
+  in its viewport, because nothing crops it here the way a launcher mask crops the adaptive foreground.
+
+  Fill colour is irrelevant for the same reason; only the silhouette and its one hole survive.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -10,7 +15,10 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8"
+        android:pathData="M6.9,1.75 H13.9 A1.2,1.2 0 0 1 14.75,2.1 L19.15,6.5 A1.2,1.2 0 0 1 19.5,7.35 V19.85 A2.4,2.4 0 0 1 17.1,22.25 H6.9 A2.4,2.4 0 0 1 4.5,19.85 V4.15 A2.4,2.4 0 0 1 6.9,1.75 Z" />
+    <path
         android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M7,2h7l4,4v14a2,2 0 0 1 -2,2h-12a2,2 0 0 1 -2,-2v-16a2,2 0 0 1 2,-2zM9,12h6v7h-6z" />
+        android:pathData="M4.5,7.25 V4.15 A2.4,2.4 0 0 1 6.9,1.75 H13.9 A1.2,1.2 0 0 1 14.75,2.1 L19.15,6.5 A1.2,1.2 0 0 1 19.5,7.35 V19.85 A2.4,2.4 0 0 1 18.8,21.55 L4.5,7.25 Z" />
 </vector>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The mark: a card with one corner cut away, divided along a line parallel to that cut.
+
+  The two halves are the whole idea. One is filled and one is only outlined, which is the same pairing
+  the screen uses for REAL and DISGUISE — one identity present, one merely asserted — and the cut corner
+  is the only nod to a SIM. Nothing is drawn twice: the void between the halves is real transparency, so
+  the shape survives being tinted for a themed icon or masked down to alpha in the status bar.
+
+  The cut is itself bevelled at both ends, 3 against the card's 6, so the corner reads as machined rather
+  than snapped off. Sharp there was the one detail that made the whole mark look unfinished at size.
+
+  The dividing line runs to the opposite corner. Its 45 degrees pass exactly through the centre of that
+  corner's radius, which is what makes it read as aimed at the corner rather than merely ending near it,
+  and it leaves the void a true half-square: 38 down the left edge, 38 along the bottom.
+
+  Sized to the adaptive-icon safe zone: 38 by 52 of the 108 viewport, centred, putting the far corners
+  32.2 from the middle and inside the 66 circle every launcher mask is guaranteed to show.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#E6EDEE"
+        android:strokeWidth="4.6"
+        android:pathData="M41,28 H58.76 A3,3 0 0 1 60.88,28.88 L72.12,40.12 A3,3 0 0 1 73,42.24 V74 A6,6 0 0 1 67,80 H41 A6,6 0 0 1 35,74 V34 A6,6 0 0 1 41,28 Z" />
+    <path
+        android:fillColor="#E6EDEE"
+        android:pathData="M35,42 V34 A6,6 0 0 1 41,28 H58.76 A3,3 0 0 1 60.88,28.88 L72.12,40.12 A3,3 0 0 1 73,42.24 V74 A6,6 0 0 1 71.24,78.24 L35,42 Z" />
+</vector>
