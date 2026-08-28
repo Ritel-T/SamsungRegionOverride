@@ -44,6 +44,12 @@ The Network layer writes MCC/MNC, a synthetic test IMSI, SPN and PNN. ICCID, GID
 privilege rules remain null. The Country layer writes `sim_country_iso_override_string` and can
 optionally override the subscription display name.
 
+Apps read the SIM that carries mobile data, and only that one. On a dual-SIM phone a disguise written
+to the idle slot applies cleanly, reports success, and changes nothing any app can see — the override
+really did land, and every field this tool reads back agrees it did. The SIM selector marks the data
+slot **DATA** and says so plainly when the selected SIM is not it. Switch which SIM carries data in
+Android Settings, not here.
+
 App behaviour is not guaranteed by a single signal. Account country, IP address, CSC, app version,
 server-side experiments and cached data can also participate. The UI force-stops selected target apps
 after apply and restore so they can re-read the framework state on their next launch.

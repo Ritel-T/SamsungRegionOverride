@@ -65,6 +65,7 @@
     <string name="badge_set">ĐÃ ĐẶT</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">QG</string>
+    <string name="badge_data">DỮ LIỆU</string>
     <string name="badge_absent">KHÔNG CÓ</string>
     <string name="no_sim">Không có SIM</string>
     <string name="unknown">Không rõ</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Khe trống</string>
     <string name="no_subscription">Không tìm thấy thuê bao. Hãy lắp SIM hoặc bật eSIM rồi quét lại.</string>
+    <string name="not_data_sim">Ứng dụng đọc SIM đang dùng dữ liệu di động. Đó là %1$s, nên việc ngụy trang trên %2$s sẽ được áp dụng nhưng vẫn vô hình với chúng.</string>
     <string name="sim_state_ready">SẴN SÀNG</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

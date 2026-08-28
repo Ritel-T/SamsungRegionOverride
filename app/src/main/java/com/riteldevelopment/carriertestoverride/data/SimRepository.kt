@@ -23,6 +23,15 @@ data class SimInfo(
     val countryIso: String,
     val flags: OverrideStore.Flags,
     val original: OverrideStore.Snapshot,
+    /**
+     * Whether this subscription is the one the system routes mobile data through.
+     *
+     * Not cosmetic. Every app tested so far reads the *data* subscription and ignores the other slot
+     * entirely, so a disguise written to the idle SIM applies cleanly, reports success, and changes
+     * nothing any app can see. That failure is invisible without this flag: the override really did
+     * land, and every field the screen reads back agrees it did.
+     */
+    val isDefaultData: Boolean = false,
 ) {
     /** Only a fully loaded SIM exposes the IccRecords the SIM identity layer rewrites. */
     val isReady: Boolean get() = simState == TelephonyManager.SIM_STATE_READY
@@ -154,7 +163,12 @@ class SimRepository(context: Context, private val store: OverrideStore) {
         val subscriptions = appContext.getSystemService(SubscriptionManager::class.java)
             ?: return SimScan.Failure(appContext.getString(R.string.error_no_subscription_manager))
         val declared = supportedSlotCount(manager)
-        val sims = (0 until declared).mapNotNull { slot -> readSlot(manager, subscriptions, slot) }
+        // Read once for the whole scan rather than per slot: two reads could straddle a data-SIM switch
+        // and mark both slots, or neither, as the one apps will read.
+        val dataSubId = defaultDataSubId()
+        val sims = (0 until declared).mapNotNull { slot ->
+            readSlot(manager, subscriptions, slot, dataSubId)
+        }
         // A subscription reported at a slot beyond the declared count would otherwise be dropped
         // silently, so the count grows to cover it rather than the SIM disappearing from the screen.
         val highestUsed = (sims.maxOfOrNull { it.slotIndex } ?: -1) + 1
@@ -173,6 +187,7 @@ class SimRepository(context: Context, private val store: OverrideStore) {
         manager: TelephonyManager,
         subscriptions: SubscriptionManager,
         slot: Int,
+        dataSubId: Int,
     ): SimInfo? {
         val subId = subscriptionId(subscriptions, slot)
         val state = manager.getSimState(slot)
@@ -192,6 +207,7 @@ class SimRepository(context: Context, private val store: OverrideStore) {
             countryIso = forSub.simCountryIso.orEmpty(),
             flags = store.flags(subId),
             original = store.snapshot(subId),
+            isDefaultData = SubscriptionManager.isValidSubscriptionId(dataSubId) && subId == dataSubId,
         )
     }
 
@@ -225,7 +241,13 @@ class SimRepository(context: Context, private val store: OverrideStore) {
         return if (reported in 1..MAX_SLOTS) reported else DEFAULT_SLOTS
     }
 
-    /** The subscription the system uses for data, used to pick a sensible default selection. */
+    /**
+     * The subscription the system routes mobile data through.
+     *
+     * This picks the default selection, and it is also the one fact that decides whether a disguise is
+     * visible at all: apps read this subscription, so writing to the other slot is a no-op they will
+     * never notice. See [SimInfo.isDefaultData].
+     */
     fun defaultDataSubId(): Int = SubscriptionManager.getDefaultDataSubscriptionId()
 
     private companion object {

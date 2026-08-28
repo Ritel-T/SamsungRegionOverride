@@ -65,6 +65,7 @@
     <string name="badge_set">DÉFINI</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">PAYS</string>
+    <string name="badge_data">DONNÉES</string>
     <string name="badge_absent">ABSENTE</string>
     <string name="no_sim">Aucune SIM</string>
     <string name="unknown">Inconnu</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Emplacement vide</string>
     <string name="no_subscription">Aucun abonnement détecté. Insérez une SIM ou activez une eSIM, puis relancez la recherche.</string>
+    <string name="not_data_sim">Les applis lisent la SIM qui porte les données mobiles. C\'est %1$s, donc un camouflage sur %2$s sera appliqué mais restera invisible pour elles.</string>
     <string name="sim_state_ready">PRÊTE</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

@@ -65,6 +65,7 @@
     <string name="badge_set">مضبوط</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">البلد</string>
+    <string name="badge_data">بيانات</string>
     <string name="badge_absent">غير موجود</string>
     <string name="no_sim">لا توجد SIM</string>
     <string name="unknown">غير معروف</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">فتحة فارغة</string>
     <string name="no_subscription">لم يتم العثور على اشتراك. أدخل شريحة SIM أو فعّل eSIM، ثم أعد الفحص.</string>
+    <string name="not_data_sim">تقرأ التطبيقات شريحة SIM التي تحمل بيانات الجوال. وهي %1$s، لذا فإن التمويه على %2$s سيُطبَّق لكنه سيظل غير مرئي لها.</string>
     <string name="sim_state_ready">جاهزة</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

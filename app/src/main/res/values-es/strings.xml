@@ -65,6 +65,7 @@
     <string name="badge_set">FIJADO</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">PAÍS</string>
+    <string name="badge_data">DATOS</string>
     <string name="badge_absent">AUSENTE</string>
     <string name="no_sim">Sin SIM</string>
     <string name="unknown">Desconocido</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Ranura vacía</string>
     <string name="no_subscription">No se encontró ninguna suscripción. Inserta una SIM o activa una eSIM y vuelve a buscar.</string>
+    <string name="not_data_sim">Las apps leen la SIM que lleva los datos móviles. Es %1$s, así que un disfraz en %2$s se aplicará pero seguirá siendo invisible para ellas.</string>
     <string name="sim_state_ready">LISTA</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

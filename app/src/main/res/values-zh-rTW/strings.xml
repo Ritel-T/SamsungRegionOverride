@@ -65,6 +65,7 @@
     <string name="badge_set">已設</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">地區</string>
+    <string name="badge_data">數據</string>
     <string name="badge_absent">未安裝</string>
     <string name="no_sim">無 SIM 卡</string>
     <string name="unknown">未知</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">空卡槽</string>
     <string name="no_subscription">找不到訂閱。請插入 SIM 卡或啟用 eSIM，然後重新掃描。</string>
+    <string name="not_data_sim">應用程式讀取的是承載行動數據的那張 SIM。目前是 %1$s，因此在 %2$s 上的偽裝會生效，但應用程式看不到。</string>
     <string name="sim_state_ready">就緒</string>
     <string name="sim_state_pin">需要 PIN</string>
     <string name="sim_state_puk">需要 PUK</string>

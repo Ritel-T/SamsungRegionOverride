@@ -65,6 +65,7 @@
     <string name="badge_set">設定済み</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">国</string>
+    <string name="badge_data">データ</string>
     <string name="badge_absent">未インストール</string>
     <string name="no_sim">SIM なし</string>
     <string name="unknown">不明</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">空きスロット</string>
     <string name="no_subscription">サブスクリプションが見つかりません。SIM を挿入するか eSIM を有効にしてから、再スキャンしてください。</string>
+    <string name="not_data_sim">アプリはモバイルデータを使用している SIM を読み取ります。それは %1$s なので、%2$s への偽装は適用されてもアプリからは見えません。</string>
     <string name="sim_state_ready">準備完了</string>
     <string name="sim_state_pin">PIN が必要</string>
     <string name="sim_state_puk">PUK が必要</string>

@@ -65,6 +65,7 @@
     <string name="badge_set">SET</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">CTY</string>
+    <string name="badge_data">DATA</string>
     <string name="badge_absent">ABSENT</string>
     <string name="no_sim">No SIM</string>
     <string name="unknown">Unknown</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Empty slot</string>
     <string name="no_subscription">No subscription found. Insert a SIM or enable an eSIM, then rescan.</string>
+    <string name="not_data_sim">Apps read the SIM that carries mobile data. That is %1$s, so a disguise on %2$s will apply but stay invisible to them.</string>
     <string name="sim_state_ready">READY</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

@@ -65,6 +65,7 @@
     <string name="badge_set">ตั้งแล้ว</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">ประเทศ</string>
+    <string name="badge_data">ดาต้า</string>
     <string name="badge_absent">ไม่มี</string>
     <string name="no_sim">ไม่มี SIM</string>
     <string name="unknown">ไม่ทราบ</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">ช่องว่าง</string>
     <string name="no_subscription">ไม่พบการสมัครใช้บริการ ใส่ SIM หรือเปิดใช้ eSIM แล้วสแกนใหม่</string>
+    <string name="not_data_sim">แอปจะอ่านซิมที่ใช้เน็ตมือถือ ซึ่งคือ %1$s การพรางบน %2$s จึงถูกใช้งานแต่แอปจะมองไม่เห็น</string>
     <string name="sim_state_ready">พร้อม</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

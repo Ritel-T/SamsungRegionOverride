@@ -65,6 +65,7 @@
     <string name="badge_set">GESETZT</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">LAND</string>
+    <string name="badge_data">DATEN</string>
     <string name="badge_absent">FEHLT</string>
     <string name="no_sim">Keine SIM</string>
     <string name="unknown">Unbekannt</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Leerer Steckplatz</string>
     <string name="no_subscription">Kein Mobilfunktarif gefunden. Legen Sie eine SIM ein oder aktivieren Sie eine eSIM und lesen Sie erneut ein.</string>
+    <string name="not_data_sim">Apps lesen die SIM, über die mobile Daten laufen. Das ist %1$s, eine Tarnung auf %2$s wird also angewendet, bleibt für sie aber unsichtbar.</string>
     <string name="sim_state_ready">BEREIT</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

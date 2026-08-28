@@ -65,6 +65,7 @@
     <string name="badge_set">ЗАДАНО</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">СТР</string>
+    <string name="badge_data">ДАННЫЕ</string>
     <string name="badge_absent">НЕТ</string>
     <string name="no_sim">Нет SIM</string>
     <string name="unknown">Неизвестно</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Пустой слот</string>
     <string name="no_subscription">Подписка не найдена. Вставьте SIM или включите eSIM, затем повторите поиск.</string>
+    <string name="not_data_sim">Приложения читают SIM, через которую идёт мобильный интернет. Это %1$s, поэтому маскировка на %2$s применится, но останется для них невидимой.</string>
     <string name="sim_state_ready">ГОТОВА</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

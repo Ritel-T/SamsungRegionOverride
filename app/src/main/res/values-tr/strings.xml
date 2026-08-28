@@ -65,6 +65,7 @@
     <string name="badge_set">AYARLI</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">ÜLKE</string>
+    <string name="badge_data">VERİ</string>
     <string name="badge_absent">YOK</string>
     <string name="no_sim">SIM yok</string>
     <string name="unknown">Bilinmiyor</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Boş yuva</string>
     <string name="no_subscription">Abonelik bulunamadı. Bir SIM takın veya eSIM\'i etkinleştirin, ardından yeniden tarayın.</string>
+    <string name="not_data_sim">Uygulamalar mobil veriyi taşıyan SIM\'i okur. Bu %1$s, dolayısıyla %2$s üzerindeki kılık uygulanır ama onlara görünmez kalır.</string>
     <string name="sim_state_ready">HAZIR</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

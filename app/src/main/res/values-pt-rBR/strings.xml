@@ -65,6 +65,7 @@
     <string name="badge_set">DEFINIDO</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">PAÍS</string>
+    <string name="badge_data">DADOS</string>
     <string name="badge_absent">AUSENTE</string>
     <string name="no_sim">Sem chip</string>
     <string name="unknown">Desconhecido</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Slot vazio</string>
     <string name="no_subscription">Nenhuma assinatura encontrada. Insira um chip ou ative um eSIM e verifique novamente.</string>
+    <string name="not_data_sim">O SIM lido pelos apps é o que carrega os dados móveis. Esse é %1$s, então um disfarce em %2$s será aplicado mas continuará invisível para eles.</string>
     <string name="sim_state_ready">PRONTO</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

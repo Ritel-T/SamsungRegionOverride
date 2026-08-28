@@ -65,6 +65,7 @@
     <string name="badge_set">DISETEL</string>
     <string name="badge_identity">ID</string>
     <string name="badge_country">NGR</string>
+    <string name="badge_data">DATA</string>
     <string name="badge_absent">TIDAK ADA</string>
     <string name="no_sim">Tidak ada SIM</string>
     <string name="unknown">Tidak diketahui</string>
@@ -72,6 +73,7 @@
     <string name="sub_id">sub %1$d</string>
     <string name="empty_slot">Slot kosong</string>
     <string name="no_subscription">Tidak ada langganan. Masukkan SIM atau aktifkan eSIM, lalu pindai ulang.</string>
+    <string name="not_data_sim">Aplikasi membaca SIM yang membawa data seluler. Itu %1$s, jadi penyamaran pada %2$s akan diterapkan tetapi tetap tidak terlihat oleh mereka.</string>
     <string name="sim_state_ready">SIAP</string>
     <string name="sim_state_pin">PIN</string>
     <string name="sim_state_puk">PUK</string>

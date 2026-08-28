@@ -55,8 +55,9 @@ import java.util.Locale
  * subscription keeps its place as a hatched placeholder, so the layout is identical whether the second
  * SIM is present or not.
  *
- * The cards carry facts a collapsed control could not: current MCC/MNC, lock state, and — the reason
- * restore is predictable — whether *this tool* has already written a layer onto that subscription.
+ * The cards carry facts a collapsed control could not: current MCC/MNC, lock state, whether *this tool*
+ * has already written a layer onto that subscription — the reason restore is predictable — and which
+ * slot carries mobile data, which decides whether a disguise is visible to anything at all.
  *
  * [enabled] goes false while a privileged operation is in flight. It gates the click only; nothing is
  * dimmed, because the state on these cards is what the user is waiting to see change.
@@ -118,6 +119,24 @@ fun SimSelector(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        // Only worth saying when there is a data SIM to switch to. On a single-SIM phone whose data is
+        // off there is nothing to choose, so the same sentence would name a problem with no fix.
+        val selected = sims.firstOrNull { it.subId == selectedSubId }
+        val dataSim = sims.firstOrNull { it.isDefaultData }
+        if (selected != null && dataSim != null && selected.subId != dataSim.subId) {
+            Text(
+                text = stringResource(
+                    R.string.not_data_sim,
+                    // Via the resource, not SimInfo.displayName, so these can never name the slots
+                    // differently from the cards directly above them.
+                    stringResource(R.string.sim_number, dataSim.slotIndex + 1),
+                    stringResource(R.string.sim_number, selected.slotIndex + 1),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 
@@ -167,8 +186,21 @@ private fun SimCard(
             )
             .padding(CardPadding),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             MicroLabel(text = stringResource(R.string.sim_number, sim.slotIndex + 1))
+            // Toned rather than success-coloured: this is a fact about the phone, not a layer this tool
+            // has applied, and the green below already means the latter.
+            if (sim.isDefaultData) {
+                StateBadge(
+                    text = stringResource(R.string.badge_data),
+                    active = true,
+                    activeColor = scheme.secondaryContainer,
+                    onActiveColor = scheme.onSecondaryContainer,
+                )
+            }
             Spacer(Modifier.weight(1f))
             SelectionMark(selected = selected)
         }
