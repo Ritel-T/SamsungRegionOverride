@@ -12,7 +12,7 @@ import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 
 /** How a result should read: this drives colour and iconography, never the copy itself. */
-enum class ResultTone { IDLE, PROGRESS, SUCCESS, PARTIAL, ERROR }
+enum class ResultTone { IDLE, SUCCESS, PARTIAL, ERROR }
 
 /**
  * The text shown in the result panel. [detail] is the multi-line report produced by the privileged
