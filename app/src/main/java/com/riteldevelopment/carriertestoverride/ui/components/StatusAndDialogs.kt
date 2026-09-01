@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
 import android.icu.text.ListFormatter
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,6 +67,12 @@ private class ShizukuVisual(
  * A [ShizukuStatus.Connected] whose uid is neither shell nor root is coloured with `error`, not `success`
  * — Shizuku running under an unexpected uid means the privileged calls will fail in confusing ways later,
  * so it is flagged as a fault here rather than being reported as a healthy connection.
+ *
+ * Connected-but-not-granted gets the same treatment for the same reason, one step milder. Every
+ * privileged call fails without the grant, so green would be claiming a working link that is not
+ * working; but unlike a wrong uid this is a thing the user fixes in Shizuku in one tap, so it takes the
+ * `tertiary` attention colour that [ShizukuStatus.NotRunning] already uses rather than `error`. The
+ * padlock says the same thing in silhouette, which is what carries it in a grayscale screenshot.
  */
 @Composable
 fun ShizukuStatusRow(
@@ -80,10 +88,10 @@ fun ShizukuStatusRow(
 
         is ShizukuStatus.Connected -> ShizukuVisual(
             icon = if (status.granted) Icons.Filled.CheckCircle else Icons.Filled.Lock,
-            tint = if (status.privileged) {
-                LocalOverrideColors.current.success
-            } else {
-                MaterialTheme.colorScheme.error
+            tint = when {
+                !status.privileged -> MaterialTheme.colorScheme.error
+                !status.granted -> MaterialTheme.colorScheme.tertiary
+                else -> LocalOverrideColors.current.success
             },
             value = AnnotatedString(
                 stringResource(
@@ -115,6 +123,15 @@ fun ShizukuStatusRow(
         MaterialTheme.typography.bodySmall.lineHeight.toDp()
     }
 
+    // Shizuku being started, granted or revoked happens in another app, so this row's state changes on
+    // the way back into this one. Animating the tint means the change is still arriving as the user
+    // looks at it, rather than having already happened before the window was drawn.
+    val tint by animateColorAsState(
+        targetValue = visual.tint,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "shizukuTint",
+    )
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
@@ -129,7 +146,7 @@ fun ShizukuStatusRow(
                 imageVector = visual.icon,
                 // The value text says the same thing; announcing the icon too would just repeat it.
                 contentDescription = null,
-                tint = visual.tint,
+                tint = tint,
                 modifier = Modifier.size(16.dp),
             )
             // The label stays neutral: it names the field, and only the value carries state colour.
@@ -139,7 +156,7 @@ fun ShizukuStatusRow(
             text = visual.value,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodySmall,
-            color = visual.tint,
+            color = tint,
         )
     }
 }
