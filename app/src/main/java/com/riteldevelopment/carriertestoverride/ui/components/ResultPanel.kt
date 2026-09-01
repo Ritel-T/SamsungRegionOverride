@@ -2,33 +2,40 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -53,10 +60,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.RoundedPolygon
 import com.riteldevelopment.carriertestoverride.R
@@ -67,14 +74,14 @@ import com.riteldevelopment.carriertestoverride.ui.ResultTone
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 import kotlinx.coroutines.delay
 
-/** How much of the report is shown before the user asks for the rest. Six lines is roughly one screen. */
-private const val CollapsedDetailLines = 6
-
 /** How long the copy button admits it did something, on the versions of Android that say nothing. */
 private const val CopiedFeedbackMillis = 1600L
+private const val MaxLocalDetailChars = 12_000
+private const val ResultResizeMillis = 520
+private const val ResultFadeMillis = 300
 
 /** A discriminator rather than a payload, so stage updates do not restart the shell transition. */
-private enum class ResultShellMode { BARE, BUSY, RESULT }
+private enum class ResultShellMode { BUSY, RESULT }
 
 /**
  * The report the privileged operation produced.
@@ -90,53 +97,32 @@ fun ResultPanel(
     result: ResultState,
     modifier: Modifier = Modifier,
     busy: BusyState? = null,
+    onReportIssue: () -> Unit = {},
 ) {
     val detail = result.detail
     val probe = result.probe
     val headline = result.headline.ifBlank { stringResource(R.string.result_nothing_run) }
     val motion = MaterialTheme.motionScheme
 
-    // Nothing has run yet. A tinted box with an icon here would claim an outcome that does not exist, so
-    // the initial state gets no container at all.
-    //
-    // Keyed on tone, not on emptiness. Every validation refusal — "No usable SIM is selected", "Shizuku
-    // is not installed" — is an ERROR with a headline and nothing else, and testing emptiness alone
-    // rendered those as quiet grey prose indistinguishable from the idle state.
-    val bare = detail == null && probe == null && result.tone == ResultTone.IDLE
     var lastBusy by remember { mutableStateOf<BusyState?>(null) }
     if (busy != null) lastBusy = busy
     val shellMode = when {
         busy != null -> ResultShellMode.BUSY
-        bare -> ResultShellMode.BARE
         else -> ResultShellMode.RESULT
     }
 
     // Crossfaded rather than swapped. This is the one place on the screen an operation reports back, and
-    // the change it reports is exactly the bare line becoming a coloured panel — the first run of the
-    // app goes straight from "Nothing has run yet" to a full green result. Cutting between those two
-    // reads as the list reflowing rather than as an answer arriving.
-    //
-    // The height animator sits out here too, outside the crossfade rather than inside the panel.
-    // Everything that resizes this block — the idle line becoming a panel, MORE/LESS on the report, the
-    // probe opening — is a change to the same outer box, so owning all three in one place is what stops
-    // them compounding. It is also why the parts inside only fade: an expandVertically nested under this
-    // would have the outer animation chasing the inner one instead of following the content.
+    // the same card changes tone when the first result arrives. Cutting between those states reads as the
+    // list reflowing rather than as an answer arriving.
+    // Detail disclosure owns its fade and height in one transition below, so closing it cannot leave a
+    // second empty-height animation behind after the text has disappeared.
     Crossfade(
         targetState = shellMode,
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = motion.defaultSpatialSpec()),
+        modifier = modifier.fillMaxWidth(),
         animationSpec = motion.defaultEffectsSpec(),
         label = "resultShell",
     ) { mode ->
         when (mode) {
-            ResultShellMode.BARE -> Text(
-                text = headline,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
             ResultShellMode.BUSY -> lastBusy?.let { ResultProgressBody(it) }
 
             ResultShellMode.RESULT -> ResultBody(
@@ -144,6 +130,7 @@ fun ResultPanel(
                 headline = headline,
                 detail = detail,
                 probe = probe,
+                onReportIssue = onReportIssue,
             )
         }
     }
@@ -156,7 +143,7 @@ fun ResultPanel(
  * already-localised stage text so the report slot never implies that an earlier result is still current,
  * without adding fifteen translations for a second progress vocabulary.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ResultProgressBody(busy: BusyState) {
     val stages = OverrideRepository.Stage.entries
@@ -205,7 +192,7 @@ private fun ResultProgressBody(busy: BusyState) {
 /**
  * The panel proper: everything that only exists once something has actually run.
  *
- * Split out so the shell above can crossfade between this and the bare idle line. The remembered
+ * Split out so the shell above can keep the idle and completed states on the same card. The remembered
  * expansion and copy-feedback state lives here, keyed on the report it belongs to, so a new result
  * arrives collapsed rather than inheriting the last one's disclosure.
  */
@@ -216,6 +203,7 @@ private fun ResultBody(
     headline: String,
     detail: String?,
     probe: String?,
+    onReportIssue: () -> Unit,
 ) {
     val palette = panelColors(result.tone)
     val motion = MaterialTheme.motionScheme
@@ -234,16 +222,24 @@ private fun ResultBody(
     )
 
     val context = LocalContext.current
-    val clipText = remember(result, headline) {
-        listOfNotNull(headline, detail, probe).joinToString("\n\n")
+    val diagnostic = result.diagnostic
+    val diagnosticText = remember(diagnostic, result.tone) {
+        diagnostic?.toSafeText()
+            ?: "SRO-DIAGNOSTIC/1\nresult=${result.tone.name}; failure=UNKNOWN"
     }
-
-    var detailExpanded by remember(detail) { mutableStateOf(false) }
-    // Latched, never cleared: once expanded the text no longer overflows, and recomputing from the layout
-    // would make the "LESS" button delete itself. Measurement is the only honest source here — counting
-    // characters cannot know the panel width or where the text will break.
-    var detailOverflows by remember(detail) { mutableStateOf(false) }
-    var probeExpanded by remember(probe) { mutableStateOf(false) }
+    val hasDetails = !detail.isNullOrBlank() || !probe.isNullOrBlank() || diagnostic != null
+    val interactionSource = rememberCardInteractionSource()
+    var detailsExpanded by remember(result) { mutableStateOf(false) }
+    val actionColors = ButtonDefaults.textButtonColors(
+        containerColor = content.copy(alpha = 0.12f),
+        contentColor = content,
+    )
+    val actionPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
+    val headerClick = if (hasDetails) {
+        Modifier.cardHeaderClick(interactionSource) { detailsExpanded = !detailsExpanded }
+    } else {
+        Modifier
+    }
     var copied by remember(result) { mutableStateOf(false) }
 
     LaunchedEffect(copied) {
@@ -258,9 +254,15 @@ private fun ResultBody(
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
             .background(container)
-            .padding(start = 14.dp, top = 10.dp, end = 10.dp, bottom = 12.dp),
+            .cardRipple(interactionSource),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(headerClick)
+                .padding(start = 14.dp, top = 10.dp, end = 10.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             ToneMark(tone = result.tone, tint = content)
             Text(
                 text = headline,
@@ -268,76 +270,109 @@ private fun ResultBody(
                 style = MaterialTheme.typography.titleMediumEmphasized,
                 color = content,
             )
-            Spacer(Modifier.width(8.dp))
-            TextButton(
-                onClick = {
-                    val clipboard = context.getSystemService(ClipboardManager::class.java)
-                    clipboard?.setPrimaryClip(ClipData.newPlainText("carrier-override", clipText))
-                    copied = true
-                },
-                colors = ButtonDefaults.textButtonColors(contentColor = content),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = stringResource(
-                        if (copied) R.string.action_copied else R.string.action_copy
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
+            if (hasDetails) {
+                DisclosureChevron(
+                    expanded = detailsExpanded,
+                    modifier = Modifier.size(24.dp),
+                    tint = content,
+                    onToggle = { detailsExpanded = !detailsExpanded },
                 )
             }
         }
 
-        // One selection spanning report + probe, so a single long-press drag grabs everything worth
-        // pasting. The toggles inside are excluded — their labels are chrome, not report content.
-        SelectionContainer {
-            Column(modifier = Modifier.fillMaxWidth()) {
+        AnimatedVisibility(
+            visible = detailsExpanded,
+            enter = fadeIn(animationSpec = tween(ResultFadeMillis, easing = LinearOutSlowInEasing)) +
+                expandVertically(
+                    animationSpec = tween(ResultResizeMillis, easing = LinearOutSlowInEasing),
+                ),
+            exit = fadeOut(animationSpec = tween(ResultFadeMillis, easing = LinearOutSlowInEasing)) +
+                shrinkVertically(
+                    animationSpec = tween(ResultResizeMillis, easing = LinearOutSlowInEasing),
+                ),
+        ) {
+            Column(
+                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // These local details are intentionally shown only after an explicit tap. They are useful
+                // on the device, but the share/copy action below uses the allow-listed diagnostic instead.
                 if (detail != null) {
-                    Spacer(Modifier.height(4.dp))
-                    // No animateContentSize of its own: the panel's outer Column now animates the whole
-                    // block's height, and nesting a second one inside it makes the outer animation chase
-                    // the inner one rather than follow the content.
-                    Text(
-                        text = detail,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = content,
-                        maxLines = if (detailExpanded) Int.MAX_VALUE else CollapsedDetailLines,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { layout ->
-                            if (!detailExpanded && layout.hasVisualOverflow) detailOverflows = true
-                        },
-                    )
-                    if (detailOverflows) {
-                        DisableSelection {
-                            InlineToggle(
-                                text = stringResource(
-                                    if (detailExpanded) R.string.action_less else R.string.action_more
-                                ),
-                                expanded = detailExpanded,
-                                tint = content,
-                                onClick = { detailExpanded = !detailExpanded },
-                            )
-                        }
-                    }
-                }
-
-                if (probe != null) {
-                    DisableSelection {
-                        InlineToggle(
-                            text = stringResource(R.string.action_runtime_probe),
-                            expanded = probeExpanded,
-                            tint = content,
-                            onClick = { probeExpanded = !probeExpanded },
+                    SelectionContainer {
+                        Text(
+                            text = detail.take(MaxLocalDetailChars),
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = content,
                         )
                     }
-                    // Fade only. The height is the outer animator's job, and adding expandVertically
-                    // here would animate the same change twice at two different rates.
-                    AnimatedVisibility(
-                        visible = probeExpanded,
-                        enter = fadeIn(animationSpec = motion.fastEffectsSpec()),
-                        exit = fadeOut(animationSpec = motion.fastEffectsSpec()),
+                }
+                if (probe != null) {
+                    ProbeBlock(probe = probe.take(MaxLocalDetailChars), tint = content)
+                }
+                if (diagnostic != null) {
+                    Text(
+                        text = stringResource(R.string.diagnostic_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = content,
+                    )
+                    ProbeBlock(probe = diagnosticText, tint = content)
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            clipboard?.setPrimaryClip(
+                                ClipData.newPlainText("SRO diagnostic", diagnosticText)
+                            )
+                            copied = true
+                        },
+                        colors = actionColors,
+                        contentPadding = actionPadding,
                     ) {
-                        ProbeBlock(probe = probe, tint = content)
+                        Icon(
+                            painter = painterResource(R.drawable.ic_content_copy),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            stringResource(if (copied) R.string.action_copied else R.string.action_copy),
+                            maxLines = 1,
+                        )
+                    }
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        Intent(Intent.ACTION_SEND)
+                                            .setType("text/plain")
+                                            .putExtra(Intent.EXTRA_TEXT, diagnosticText),
+                                        null,
+                                    )
+                                )
+                            }
+                        },
+                        colors = actionColors,
+                        contentPadding = actionPadding,
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_share), maxLines = 1)
+                    }
+                    TextButton(
+                        onClick = onReportIssue,
+                        colors = actionColors,
+                        contentPadding = actionPadding,
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_report_issue), maxLines = 1)
                     }
                 }
             }
@@ -375,31 +410,6 @@ private fun ProbeBlock(
             color = tint,
             softWrap = false,
         )
-    }
-}
-
-/** Disclosure control pulled back into the text column so its label lines up with the body above it. */
-@Composable
-private fun InlineToggle(
-    text: String,
-    expanded: Boolean,
-    tint: Color,
-    onClick: () -> Unit,
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.offset(x = (-8).dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = tint),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-    ) {
-        DisclosureChevron(
-            expanded = expanded,
-            modifier = Modifier.size(16.dp),
-            tint = tint,
-            onToggle = onClick,
-        )
-        Spacer(Modifier.width(4.dp))
-        MicroLabel(text = text, color = tint)
     }
 }
 
@@ -492,6 +502,6 @@ private fun panelColors(tone: ResultTone): PanelColors {
         ResultTone.ERROR -> PanelColors(scheme.errorContainer, scheme.onErrorContainer)
         ResultTone.PARTIAL -> PanelColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)
         ResultTone.SUCCESS -> PanelColors(override.successContainer, override.onSuccessContainer)
-        ResultTone.IDLE -> PanelColors(scheme.surfaceContainer, scheme.onSurface)
+        ResultTone.IDLE -> PanelColors(scheme.surfaceContainerLow, scheme.onSurfaceVariant)
     }
 }

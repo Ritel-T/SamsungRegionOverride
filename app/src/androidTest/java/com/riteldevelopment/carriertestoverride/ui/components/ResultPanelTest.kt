@@ -5,18 +5,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
+import com.riteldevelopment.carriertestoverride.data.OperationKind
 import com.riteldevelopment.carriertestoverride.ui.BusyState
+import com.riteldevelopment.carriertestoverride.ui.DiagnosticFailure
+import com.riteldevelopment.carriertestoverride.ui.DiagnosticIms
+import com.riteldevelopment.carriertestoverride.ui.DiagnosticReport
+import com.riteldevelopment.carriertestoverride.ui.DiagnosticRuntime
+import com.riteldevelopment.carriertestoverride.ui.DiagnosticShizuku
 import com.riteldevelopment.carriertestoverride.ui.LocalizedText
 import com.riteldevelopment.carriertestoverride.ui.ResultState
 import com.riteldevelopment.carriertestoverride.ui.ResultTone
@@ -92,7 +101,7 @@ class ResultPanelTest {
     }
 
     @Test
-    fun resultPanelReplacesTheIdleLineWithThePanel() {
+    fun resultPanelStartsAsAQuietCardAndCollapsesNewResults() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val nothingRun = context.getString(R.string.result_nothing_run)
         var result by mutableStateOf(ResultState.Initial)
@@ -104,14 +113,37 @@ class ResultPanelTest {
         }
 
         compose.onNodeWithText(nothingRun).assertIsDisplayed()
+        compose.onNodeWithText(nothingRun)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
         result = ResultState(
             headline = LocalizedText.Literal("Region applied"),
             detail = "SIM operator override written",
             tone = ResultTone.SUCCESS,
+            diagnostic = DiagnosticReport(
+                appVersion = "3.8.0",
+                manufacturer = "Samsung",
+                model = "SM-S938B",
+                apiLevel = 37,
+                operation = OperationKind.APPLY,
+                slotIndex = 1,
+                layers = "NETWORK",
+                targetCountry = "gb",
+                targetAppCount = 0,
+                result = ResultTone.SUCCESS,
+                ims = DiagnosticIms.REGISTERED,
+                shizuku = DiagnosticShizuku.CONNECTED_GRANTED,
+                stage = OverrideRepository.Stage.RUNNING,
+                failure = DiagnosticFailure.NONE,
+                runtime = DiagnosticRuntime.AVAILABLE,
+            ),
         )
         compose.waitForIdle()
         compose.onNodeWithText("Region applied").assertIsDisplayed()
         compose.onNodeWithText(nothingRun).assertDoesNotExist()
+        compose.onNodeWithText("SIM operator override written").assertDoesNotExist()
+        compose.onNodeWithText("Region applied").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("SIM operator override written").assertIsDisplayed()
         compose.onRoot().tryPerformAccessibilityChecks()
     }
 }
