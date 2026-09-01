@@ -2,9 +2,14 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,10 +22,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -30,14 +40,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.collapse
+import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -51,7 +66,16 @@ val BlockGap: Dp = 14.dp
 /** Sized to sit on the subtitle's line without outweighing the layer title above it. */
 private val LayerReaderIconSize: Dp = 16.dp
 
-/** Small tracked-out label used for field names and section headers. */
+/** Shared with SIM-card headers so the DATA badge cannot make one card's content start lower. */
+private val StateBadgeVerticalPadding: Dp = 2.dp
+
+/** The badge's measured text line plus its real vertical padding, including the current font scale. */
+@Composable
+internal fun stateBadgeMinimumHeight(): Dp = with(LocalDensity.current) {
+    MaterialTheme.typography.labelSmallEmphasized.lineHeight.toDp()
+} + StateBadgeVerticalPadding * 2
+
+/** Compact emphasized label used for field names and section headers. */
 @Composable
 fun MicroLabel(
     text: String,
@@ -61,10 +85,7 @@ fun MicroLabel(
     Text(
         text = text,
         modifier = modifier,
-        style = MaterialTheme.typography.labelSmall.copy(
-            letterSpacing = 1.2.sp,
-            fontWeight = FontWeight.SemiBold,
-        ),
+        style = MaterialTheme.typography.labelSmallEmphasized.copy(letterSpacing = 0.sp),
         color = color,
     )
 }
@@ -73,6 +94,12 @@ fun MicroLabel(
  * A state marker whose *shape* carries meaning as well as its colour: filled when the layer is actually
  * applied to this SIM, outline-only when it is not. Colour alone would leave the two states
  * indistinguishable to a colour-blind reader and in a grayscale screenshot.
+ *
+ * Both states are drawn by the same code — a fill and a border, one of which is transparent — rather
+ * than by two different modifier chains, so the flip is three colour animations instead of a swap. This
+ * badge is how a layer reports that it landed, which is the payoff moment of the whole screen; cutting
+ * straight to the filled state there reads as the screen redrawing rather than as the SIM changing.
+ * Neither `background` nor `border` affects measurement, so the badge holds its size throughout.
  */
 @Composable
 fun StateBadge(
@@ -82,22 +109,121 @@ fun StateBadge(
     activeColor: Color = LocalOverrideColors.current.success,
     onActiveColor: Color = LocalOverrideColors.current.onSuccess,
 ) {
-    val shape = RoundedCornerShape(4.dp)
+    val shape = MaterialTheme.shapes.small
+    val motion = MaterialTheme.motionScheme
+    val container by animateColorAsState(
+        targetValue = if (active) activeColor else Color.Transparent,
+        animationSpec = motion.defaultEffectsSpec(),
+        label = "badgeContainer",
+    )
+    val edge by animateColorAsState(
+        targetValue = if (active) Color.Transparent else MaterialTheme.colorScheme.outlineVariant,
+        animationSpec = motion.defaultEffectsSpec(),
+        label = "badgeEdge",
+    )
+    val ink by animateColorAsState(
+        targetValue = if (active) onActiveColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = motion.defaultEffectsSpec(),
+        label = "badgeInk",
+    )
     Box(
         modifier = modifier
             .clip(shape)
-            .then(
-                if (active) Modifier.background(activeColor)
-                else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-            )
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .background(container)
+            .border(1.dp, edge, shape)
+            .padding(horizontal = 6.dp, vertical = StateBadgeVerticalPadding)
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = if (active) onActiveColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmallEmphasized,
+            color = ink,
         )
     }
+}
+
+/**
+ * A badge that is not always there — LIVE, DATA — entering and leaving under its own animation.
+ *
+ * Separate from [StateBadge] because appearing and changing state are different events and only one of
+ * them is about this badge's own colours. Row arrangements space measured children, and a settled
+ * `AnimatedVisibility` emits no node at all, so a hidden badge leaves no gap behind it.
+ */
+@Composable
+fun AppearingStateBadge(
+    text: String,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    activeColor: Color = LocalOverrideColors.current.success,
+    onActiveColor: Color = LocalOverrideColors.current.onSuccess,
+) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        // Scaled as well as expanded, and clip = false so the overshoot on the spring is allowed to
+        // show rather than being cut off at the badge's own bounds.
+        enter = fadeIn(animationSpec = motion.fastEffectsSpec()) +
+            scaleIn(animationSpec = motion.defaultSpatialSpec(), initialScale = 0.7f) +
+            expandHorizontally(animationSpec = motion.defaultSpatialSpec(), clip = false),
+        exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
+            scaleOut(animationSpec = motion.fastSpatialSpec(), targetScale = 0.7f) +
+            shrinkHorizontally(animationSpec = motion.fastSpatialSpec(), clip = false),
+    ) {
+        StateBadge(
+            text = text,
+            active = true,
+            activeColor = activeColor,
+            onActiveColor = onActiveColor,
+        )
+    }
+}
+
+/**
+ * The disclosure chevron on an expandable block.
+ *
+ * Rotated rather than swapped between the up and down glyphs. Those two icons differ by exactly that
+ * rotation, so turning one is the same picture doing what the tap just did, where swapping them is two
+ * pictures with nothing in between. Three separate blocks on this screen open this way — the custom
+ * target fields, the target-apps panel, the report and its probe — and all three open directly under the
+ * finger that pressed them, which is the case where the missing half of the motion is most obvious.
+ *
+ * The rotation is the whole of the *visible* signal, and for a while it was the whole signal full stop:
+ * a plain `onClick` row says "double tap to activate" and nothing about which way this block is about to
+ * go. Passing [onToggle] puts the platform's own expand/collapse action on the row instead. That action
+ * is labelled by the framework in the user's locale, so a screen reader can name the direction without
+ * this project shipping the words for it in fifteen languages, and offering only one of the two is
+ * itself the statement of which state the block is in.
+ *
+ * It is declared here, on the arrow, rather than on the row: these rows are `ListItem`s that merge their
+ * descendants, so an action declared inside the merge rises into the node the reader actually lands on,
+ * while one declared on an ancestor of it would sit on a node the reader passes straight through.
+ */
+@Composable
+fun DisclosureChevron(
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
+    onToggle: (() -> Unit)? = null,
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "chevronRotation",
+    )
+    Icon(
+        imageVector = Icons.Filled.KeyboardArrowDown,
+        // No description of its own: the arrow says the same thing the expand/collapse action below
+        // says, and a reader that announced both would say it twice.
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier
+            .rotate(rotation)
+            .then(
+                if (onToggle == null) Modifier else Modifier.semantics {
+                    if (expanded) collapse { onToggle(); true } else expand { onToggle(); true }
+                }
+            ),
+    )
 }
 
 /**
@@ -113,7 +239,7 @@ fun HazardNote(text: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .drawWithCache {
                 val band = 7.dp.toPx()
@@ -185,12 +311,14 @@ fun LayerSection(
 ) {
     val success = LocalOverrideColors.current.success
     val idleColor = MaterialTheme.colorScheme.outlineVariant
+    val motion = MaterialTheme.motionScheme
     val railColor by animateColorAsState(
         targetValue = when {
             applied -> success
             enabled -> accent
             else -> idleColor
         },
+        animationSpec = motion.fastEffectsSpec(),
         label = "layerRailColor",
     )
     val layoutDirection = LocalLayoutDirection.current
@@ -198,7 +326,7 @@ fun LayerSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .drawBehind {
                 val width = 3.dp.toPx()
@@ -213,7 +341,18 @@ fun LayerSection(
             }
             .padding(start = 17.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .toggleable(
+                    value = enabled,
+                    enabled = controlsEnabled,
+                    role = Role.Switch,
+                    onValueChange = onEnabledChange,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -221,12 +360,12 @@ fun LayerSection(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    if (applied) StateBadge(
+                    AppearingStateBadge(
                         text = stringResource(R.string.badge_live),
-                        active = true,
+                        visible = applied,
                     )
                 }
                 Spacer(Modifier.height(3.dp))
@@ -253,24 +392,39 @@ fun LayerSection(
             Spacer(Modifier.width(8.dp))
             Switch(
                 checked = enabled,
-                onCheckedChange = onEnabledChange,
+                onCheckedChange = null,
                 enabled = controlsEnabled,
             )
         }
 
-        if (applied && !enabled && liveButDisarmedText != null) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = liveButDisarmedText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+        // Animated for the same reason the body below is: turning the switch off while the layer is
+        // still live collapses the body and raises this warning in the same frame, and an un-animated
+        // line appearing inside a card that is simultaneously shrinking reads as a glitch.
+        AnimatedVisibility(
+            visible = applied && !enabled && liveButDisarmedText != null,
+            enter = fadeIn(animationSpec = motion.fastEffectsSpec()) +
+                expandVertically(animationSpec = motion.defaultSpatialSpec()),
+            exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
+                shrinkVertically(animationSpec = motion.defaultSpatialSpec()),
+        ) {
+            Column {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    // Held through the exit: the text is null exactly when the caller has nothing to
+                    // say, and reading it live would blank the line halfway out of view.
+                    text = liveButDisarmedText.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
 
         AnimatedVisibility(
             visible = enabled,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
+            enter = fadeIn(animationSpec = motion.fastEffectsSpec()) +
+                expandVertically(animationSpec = motion.defaultSpatialSpec()),
+            exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
+                shrinkVertically(animationSpec = motion.defaultSpatialSpec()),
         ) {
             Column {
                 Spacer(Modifier.height(14.dp))

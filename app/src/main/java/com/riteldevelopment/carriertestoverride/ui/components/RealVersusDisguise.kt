@@ -2,9 +2,7 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -138,35 +135,39 @@ fun RealVersusDisguise(
     val inkColor = MaterialTheme.colorScheme.onSurface
     val quietColor = MaterialTheme.colorScheme.onSurfaceVariant
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val motion = MaterialTheme.motionScheme
 
     // One driver for every part of the effect, so the highlight, the fades and the values can never
     // disagree about which side is in force.
     val slide by animateFloatAsState(
         targetValue = if (live) 1f else 0f,
-        // Just under critical damping: the highlight settles with a single small overshoot, which reads
-        // as something moving into place. A bouncier spring would throw the capsule clear of the column
-        // it is meant to be marking, and the whole point of the travel is that it lands on one side.
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motion.defaultSpatialSpec(),
         label = "disguiseSlide",
     )
 
     val disguiseColor by animateColorAsState(
         targetValue = if (live) successColor else accentColor,
+        animationSpec = motion.fastEffectsSpec(),
         label = "disguiseColor",
     )
     val highlightColor by animateColorAsState(
         // Grey rather than nothing while the SIM is itself: an empty left half would read as "this side
         // is switched off", when what it means is "this is the identity in force".
         targetValue = if (live) successColor.copy(alpha = 0.14f) else inkColor.copy(alpha = 0.05f),
+        animationSpec = motion.fastEffectsSpec(),
         label = "disguiseHighlight",
     )
 
-    val numericStyle = MaterialTheme.typography.headlineMedium.merge(TabularFigures)
+    // Display rather than headline, and heavier. Expressive's type guidance is to spend the scale on the
+    // one element the screen exists for instead of spreading emphasis evenly, and here that is the pair
+    // of operator numerics the whole comparison is about. Everything around them stays where it was, so
+    // the extra weight buys hierarchy rather than noise.
+    val numericStyle = MaterialTheme.typography.displaySmallEmphasized.merge(TabularFigures)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             // Painted before the padding is applied, so the highlight can bleed out past the columns it
             // sits behind while staying inside the card's own clip.
@@ -193,6 +194,7 @@ fun RealVersusDisguise(
             Crossfade(
                 targetState = realNumeric,
                 modifier = Modifier.weight(1f),
+                animationSpec = motion.fastEffectsSpec(),
                 label = "realNumeric",
             ) { value ->
                 Text(
@@ -214,6 +216,7 @@ fun RealVersusDisguise(
             Crossfade(
                 targetState = disguiseNumeric,
                 modifier = Modifier.weight(1f),
+                animationSpec = motion.fastEffectsSpec(),
                 label = "disguiseNumeric",
             ) { value ->
                 Text(
@@ -232,6 +235,7 @@ fun RealVersusDisguise(
             Crossfade(
                 targetState = realDetail,
                 modifier = Modifier.weight(1f),
+                animationSpec = motion.fastEffectsSpec(),
                 label = "realDetail",
             ) { detail ->
                 DetailLine(text = detail, color = quietColor.fade(1f - slide))
@@ -240,6 +244,7 @@ fun RealVersusDisguise(
             Crossfade(
                 targetState = disguiseDetail,
                 modifier = Modifier.weight(1f),
+                animationSpec = motion.fastEffectsSpec(),
                 label = "disguiseDetail",
             ) { detail ->
                 DetailLine(text = detail, color = disguiseColor.fade(slide))
@@ -285,7 +290,13 @@ private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color, rtl: Bool
     )
 }
 
-/** A column heading, carrying the LIVE badge when that column is the identity currently in force. */
+/**
+ * A column heading, carrying the LIVE badge when that column is the identity currently in force.
+ *
+ * The badge animates because it does not fade in place — it hands over. Applying a disguise takes it off
+ * the left heading and puts it on the right one while the highlight slides underneath, and a badge that
+ * cut instantly would arrive before the surface it belongs to.
+ */
 @Composable
 private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier) {
     Row(
@@ -294,7 +305,7 @@ private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         MicroLabel(text = text)
-        if (live) StateBadge(text = stringResource(R.string.badge_live), active = true)
+        AppearingStateBadge(text = stringResource(R.string.badge_live), visible = live)
     }
 }
 
