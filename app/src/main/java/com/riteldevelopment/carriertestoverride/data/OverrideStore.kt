@@ -2,6 +2,7 @@ package com.riteldevelopment.carriertestoverride.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import java.util.Locale
 
 internal data class ApplyLayerState(
@@ -329,7 +330,7 @@ class OverrideStore(context: Context) {
     fun rememberPreset(id: String) {
         if (id.isBlank()) return
         val updated = (listOf(id) + recentPresetIds().filter { it != id }).take(MAX_RECENT_PRESETS)
-        prefs.edit().putString(RECENT_PRESETS, updated.joinToString(LIST_SEPARATOR)).apply()
+        prefs.edit { putString(RECENT_PRESETS, updated.joinToString(LIST_SEPARATOR)) }
     }
 
     /**
@@ -350,14 +351,14 @@ class OverrideStore(context: Context) {
     }
 
     fun setTargetPackages(packages: List<String>) {
-        prefs.edit()
-            .putString(TARGET_PACKAGES, packages.filter { it.isNotBlank() }.joinToString(LIST_SEPARATOR))
-            .apply()
+        prefs.edit {
+            putString(TARGET_PACKAGES, packages.filter { it.isNotBlank() }.joinToString(LIST_SEPARATOR))
+        }
     }
 
     /** Forgets the user's choice so the built-in defaults apply again. */
     fun clearTargetPackages() {
-        prefs.edit().remove(TARGET_PACKAGES).apply()
+        prefs.edit { remove(TARGET_PACKAGES) }
     }
 
     /**
@@ -371,7 +372,7 @@ class OverrideStore(context: Context) {
     fun notificationPromptShown(): Boolean = prefs.getBoolean(NOTIFICATION_PROMPT_SHOWN, false)
 
     fun markNotificationPromptShown() {
-        prefs.edit().putBoolean(NOTIFICATION_PROMPT_SHOWN, true).apply()
+        prefs.edit { putBoolean(NOTIFICATION_PROMPT_SHOWN, true) }
     }
 
     companion object {
