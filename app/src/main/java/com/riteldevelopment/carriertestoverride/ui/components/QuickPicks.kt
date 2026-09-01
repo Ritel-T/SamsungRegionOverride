@@ -1,18 +1,23 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButtonSize
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -49,7 +54,9 @@ fun QuickPickRow(
             .fillMaxWidth()
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        // Extra-small toggle buttons reserve a little vertical breathing room around their shape.
+        // Pull wrapped lines together slightly so the two-row set reads as one compact choice group.
+        verticalArrangement = Arrangement.spacedBy((-6).dp),
     ) {
         quickPicks.forEach { pick ->
             QuickPickChip(
@@ -74,17 +81,31 @@ private fun QuickPickChip(
     // unpicked and squaring off when picked, and it squashes under the finger on the way there. A chip
     // could only change colour, and this row is a dozen near-identical items where a second, structural
     // difference is what makes the picked one findable at a glance.
+    val scheme = MaterialTheme.colorScheme
     OutlinedToggleButton(
         checked = selected,
         onCheckedChange = { onSelect(preset) },
         buttonSize = ToggleButtonSize.ExtraSmall,
         enabled = enabled,
+        shapes = ToggleButtonShapes(
+            shape = RoundedCornerShape(28.dp),
+            pressedShape = RoundedCornerShape(16.dp),
+            checkedShape = RoundedCornerShape(10.dp),
+        ),
+        colors = ToggleButtonDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = scheme.onSurfaceVariant,
+            checkedContainerColor = lerp(scheme.surfaceContainerHighest, scheme.primary, 0.14f),
+            checkedContentColor = scheme.onSurface,
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (selected) lerp(scheme.outline, scheme.primary, 0.45f) else scheme.outlineVariant,
+        ),
         // Re-roled from the toggle button's own checkbox semantics. Only one preset can be loaded at a
         // time, and "checked" invites a screen-reader user to tick several; the row is announced as the
         // single-choice group it is, matching the `selectableGroup` on the parent.
-        modifier = Modifier
-            .heightIn(min = 48.dp)
-            .semantics { role = Role.RadioButton },
+        modifier = Modifier.semantics { role = Role.RadioButton },
         icon = {
             Text(
                 text = preset.flag,
