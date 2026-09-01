@@ -103,7 +103,6 @@ class OverrideRepository(
         sim: SimInfo,
         target: RegionTarget,
         layers: LayerSelection,
-        refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
         if (store.hasLegacyUnboundState(sim.subId)) {
@@ -143,7 +142,6 @@ class OverrideRepository(
         // READ_PHONE_STATE, which only the shell service holds. So it is captured here: after the
         // service exists, and still before a single byte of override has been written.
         if (replacedCard || !sim.flags.any) captureDisplayName(service, sim.subId)
-        store.rememberSessionPackages(sim.subId, refreshPackages)
         // Synchronous and immediately before the Binder write. If either process dies after a layer
         // lands but before the long report returns, the next launch still errs toward Restore.
         store.markApplyPending(sim.subId, layers.simIdentity, layers.appCountry)
@@ -163,11 +161,6 @@ class OverrideRepository(
                         countryAttempted = layers.appCountry,
                         countrySucceeded = countrySucceeded,
                     )
-                    // Failed layers remain pending because a privileged write can land before its
-                    // reply is lost. Keep the session app list for that conservative Restore path.
-                    if (!store.flags(sim.subId).any) {
-                        store.clearSessionPackages(sim.subId)
-                    }
                 }
             },
         ) {
@@ -180,7 +173,6 @@ class OverrideRepository(
                 layers.simIdentity,
                 layers.appCountry,
                 layers.carrierNameOverride,
-                refreshPackages.toTypedArray(),
             )
         }
     }
@@ -189,7 +181,6 @@ class OverrideRepository(
         sim: SimInfo,
         restoreSimIdentity: Boolean,
         clearAppCountry: Boolean,
-        refreshPackages: List<String>,
         onStage: (Stage) -> Unit,
     ): OperationOutcome {
         if (store.hasLegacyUnboundState(sim.subId)) {
@@ -210,7 +201,6 @@ class OverrideRepository(
         }
         val snapshot = store.snapshot(sim.subId)
         val flagsBefore = store.flags(sim.subId)
-        val allSessionPackages = (store.sessionPackages(sim.subId) + refreshPackages).distinct()
         onStage(Stage.RUNNING)
         return runOperation(
             kind = OperationKind.RESTORE,
@@ -225,11 +215,6 @@ class OverrideRepository(
                         simIdentity = if (restoreSimIdentity && !outcome.simLayerFailed) false else null,
                         appCountry = if (clearAppCountry && !outcome.countryLayerFailed) false else null,
                     )
-                    val simRemains = flagsBefore.simIdentity &&
-                        !(restoreSimIdentity && !outcome.simLayerFailed)
-                    val countryRemains = flagsBefore.appCountry &&
-                        !(clearAppCountry && !outcome.countryLayerFailed)
-                    if (!simRemains && !countryRemains) store.clearSessionPackages(sim.subId)
                 }
             },
         ) {
@@ -247,7 +232,6 @@ class OverrideRepository(
                 networkMayBeLive(flagsBefore),
                 restoreSimIdentity,
                 clearAppCountry,
-                allSessionPackages.toTypedArray(),
             )
         }
     }

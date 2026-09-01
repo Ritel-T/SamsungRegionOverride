@@ -67,17 +67,6 @@ public final class TargetApps {
     private TargetApps() {
     }
 
-    /**
-     * Stops the given targets without touching their storage. Runs after every successful
-     * apply/restore, so the apps re-read the region on their next start.
-     *
-     * <p>Null means the built-in defaults, matching {@link #refresh}. An empty array stops nothing,
-     * which is what a user who has deselected every target has asked for.</p>
-     */
-    static String forceStop(String[] packages) {
-        return refresh(packages, WIPE_NONE, false);
-    }
-
     static String refresh(String[] packages, int wipeMode, boolean relaunch) {
         // Only a null list means "you decide"; an empty one means the caller resolved the set to nothing
         // and must not be answered by stopping every default target instead.
