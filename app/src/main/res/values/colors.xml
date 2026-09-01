@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Static fallback for Android 10 and 11, before the system tonal palette existed. -->
+    <color name="launcher_icon_background">#111A1D</color>
+    <color name="launcher_icon_foreground">#E6EDEE</color>
+</resources>

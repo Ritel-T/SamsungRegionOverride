@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      These are part of the ordinary adaptive icon, not its monochrome/themed layer. As a result the
+      launcher resolves the current system tonal palette even when "themed icons" is disabled. Keeping
+      both tones in accent1 makes the mark visibly dynamic without turning a restrained two-colour icon
+      into a multicolour illustration. This is the same mechanism used by SystemUI Tuner and PI.
+    -->
+    <color name="launcher_icon_background">@android:color/system_accent1_100</color>
+    <color name="launcher_icon_foreground">@android:color/system_accent1_700</color>
+</resources>
