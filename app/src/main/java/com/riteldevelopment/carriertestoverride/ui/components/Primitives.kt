@@ -2,7 +2,9 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,6 +16,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,11 +40,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -55,13 +65,138 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 /** Consistent gap between the screen's top-level blocks. */
 val BlockGap: Dp = 14.dp
+
+@Composable
+internal fun rememberCardInteractionSource(): MutableInteractionSource = remember {
+    MutableInteractionSource()
+}
+
+/**
+ * Draws a press state over the whole card while keeping the touch point in card coordinates.
+ *
+ * A stock indication attached to the card cannot safely consume a press emitted by a smaller header:
+ * its hotspot is measured in the header's coordinates, then the card is remeasured as the body expands.
+ * This small renderer stores the original point, recomputes the farthest corner on every draw, and
+ * therefore stays under the finger while the card changes height.
+ */
+@Composable
+internal fun Modifier.cardRipple(
+    source: MutableInteractionSource,
+    pressOffset: DpOffset = DpOffset.Zero,
+): Modifier {
+    val density = LocalDensity.current
+    val offset = with(density) { Offset(pressOffset.x.toPx(), pressOffset.y.toPx()) }
+    val tint = MaterialTheme.colorScheme.onSurface
+    val expansion = remember { Animatable(0f) }
+    val opacity = remember { Animatable(0f) }
+    var activePress by remember { mutableStateOf<PressInteraction.Press?>(null) }
+
+    LaunchedEffect(source, offset) {
+        var animation: Job? = null
+        source.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    animation?.cancel()
+                    activePress = interaction
+                    expansion.snapTo(0f)
+                    opacity.snapTo(1f)
+                    animation = launch {
+                        expansion.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(CardRippleExpandMillis),
+                        )
+                    }
+                }
+
+                is PressInteraction.Release -> {
+                    if (interaction.press !== activePress) return@collect
+                    animation?.cancel()
+                    animation = launch {
+                        val remaining = ((1f - expansion.value) * CardRippleExpandMillis)
+                            .roundToInt()
+                            .coerceAtLeast(1)
+                        expansion.animateTo(1f, tween(remaining))
+                        opacity.animateTo(0f, tween(CardRippleFadeMillis))
+                        activePress = null
+                        expansion.snapTo(0f)
+                    }
+                }
+
+                is PressInteraction.Cancel -> {
+                    if (interaction.press !== activePress) return@collect
+                    animation?.cancel()
+                    animation = launch {
+                        opacity.animateTo(0f, tween(CardRippleFadeMillis))
+                        activePress = null
+                        expansion.snapTo(0f)
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+    }
+
+    return drawWithContent {
+        drawContent()
+        val press = activePress ?: return@drawWithContent
+        val rawCenter = press.pressPosition + offset
+        val center = if (!rawCenter.x.isNaN() && !rawCenter.y.isNaN()) rawCenter
+        else Offset(size.width / 2f, size.height / 2f)
+        val horizontal = max(center.x, size.width - center.x)
+        val vertical = max(center.y, size.height - center.y)
+        val radius = hypot(horizontal, vertical) + with(density) { 8.dp.toPx() }
+        drawCircle(
+            color = tint,
+            alpha = CardRippleAlpha * opacity.value,
+            radius = radius * expansion.value,
+            center = center,
+        )
+    }
+}
+
+private const val CardRippleExpandMillis = 280
+private const val CardRippleFadeMillis = 160
+private const val CardRippleAlpha = 0.12f
+
+/** The header emits into the surface's source, so the visual ripple spans the full card only once. */
+internal fun Modifier.cardHeaderClick(
+    source: MutableInteractionSource,
+    onClick: () -> Unit,
+): Modifier = clickable(
+    interactionSource = source,
+    indication = null,
+    role = Role.Button,
+    onClick = onClick,
+)
+
+/** Keeps switch semantics while sending the press to the surface-level ripple. */
+internal fun Modifier.cardHeaderToggleable(
+    source: MutableInteractionSource,
+    value: Boolean,
+    enabled: Boolean,
+    onValueChange: (Boolean) -> Unit,
+): Modifier = toggleable(
+    value = value,
+    enabled = enabled,
+    role = Role.Switch,
+    interactionSource = source,
+    indication = null,
+    onValueChange = onValueChange,
+)
 
 /** Sized to sit on the subtitle's line without outweighing the layer title above it. */
 private val LayerReaderIconSize: Dp = 16.dp
@@ -227,7 +362,7 @@ fun DisclosureChevron(
 }
 
 /**
- * The standing risk notice.
+ * A concise warning note for state that needs attention.
  *
  * Deliberately not a warm-tinted box: those read as decoration and get tuned out. Attention comes from a
  * hatched edge — a texture borrowed from hazard marking — while the surface itself stays quiet, so the
@@ -322,12 +457,20 @@ fun LayerSection(
         label = "layerRailColor",
     )
     val layoutDirection = LocalLayoutDirection.current
+    val interactionSource = rememberCardInteractionSource()
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .cardRipple(
+                source = interactionSource,
+                pressOffset = DpOffset(
+                    if (layoutDirection == LayoutDirection.Ltr) 17.dp else 14.dp,
+                    14.dp,
+                ),
+            )
             .drawBehind {
                 val width = 3.dp.toPx()
                 drawRect(
@@ -345,10 +488,10 @@ fun LayerSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .toggleable(
+                .cardHeaderToggleable(
+                    source = interactionSource,
                     value = enabled,
                     enabled = controlsEnabled,
-                    role = Role.Switch,
                     onValueChange = onEnabledChange,
                 ),
             verticalAlignment = Alignment.CenterVertically,
