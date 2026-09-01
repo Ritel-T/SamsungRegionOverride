@@ -61,7 +61,7 @@ class TargetAppRepository(
 
     private val packageManager = context.applicationContext.packageManager
 
-    /** The packages operations act on: the user's choice, or the built-in defaults if they have none. */
+    /** Packages shown in the manual refresh panel: the user's choice, or built-in defaults if unset. */
     fun selectedPackages(): List<String> =
         store.targetPackages() ?: TargetApps.defaultPackages().toList()
 

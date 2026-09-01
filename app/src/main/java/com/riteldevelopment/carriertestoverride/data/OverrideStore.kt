@@ -207,7 +207,7 @@ class OverrideStore(context: Context) {
         editor.commitOrThrow("layer flags")
     }
 
-    // ---------------------------------------------------------------- subscription identity and session
+    // ---------------------------------------------------------------- subscription identity
 
     fun hasFingerprint(subId: Int): Boolean = prefs.contains(fingerprintKey(subId))
 
@@ -269,25 +269,6 @@ class OverrideStore(context: Context) {
         return !fingerprint.isNullOrBlank() && stored == fingerprint
     }
 
-    fun sessionPackages(subId: Int): List<String> = prefs
-        .getString(sessionPackagesKey(subId), null)
-        .orEmpty()
-        .split(LIST_SEPARATOR)
-        .filter { it.isNotBlank() }
-
-    /** Keeps every app touched during this live disguise, even if the picker changes before restore. */
-    fun rememberSessionPackages(subId: Int, packages: List<String>) {
-        val combined = (sessionPackages(subId) + packages)
-            .filter { it.isNotBlank() }
-            .distinct()
-        prefs.edit().putString(sessionPackagesKey(subId), combined.joinToString(LIST_SEPARATOR))
-            .commitOrThrow("session app list")
-    }
-
-    fun clearSessionPackages(subId: Int) {
-        prefs.edit().remove(sessionPackagesKey(subId)).commitOrThrow("session app list")
-    }
-
     private fun clearSubscriptionState(subId: Int, replacementFingerprint: String? = null) {
         prefs.edit()
             .remove(originalNumericKey(subId))
@@ -301,7 +282,6 @@ class OverrideStore(context: Context) {
             .remove(simPendingKey(subId))
             .remove(countryPendingKey(subId))
             .remove(fingerprintUnavailableKey(subId))
-            .remove(sessionPackagesKey(subId))
             .apply {
                 if (replacementFingerprint == null) remove(fingerprintKey(subId))
                 else putString(fingerprintKey(subId), replacementFingerprint)
@@ -407,6 +387,5 @@ class OverrideStore(context: Context) {
         private fun countryPendingKey(subId: Int) = "country_layer_pending_$subId"
         private fun fingerprintKey(subId: Int) = "sim_fingerprint_$subId"
         private fun fingerprintUnavailableKey(subId: Int) = "sim_fingerprint_unavailable_$subId"
-        private fun sessionPackagesKey(subId: Int) = "session_packages_$subId"
     }
 }
