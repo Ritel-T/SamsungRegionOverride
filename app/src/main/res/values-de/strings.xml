@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">SIMs neu einlesen</string>
     <string name="menu_app_language">App-Sprache</string>
     <string name="menu_clear_all">Alle CarrierConfig-Überschreibungen löschen&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Nicht aktiv – zuerst Shizuku starten</string>
     <string name="shizuku_connected">Verbunden · UID %1$d · %2$s</string>
     <string name="shizuku_granted">gewährt</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Kann IMS/VoLTE bei der nächsten Neuverbindung stören. Nur kurz verwenden und danach wiederherstellen.</string>
     <string name="layer_still_live">Noch aktiv. Durch Ausschalten wird diese Ebene nur von der nächsten Anwendung ausgeschlossen; Wiederherstellen entfernt sie.</string>
     <string name="pending_state_warning">Ein vorheriger Schreibvorgang endete, bevor das Ergebnis erfasst wurde. Stellen Sie vor einer neuen Tarnung den Zustand wieder her. Falls dies nicht gelingt, starten Sie das Gerät neu, um die Kernüberschreibungen zu löschen, und beachten Sie vor einer neuen Sitzung alle Warnungen zur SIM-Identität.</string>
-    <string name="risk_notice">Nur vorübergehend verwenden. Eine falsche Netzwerkidentität kann IMS/VoLTE bei einer Neuverbindung stören; das Hinzufügen eines Landes kann diese auslösen. IMS kann zunächst intakt wirken. Beenden Sie die Tarnung direkt nach der Nutzung. Ein Neustart entfernt die Kernüberschreibungen.</string>
 
     <string name="action_start_disguise">Tarnung starten</string>
     <string name="action_update_disguise">Aktualisieren</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Schließen</string>
     <string name="action_copy">Kopieren</string>
     <string name="action_copied">Kopiert</string>
-    <string name="action_more">MEHR</string>
-    <string name="action_less">WENIGER</string>
-    <string name="action_runtime_probe">LAUFZEITTEST</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Instrumentierungshost wird vorbereitet</string>
     <string name="busy_shizuku">Warten auf Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Land, Anbieter oder Code</string>
     <string name="preset_no_match">Kein Treffer. Schließen und Werte direkt eingeben.</string>
 
-    <string name="target_apps_heading">ZIEL-APPS</string>
+    <string name="target_apps_heading">Ziel-Apps</string>
     <string name="target_apps_none">Keine Apps ausgewählt. Die Region ändert sich trotzdem; nichts wird beendet oder gelöscht.</string>
     <string name="target_app_stop_open">Beenden &amp; öffnen</string>
     <string name="target_app_force_stop">Beenden erzwingen</string>
@@ -99,11 +93,11 @@
     <string name="target_app_loading">Installierte Apps werden gelesen&#8230;</string>
     <string name="target_app_no_match">Keine passende App.</string>
     <string name="target_app_not_installed">%1$s · nicht installiert</string>
-    <string name="target_apps_loading_summary">Beim Anwenden und Wiederherstellen werden diese Apps beendet, damit sie die Region neu einlesen.</string>
-    <string name="target_apps_empty_summary">Nichts ausgewählt – beim Anwenden und Wiederherstellen wird keine App beendet.</string>
+    <string name="target_apps_loading_summary">Diese Apps können nach einer Regionsänderung manuell aktualisiert werden.</string>
+    <string name="target_apps_empty_summary">Nichts ausgewählt – keine App wird manuell aktualisiert.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">%1$d App wird beim Anwenden und Wiederherstellen beendet.</item>
-        <item quantity="other">%1$d Apps werden beim Anwenden und Wiederherstellen beendet.</item>
+        <item quantity="one">%1$d App kann manuell aktualisiert werden.</item>
+        <item quantity="other">%1$d Apps können manuell aktualisiert werden.</item>
     </plurals>
     <string name="wipe_keep">Behalten</string>
     <string name="wipe_cache">Cache</string>
@@ -176,4 +170,9 @@
     <string name="notification_layer_network">Netzwerk</string>
     <string name="notification_channel_name">Aktive Regionsüberschreibung</string>
     <string name="notification_channel_description">Wird angezeigt, solange eine SIM eine überschriebene Region meldet.</string>
+    <string name="menu_github_project">GitHub-Projekt</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_report_issue">Problem melden</string>
+    <string name="diagnostic_title">Diagnose</string>
+    <string name="error_open_github">GitHub konnte nicht geöffnet werden: %1$s</string>
 </resources>

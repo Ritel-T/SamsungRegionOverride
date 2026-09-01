@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Verificar chips novamente</string>
     <string name="menu_app_language">Idioma do app</string>
     <string name="menu_clear_all">Limpar todas as substituições do CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Não está em execução: inicie o Shizuku primeiro</string>
     <string name="shizuku_connected">Conectado · UID %1$d · %2$s</string>
     <string name="shizuku_granted">permitido</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Pode interromper IMS/VoLTE na próxima reconexão. Use por pouco tempo e restaure ao terminar.</string>
     <string name="layer_still_live">Ainda está ativa. Desligar esta opção só exclui a camada da próxima aplicação; Restaurar a remove.</string>
     <string name="pending_state_warning">Uma gravação anterior terminou antes que o resultado fosse registrado. Restaure antes de iniciar outro disfarce. Se a restauração não for concluída, reinicie para limpar as substituições principais e siga qualquer aviso sobre a identidade do chip antes de iniciar outra sessão.</string>
-    <string name="risk_notice">Somente para uso temporário. Uma identidade de Rede falsa pode interromper IMS/VoLTE quando houver uma reconexão; adicionar País pode provocar essa reconexão. O IMS pode parecer normal no início. Encerre o disfarce assim que terminar. Reiniciar remove as substituições principais.</string>
 
     <string name="action_start_disguise">Iniciar disfarce</string>
     <string name="action_update_disguise">Atualizar</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Fechar</string>
     <string name="action_copy">Copiar</string>
     <string name="action_copied">Copiado</string>
-    <string name="action_more">MAIS</string>
-    <string name="action_less">MENOS</string>
-    <string name="action_runtime_probe">SONDA DE EXECUÇÃO</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Preparando o host de instrumentação</string>
     <string name="busy_shizuku">Aguardando o Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">País, operadora ou código</string>
     <string name="preset_no_match">Nenhum resultado. Feche esta janela e digite os valores diretamente.</string>
 
-    <string name="target_apps_heading">APPS DE DESTINO</string>
+    <string name="target_apps_heading">Apps de destino</string>
     <string name="target_apps_none">Nenhum app selecionado. A região ainda será alterada; nenhum app será interrompido nem terá dados apagados.</string>
     <string name="target_app_stop_open">Interromper e abrir</string>
     <string name="target_app_force_stop">Forçar parada</string>
@@ -99,12 +93,12 @@
     <string name="target_app_loading">Lendo apps instalados&#8230;</string>
     <string name="target_app_no_match">Nenhum app corresponde à busca.</string>
     <string name="target_app_not_installed">%1$s · não instalado</string>
-    <string name="target_apps_loading_summary">Aplicar e restaurar interrompem estes apps para que leiam a região novamente.</string>
-    <string name="target_apps_empty_summary">Nenhum selecionado: aplicar e restaurar não interromperão nenhum app.</string>
+    <string name="target_apps_loading_summary">Você pode atualizar estes apps manualmente depois de mudar a região.</string>
+    <string name="target_apps_empty_summary">Nenhum selecionado: nenhum app será atualizado manualmente.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">%1$d app é interrompido ao aplicar e restaurar.</item>
-        <item quantity="many">%1$d apps são interrompidos ao aplicar e restaurar.</item>
-        <item quantity="other">%1$d apps são interrompidos ao aplicar e restaurar.</item>
+        <item quantity="one">%1$d app disponível para atualização manual.</item>
+        <item quantity="many">%1$d apps disponíveis para atualização manual.</item>
+        <item quantity="other">%1$d apps disponíveis para atualização manual.</item>
     </plurals>
     <string name="wipe_keep">Manter</string>
     <string name="wipe_cache">Cache</string>
@@ -177,4 +171,9 @@
     <string name="notification_layer_network">Rede</string>
     <string name="notification_channel_name">Substituição de região ativa</string>
     <string name="notification_channel_description">Exibida enquanto um chip informa uma região substituída.</string>
+    <string name="menu_github_project">Projeto no GitHub</string>
+    <string name="action_share">Compartilhar</string>
+    <string name="action_report_issue">Relatar problema</string>
+    <string name="diagnostic_title">Diagnóstico</string>
+    <string name="error_open_github">Não foi possível abrir o GitHub: %1$s</string>
 </resources>

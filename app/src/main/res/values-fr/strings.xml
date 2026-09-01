@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Rechercher les SIM</string>
     <string name="menu_app_language">Langue de l’application</string>
     <string name="menu_clear_all">Effacer toutes les substitutions CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Inactif - démarrez d’abord Shizuku</string>
     <string name="shizuku_connected">Connecté · UID %1$d · %2$s</string>
     <string name="shizuku_granted">autorisé</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Peut interrompre IMS/VoLTE lors de la prochaine reconnexion. Utilisez brièvement, puis restaurez.</string>
     <string name="layer_still_live">Toujours actif. Désactiver cet interrupteur exclut seulement cette couche de la prochaine application ; Restaurer la supprime.</string>
     <string name="pending_state_warning">Une écriture précédente s’est terminée avant l’enregistrement de son résultat. Restaurez avant de commencer un autre déguisement. Si la restauration échoue, redémarrez pour effacer les substitutions principales et suivez tout avertissement concernant l’identité SIM avant une nouvelle session.</string>
-    <string name="risk_notice">Usage temporaire uniquement. Une fausse identité Réseau peut interrompre IMS/VoLTE lors de sa reconnexion ; l’ajout du Pays peut déclencher cette reconnexion. IMS peut sembler fonctionner au début. Mettez fin au déguisement dès que vous avez terminé. Un redémarrage supprime les substitutions principales.</string>
 
     <string name="action_start_disguise">Démarrer le déguisement</string>
     <string name="action_update_disguise">Mettre à jour</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Fermer</string>
     <string name="action_copy">Copier</string>
     <string name="action_copied">Copié</string>
-    <string name="action_more">PLUS</string>
-    <string name="action_less">MOINS</string>
-    <string name="action_runtime_probe">SONDE D’EXÉCUTION</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Préparation de l’hôte d’instrumentation</string>
     <string name="busy_shizuku">En attente de Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Pays, opérateur ou code</string>
     <string name="preset_no_match">Aucun résultat. Fermez cette fenêtre et saisissez directement les valeurs.</string>
 
-    <string name="target_apps_heading">APPLICATIONS CIBLES</string>
+    <string name="target_apps_heading">Applications cibles</string>
     <string name="target_apps_none">Aucune application sélectionnée. La région change quand même ; aucune application ne sera arrêtée ni effacée.</string>
     <string name="target_app_stop_open">Arrêter et ouvrir</string>
     <string name="target_app_force_stop">Forcer l’arrêt</string>
@@ -99,12 +93,12 @@
     <string name="target_app_loading">Lecture des applications installées&#8230;</string>
     <string name="target_app_no_match">Aucune application correspondante.</string>
     <string name="target_app_not_installed">%1$s · non installée</string>
-    <string name="target_apps_loading_summary">L’application et la restauration arrêtent ces applications pour qu’elles relisent la région.</string>
-    <string name="target_apps_empty_summary">Aucune sélection : l’application et la restauration n’arrêteront aucune application.</string>
+    <string name="target_apps_loading_summary">Ces applications peuvent être actualisées manuellement après un changement de région.</string>
+    <string name="target_apps_empty_summary">Aucune sélection : aucune application ne sera actualisée manuellement.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">%1$d application est arrêtée lors de l’application et de la restauration.</item>
-        <item quantity="many">%1$d applications sont arrêtées lors de l’application et de la restauration.</item>
-        <item quantity="other">%1$d applications sont arrêtées lors de l’application et de la restauration.</item>
+        <item quantity="one">%1$d application peut être actualisée manuellement.</item>
+        <item quantity="many">%1$d applications peuvent être actualisées manuellement.</item>
+        <item quantity="other">%1$d applications peuvent être actualisées manuellement.</item>
     </plurals>
     <string name="wipe_keep">Conserver</string>
     <string name="wipe_cache">Cache</string>
@@ -177,4 +171,9 @@
     <string name="notification_layer_network">Réseau</string>
     <string name="notification_channel_name">Substitution de région active</string>
     <string name="notification_channel_description">Affichée lorsqu’une SIM indique une région substituée.</string>
+    <string name="menu_github_project">Projet GitHub</string>
+    <string name="action_share">Partager</string>
+    <string name="action_report_issue">Signaler un problème</string>
+    <string name="diagnostic_title">Diagnostic</string>
+    <string name="error_open_github">Impossible d’ouvrir GitHub : %1$s</string>
 </resources>
