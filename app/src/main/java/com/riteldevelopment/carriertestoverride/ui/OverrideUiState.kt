@@ -23,6 +23,7 @@ data class ResultState(
     val detail: String? = null,
     val probe: String? = null,
     val tone: ResultTone = ResultTone.IDLE,
+    val diagnostic: DiagnosticReport? = null,
 ) {
     companion object {
         val Initial = ResultState(LocalizedText.Empty, tone = ResultTone.IDLE)
