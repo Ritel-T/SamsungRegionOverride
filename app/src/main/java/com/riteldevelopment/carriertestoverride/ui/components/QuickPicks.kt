@@ -4,13 +4,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButtonSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.ui.QuickPick
@@ -40,7 +45,9 @@ fun QuickPickRow(
 ) {
     if (quickPicks.isEmpty()) return
     FlowRow(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -55,6 +62,7 @@ fun QuickPickRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun QuickPickChip(
     preset: RegionPreset,
@@ -62,21 +70,33 @@ private fun QuickPickChip(
     enabled: Boolean,
     onSelect: (RegionPreset) -> Unit,
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = { onSelect(preset) },
+    // An OutlinedToggleButton rather than a FilterChip: it carries selection in its *shape*, rounding hard when
+    // unpicked and squaring off when picked, and it squashes under the finger on the way there. A chip
+    // could only change colour, and this row is a dozen near-identical items where a second, structural
+    // difference is what makes the picked one findable at a glance.
+    OutlinedToggleButton(
+        checked = selected,
+        onCheckedChange = { onSelect(preset) },
+        buttonSize = ToggleButtonSize.ExtraSmall,
         enabled = enabled,
-        // Shorter and tighter than the default. A chip row is a scanning surface, not a set of
-        // buttons to read, so it should cost as little vertical space as it can while staying tappable.
-        modifier = Modifier.height(32.dp),
-        label = {
+        // Re-roled from the toggle button's own checkbox semantics. Only one preset can be loaded at a
+        // time, and "checked" invites a screen-reader user to tick several; the row is announced as the
+        // single-choice group it is, matching the `selectableGroup` on the parent.
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .semantics { role = Role.RadioButton },
+        icon = {
             Text(
-                text = "${preset.flag} ${preset.carrier}",
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                text = preset.flag,
+                style = MaterialTheme.typography.bodyMedium,
             )
         },
-        shape = FilterChipDefaults.shape,
-    )
+    ) {
+        Text(
+            text = preset.carrier,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
