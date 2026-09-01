@@ -67,8 +67,8 @@ slot **DATA** and says so plainly when the selected SIM is not it. Switch which 
 Android Settings, not here.
 
 App behaviour is not guaranteed by a single signal. Account country, IP address, CSC, app version,
-server-side experiments and cached data can also participate. The UI force-stops selected target apps
-after apply and restore so they can re-read the framework state on their next launch.
+server-side experiments and cached data can also participate. Use the Target apps panel to refresh a
+selected app after changing the region if it has cached the old state.
 
 ## Calls, IMS and recovery
 
@@ -105,8 +105,6 @@ See [the IMS investigation](docs/ims-investigation.md) for the reproduced sequen
 - Snapshots are bound to a one-way SIM/card fingerprint when the firmware exposes one. A recycled
   `subId` is not allowed to write an old SIM's snapshot onto a replacement card. The raw ICCID never
   leaves the shell service.
-- Target apps used during the live session are remembered per subscription. Restore stops the union of
-  the original session list and the current list, even if the picker changed in between.
 - All core overrides are transient. A reboot is the definitive reset, although a carrier display-name
   side effect may still need the captured-name restore.
 
@@ -130,6 +128,10 @@ Android releases follow the system language.
 Technical Binder/instrumentation reports remain in English so stable machine markers and bug reports do
 not change with the UI locale.
 
+The result card is intentionally compact. Expand it only when you need the local operation detail or the
+safe `SRO-DIAGNOSTIC/1` summary. Copying, sharing or reporting an issue uses the summary and does not
+upload raw logcat or phone/SIM identifiers. See [Diagnostics](docs/diagnostics.md) for the collection flow.
+
 ## Target apps
 
 The default list is user-editable:
@@ -140,7 +142,8 @@ The default list is user-editable:
 | `com.samsung.android.voc` | Samsung Members |
 | `com.zhiliaoapp.musically` | TikTok |
 
-The on-demand panel can force-stop an app, optionally clear cache or all app data, and relaunch it.
+The Target apps panel can manually force-stop an app, optionally clear cache or all app data, and relaunch
+it. Applying or restoring a disguise does not stop target apps automatically.
 Clearing **Data** signs the user out and removes downloads, drafts and local settings. Cache-only clear
 is a documented timeout/no-op on the tested One UI build and is reported honestly.
 
