@@ -70,6 +70,8 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private var operationJob: Job? = null
     private var refreshJob: Job? = null
+    /** Null until the user chooses a card or a notification names the restore target. */
+    private var explicitSelectedSubId: Int? = null
     private val resourcesReleased = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -118,16 +120,18 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 val promptDue = scan.sims.any { it.disguised } &&
                     !notifier.canPost() &&
                     !store.notificationPromptShown()
+                val scannedSubIds = scan.sims.map(SimInfo::subId)
+                val defaultDataSubId = sims.defaultDataSubId()
                 _state.update { current ->
-                    val preferred = when {
-                        scan.sims.any { it.subId == current.selectedSubId } -> current.selectedSubId
-                        scan.sims.any { it.subId == sims.defaultDataSubId() } -> sims.defaultDataSubId()
-                        else -> scan.sims.firstOrNull()?.subId ?: -1
-                    }
                     current.copy(
                         sims = scan.sims,
                         slotCount = scan.slotCount,
-                        selectedSubId = preferred,
+                        selectedSubId = resolveSelectedSubIdAfterScan(
+                            currentSelectedSubId = current.selectedSubId,
+                            scannedSubIds = scannedSubIds,
+                            defaultDataSubId = defaultDataSubId,
+                            selectionIsExplicit = explicitSelectedSubId != null,
+                        ),
                         simScanError = null,
                         notificationPromptDue = promptDue,
                     )
@@ -194,7 +198,10 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     // ---------------------------------------------------------------- editing
 
-    fun selectSim(subId: Int) = _state.update { it.copy(selectedSubId = subId) }
+    fun selectSim(subId: Int) {
+        explicitSelectedSubId = subId
+        _state.update { it.copy(selectedSubId = subId) }
+    }
 
     fun selectPreset(preset: RegionPreset) = _state.update {
         it.copy(
@@ -316,6 +323,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         // the user believing it had been.
         val sim = _state.value.sims.firstOrNull { it.subId == subId }
             ?: return fail(R.string.error_sim_removed)
+        explicitSelectedSubId = subId
         _state.update { it.copy(selectedSubId = subId) }
         val flags = store.flags(subId)
         if (!flags.any) return
