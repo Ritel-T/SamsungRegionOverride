@@ -6,9 +6,8 @@ Temporarily changes the SIM region that Android reports to region-sensitive apps
 short sessions: start a disguise, open the Samsung or other target app, then end the disguise and
 restore mobile service.
 
-The primary target is recent Samsung firmware. The complete path has been tested on an **SM-S938B,
-Android 16, One UI 8.5** with Shizuku 13.1.5. Other Samsung and non-Samsung builds are compatibility
-targets, not validated claims.
+The primary target is recent Samsung firmware. It has been tested on an **SM-S938B** running Android 16 /
+One UI 8.5 and Android 17 / One UI 9 Beta. Other Samsung and non-Samsung builds are compatibility targets.
 
 No root is required. The radio remains attached to the real carrier and the phone number does not
 change, but Android's carrier identity, CarrierConfig, data profiles and IMS behaviour can change. Do
@@ -150,7 +149,7 @@ is a documented timeout/no-op on the tested One UI build and is reported honestl
 Download the signed APK from [GitHub Releases](https://github.com/Ritel-T/SamsungRegionOverride/releases).
 Each release publishes the APK SHA-256 and signing-certificate SHA-256; verify both before installing.
 
-JDK 17 or newer is required. The wrapper pins Gradle 9.7.1 and AGP 9.3.1 supplies Kotlin 2.2.10.
+JDK 17 or newer is required. The wrapper pins Gradle 9.7.1 and AGP 9.3.2 supplies Kotlin 2.2.10.
 Shizuku 13.1.5 AARs are vendored and checksum-pinned under `app/libs`.
 
 ```bash
@@ -168,7 +167,12 @@ Maintainers can build the signed release variant using the environment-variable 
 
 The test suite covers the two known Samsung/AOSP UICC toggle signatures, refuses unknown overloads,
 guards against UICC recovery while a fake Network remains live, and verifies Network-first country
-snapshot derivation.
+snapshot derivation. Device-side Compose tests also guard single-selection semantics, one-toggle-per-row
+accessibility, progressive Target Apps disclosure and its expand/collapse actions, the still-live layer
+warning, badge size across a state flip, and the absence of false progress announcements.
+
+`connectedDebugAndroidTest` uninstalls the app when it finishes, which discards the override snapshots
+a restore needs. Do not run it against a device with an override applied.
 
 ## Architecture
 
@@ -196,10 +200,9 @@ this project.
 
 ## Known limits
 
-- Only SM-S938B / Android 16 / One UI 8.5 has been validated end to end.
+- Testing so far is limited to SM-S938B on Android 16 / One UI 8.5 and Android 17 / One UI 9 Beta.
 - The current selector displays up to two active consumer-phone subscriptions.
-- Presets are convenience data, not a live carrier database. Only EE / `23430` / `gb` has been applied
-  and restored end to end on the reference device.
+- Presets are convenience data, not a live carrier database.
 - A firmware that hides the card identifier marks new snapshots as unverified. If an identifier later
   becomes readable, the app refuses to attach it automatically to those old snapshots; reboot clears
   core overrides, after which app storage must be cleared before a new session.
