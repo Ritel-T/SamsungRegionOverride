@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Pindai ulang SIM</string>
     <string name="menu_app_language">Bahasa aplikasi</string>
     <string name="menu_clear_all">Hapus semua override CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Tidak berjalan - jalankan Shizuku terlebih dahulu</string>
     <string name="shizuku_connected">Terhubung · uid %1$d · %2$s</string>
     <string name="shizuku_granted">diizinkan</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Dapat merusak IMS/VoLTE saat tersambung ulang. Gunakan sebentar lalu pulihkan setelah selesai.</string>
     <string name="layer_still_live">Masih aktif. Menonaktifkan sakelar ini hanya mengecualikannya dari penerapan berikutnya; Pulihkan akan menghapusnya.</string>
     <string name="pending_state_warning">Penulisan sebelumnya berakhir sebelum hasilnya tercatat. Pulihkan sebelum memulai penyamaran lain. Jika pemulihan tidak dapat diselesaikan, mulai ulang perangkat untuk menghapus override inti dan ikuti peringatan identitas SIM sebelum sesi baru.</string>
-    <string name="risk_notice">Hanya untuk penggunaan sementara. Identitas Jaringan palsu dapat merusak IMS/VoLTE saat tersambung ulang; menambahkan Negara dapat memicu sambungan ulang tersebut. IMS mungkin tampak normal pada awalnya. Akhiri penyamaran segera setelah selesai. Memulai ulang perangkat akan menghapus override inti.</string>
 
     <string name="action_start_disguise">Mulai penyamaran</string>
     <string name="action_update_disguise">Perbarui</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Tutup</string>
     <string name="action_copy">Salin</string>
     <string name="action_copied">Disalin</string>
-    <string name="action_more">LAINNYA</string>
-    <string name="action_less">RINGKAS</string>
-    <string name="action_runtime_probe">PROBE RUNTIME</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Menyiapkan host instrumentasi</string>
     <string name="busy_shizuku">Menunggu Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Negara, operator, atau kode</string>
     <string name="preset_no_match">Tidak ada hasil. Tutup lalu masukkan nilainya secara langsung.</string>
 
-    <string name="target_apps_heading">APLIKASI TARGET</string>
+    <string name="target_apps_heading">Aplikasi target</string>
     <string name="target_apps_none">Tidak ada aplikasi yang dipilih. Wilayah tetap berubah; tidak ada aplikasi yang dihentikan atau dihapus datanya.</string>
     <string name="target_app_stop_open">Hentikan &amp; buka</string>
     <string name="target_app_force_stop">Paksa berhenti</string>
@@ -99,10 +93,10 @@
     <string name="target_app_loading">Membaca aplikasi terinstal&#8230;</string>
     <string name="target_app_no_match">Tidak ada aplikasi yang cocok.</string>
     <string name="target_app_not_installed">%1$s · tidak terinstal</string>
-    <string name="target_apps_loading_summary">Penerapan dan pemulihan menghentikan aplikasi ini agar membaca ulang wilayah.</string>
-    <string name="target_apps_empty_summary">Tidak ada yang dipilih - penerapan dan pemulihan tidak akan menghentikan aplikasi.</string>
+    <string name="target_apps_loading_summary">Aplikasi ini dapat disegarkan secara manual setelah wilayah diubah.</string>
+    <string name="target_apps_empty_summary">Tidak ada yang dipilih - tidak ada aplikasi yang akan disegarkan secara manual.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="other">%1$d aplikasi dihentikan saat penerapan dan pemulihan.</item>
+        <item quantity="other">%1$d aplikasi tersedia untuk penyegaran manual.</item>
     </plurals>
     <string name="wipe_keep">Pertahankan</string>
     <string name="wipe_cache">Cache</string>
@@ -175,4 +169,9 @@
     <string name="notification_layer_network">Jaringan</string>
     <string name="notification_channel_name">Override wilayah aktif</string>
     <string name="notification_channel_description">Ditampilkan saat SIM melaporkan wilayah yang dioverride.</string>
+    <string name="menu_github_project">Proyek GitHub</string>
+    <string name="action_share">Bagikan</string>
+    <string name="action_report_issue">Laporkan masalah</string>
+    <string name="diagnostic_title">Diagnostik</string>
+    <string name="error_open_github">Tidak dapat membuka GitHub: %1$s</string>
 </resources>

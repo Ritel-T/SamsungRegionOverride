@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Quét lại SIM</string>
     <string name="menu_app_language">Ngôn ngữ ứng dụng</string>
     <string name="menu_clear_all">Xóa mọi ghi đè CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Chưa chạy - hãy khởi động Shizuku trước</string>
     <string name="shizuku_connected">Đã kết nối · uid %1$d · %2$s</string>
     <string name="shizuku_granted">đã cấp</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Có thể làm hỏng IMS/VoLTE ở lần kết nối lại tiếp theo. Chỉ dùng trong thời gian ngắn và khôi phục khi xong.</string>
     <string name="layer_still_live">Vẫn đang hoạt động. Tắt công tắc này chỉ loại lớp khỏi lần áp dụng tiếp theo; Khôi phục mới xóa lớp.</string>
     <string name="pending_state_warning">Lần ghi trước đã kết thúc trước khi kết quả được lưu. Hãy khôi phục trước khi bắt đầu lần giả lập khác. Nếu không thể khôi phục, hãy khởi động lại để xóa các ghi đè cốt lõi và làm theo cảnh báo nhận dạng SIM trước phiên mới.</string>
-    <string name="risk_notice">Chỉ dùng tạm thời. Nhận dạng Mạng giả có thể làm hỏng IMS/VoLTE khi kết nối lại; thêm Quốc gia có thể kích hoạt lần kết nối lại đó. Ban đầu IMS có thể vẫn trông bình thường. Hãy kết thúc giả lập ngay khi xong. Khởi động lại sẽ xóa các ghi đè cốt lõi.</string>
 
     <string name="action_start_disguise">Bắt đầu giả lập</string>
     <string name="action_update_disguise">Cập nhật</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Đóng</string>
     <string name="action_copy">Sao chép</string>
     <string name="action_copied">Đã sao chép</string>
-    <string name="action_more">THÊM</string>
-    <string name="action_less">THU GỌN</string>
-    <string name="action_runtime_probe">THĂM DÒ RUNTIME</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Đang chuẩn bị máy chủ đo lường</string>
     <string name="busy_shizuku">Đang chờ Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Quốc gia, nhà mạng hoặc mã</string>
     <string name="preset_no_match">Không có kết quả. Hãy đóng cửa sổ này và nhập trực tiếp các giá trị.</string>
 
-    <string name="target_apps_heading">ỨNG DỤNG ĐÍCH</string>
+    <string name="target_apps_heading">Ứng dụng đích</string>
     <string name="target_apps_none">Chưa chọn ứng dụng. Khu vực vẫn thay đổi; không ứng dụng nào bị dừng hoặc xóa dữ liệu.</string>
     <string name="target_app_stop_open">Dừng &amp; mở</string>
     <string name="target_app_force_stop">Buộc dừng</string>
@@ -99,10 +93,10 @@
     <string name="target_app_loading">Đang đọc ứng dụng đã cài đặt&#8230;</string>
     <string name="target_app_no_match">Không có ứng dụng phù hợp.</string>
     <string name="target_app_not_installed">%1$s · chưa cài đặt</string>
-    <string name="target_apps_loading_summary">Áp dụng và khôi phục sẽ dừng các ứng dụng này để chúng đọc lại khu vực.</string>
-    <string name="target_apps_empty_summary">Chưa chọn gì - áp dụng và khôi phục sẽ không dừng ứng dụng nào.</string>
+    <string name="target_apps_loading_summary">Bạn có thể làm mới các ứng dụng này thủ công sau khi đổi khu vực.</string>
+    <string name="target_apps_empty_summary">Chưa chọn gì - không ứng dụng nào được làm mới thủ công.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="other">%1$d ứng dụng sẽ bị dừng khi áp dụng và khôi phục.</item>
+        <item quantity="other">Có thể làm mới thủ công %1$d ứng dụng.</item>
     </plurals>
     <string name="wipe_keep">Giữ lại</string>
     <string name="wipe_cache">Bộ nhớ đệm</string>
@@ -175,4 +169,9 @@
     <string name="notification_layer_network">Mạng</string>
     <string name="notification_channel_name">Ghi đè khu vực đang hoạt động</string>
     <string name="notification_channel_description">Hiển thị khi SIM đang báo cáo khu vực bị ghi đè.</string>
+    <string name="menu_github_project">Dự án GitHub</string>
+    <string name="action_share">Chia sẻ</string>
+    <string name="action_report_issue">Báo cáo sự cố</string>
+    <string name="diagnostic_title">Chẩn đoán</string>
+    <string name="error_open_github">Không thể mở GitHub: %1$s</string>
 </resources>

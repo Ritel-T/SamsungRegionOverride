@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">SIM 다시 검색</string>
     <string name="menu_app_language">앱 언어</string>
     <string name="menu_clear_all">모든 CarrierConfig 오버라이드 지우기&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">실행 중이 아님 - 먼저 Shizuku를 시작하세요</string>
     <string name="shizuku_connected">연결됨 · uid %1$d · %2$s</string>
     <string name="shizuku_granted">허용됨</string>
@@ -31,7 +29,6 @@
     <string name="network_not_ready">이 레이어에는 준비된 SIM이 필요합니다. %1$s의 현재 상태는 %2$s입니다.</string>
     <string name="network_reconnect_warning">다음 재연결 시 IMS/VoLTE가 작동하지 않을 수 있습니다. 잠시만 사용하고 완료 후 복원하세요.</string>
     <string name="layer_still_live">아직 적용 중입니다. 이 스위치를 꺼도 다음 적용 대상에서만 제외됩니다. 복원을 실행해야 제거됩니다.</string>
-    <string name="risk_notice">임시로만 사용하세요. 위조된 SIM 통신사 정보는 재연결 시 IMS/VoLTE를 작동하지 않게 할 수 있으며, 앱 국가/지역을 추가하면 이 재연결이 발생할 수 있습니다. 처음에는 IMS가 정상으로 보여도 나중에 끊길 수 있습니다. 작업이 끝나면 즉시 위장을 종료하세요. 재부팅하면 핵심 오버라이드가 제거됩니다.</string>
     <string name="pending_state_warning">이전 쓰기 작업이 결과를 기록하기 전에 종료되었습니다. 다른 위장을 시작하기 전에 복원을 실행하세요. 복원을 완료할 수 없으면 재부팅하여 핵심 오버라이드를 제거하고, 새 세션을 시작하기 전에 표시되는 SIM 식별 정보 경고를 따르세요.</string>
 
     <string name="action_start_disguise">위장 시작</string>
@@ -48,9 +45,6 @@
     <string name="action_close">닫기</string>
     <string name="action_copy">복사</string>
     <string name="action_copied">복사됨</string>
-    <string name="action_more">더보기</string>
-    <string name="action_less">접기</string>
-    <string name="action_runtime_probe">런타임 프로브</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">계측 호스트 준비 중</string>
     <string name="busy_shizuku">Shizuku 대기 중</string>
@@ -99,10 +93,10 @@
     <string name="target_app_loading">설치된 앱을 읽는 중&#8230;</string>
     <string name="target_app_no_match">일치하는 앱이 없습니다.</string>
     <string name="target_app_not_installed">%1$s · 설치되지 않음</string>
-    <string name="target_apps_loading_summary">적용 및 복원 시 이 앱들을 중지하여 지역 정보를 다시 읽게 합니다.</string>
-    <string name="target_apps_empty_summary">선택된 앱 없음 - 적용 및 복원 시 어떤 앱도 중지하지 않습니다.</string>
+    <string name="target_apps_loading_summary">지역을 바꾼 후 이 앱들을 직접 새로 고칠 수 있습니다.</string>
+    <string name="target_apps_empty_summary">선택된 앱 없음 - 앱을 직접 새로 고치지 않습니다.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="other">적용 및 복원 시 앱 %1$d개를 중지합니다.</item>
+        <item quantity="other">앱 %1$d개를 직접 새로 고칠 수 있습니다.</item>
     </plurals>
     <string name="wipe_keep">유지</string>
     <string name="wipe_cache">캐시</string>
@@ -175,4 +169,9 @@
     <string name="notification_layer_network">SIM 통신사</string>
     <string name="notification_channel_name">활성 지역 위장</string>
     <string name="notification_channel_description">SIM이 위장된 지역을 보고하는 동안 표시됩니다.</string>
+    <string name="menu_github_project">GitHub 프로젝트</string>
+    <string name="action_share">공유</string>
+    <string name="action_report_issue">문제 신고</string>
+    <string name="diagnostic_title">진단 정보</string>
+    <string name="error_open_github">GitHub를 열 수 없음: %1$s</string>
 </resources>
