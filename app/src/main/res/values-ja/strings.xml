@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">SIM を再スキャン</string>
     <string name="menu_app_language">アプリの言語</string>
     <string name="menu_clear_all">すべての CarrierConfig オーバーライドを消去&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">実行されていません - 先に Shizuku を起動してください</string>
     <string name="shizuku_connected">接続済み · uid %1$d · %2$s</string>
     <string name="shizuku_granted">許可済み</string>
@@ -31,7 +29,6 @@
     <string name="network_not_ready">このレイヤーには準備完了の SIM が必要です。%1$s の状態は「%2$s」です。</string>
     <string name="network_reconnect_warning">次回の再接続時に IMS/VoLTE が機能しなくなる可能性があります。短時間だけ使用し、完了後に復元してください。</string>
     <string name="layer_still_live">まだ有効です。このスイッチをオフにしても次回の適用対象から外れるだけです。「復元」で解除されます。</string>
-    <string name="risk_notice">一時的な使用に限ってください。偽の SIM 事業者情報は、再接続時に IMS/VoLTE を機能停止させる可能性があります。「アプリの国/地域」を追加すると、その再接続が発生することがあります。IMS が最初は正常に見えても、後で切断される場合があります。用が済んだらすぐに偽装を終了してください。再起動すると主要なオーバーライドは解除されます。</string>
     <string name="pending_state_warning">前回の書き込みは結果が記録される前に終了しました。別の偽装を開始する前に「復元」を実行してください。「復元」を完了できない場合は、再起動して主要なオーバーライドを解除し、新しいセッションを開始する前に表示される SIM の識別情報に関する警告に従ってください。</string>
 
     <string name="action_start_disguise">偽装を開始</string>
@@ -48,9 +45,6 @@
     <string name="action_close">閉じる</string>
     <string name="action_copy">コピー</string>
     <string name="action_copied">コピーしました</string>
-    <string name="action_more">詳細</string>
-    <string name="action_less">折りたたむ</string>
-    <string name="action_runtime_probe">ランタイムプローブ</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">インストルメンテーションホストを準備中</string>
     <string name="busy_shizuku">Shizuku を待機中</string>
@@ -99,10 +93,10 @@
     <string name="target_app_loading">インストール済みアプリを読み込み中&#8230;</string>
     <string name="target_app_no_match">一致するアプリがありません。</string>
     <string name="target_app_not_installed">%1$s · 未インストール</string>
-    <string name="target_apps_loading_summary">適用時と復元時にこれらのアプリを停止し、地域情報を再読み込みさせます。</string>
-    <string name="target_apps_empty_summary">何も選択されていません - 適用時と復元時にアプリは停止されません。</string>
+    <string name="target_apps_loading_summary">地域を変更した後、これらのアプリを手動で更新できます。</string>
+    <string name="target_apps_empty_summary">アプリが選択されていません - 手動更新は行いません。</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="other">適用時と復元時に %1$d 個のアプリを停止します。</item>
+        <item quantity="other">%1$d 個のアプリを手動で更新できます。</item>
     </plurals>
     <string name="wipe_keep">保持</string>
     <string name="wipe_cache">キャッシュ</string>
@@ -175,4 +169,9 @@
     <string name="notification_layer_network">SIM 事業者</string>
     <string name="notification_channel_name">有効な地域偽装</string>
     <string name="notification_channel_description">SIM が偽装した地域を報告している間に表示されます。</string>
+    <string name="menu_github_project">GitHub プロジェクト</string>
+    <string name="action_share">共有</string>
+    <string name="action_report_issue">問題を報告</string>
+    <string name="diagnostic_title">診断情報</string>
+    <string name="error_open_github">GitHub を開けません：%1$s</string>
 </resources>
