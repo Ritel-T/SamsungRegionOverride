@@ -1,7 +1,6 @@
 package com.riteldevelopment.carriertestoverride.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.expandVertically
@@ -9,17 +8,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,9 +34,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -46,10 +50,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingToolbarExitDirection
-import androidx.compose.material3.FloatingToolbarScrollBehavior
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ListItem
@@ -63,17 +66,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,17 +81,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowSizeClass
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import com.riteldevelopment.carriertestoverride.data.SimInfo
+import com.riteldevelopment.carriertestoverride.data.ShizukuStatus
 import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 import com.riteldevelopment.carriertestoverride.ui.components.BlockGap
@@ -104,10 +109,14 @@ import com.riteldevelopment.carriertestoverride.ui.components.PresetField
 import com.riteldevelopment.carriertestoverride.ui.components.QuickPickRow
 import com.riteldevelopment.carriertestoverride.ui.components.RealVersusDisguise
 import com.riteldevelopment.carriertestoverride.ui.components.ResultPanel
-import com.riteldevelopment.carriertestoverride.ui.components.ShizukuStatusRow
+import com.riteldevelopment.carriertestoverride.ui.components.cardHeaderClick
+import com.riteldevelopment.carriertestoverride.ui.components.cardRipple
 import com.riteldevelopment.carriertestoverride.ui.components.SimSelector
 import com.riteldevelopment.carriertestoverride.ui.components.TargetAppsPanel
 import com.riteldevelopment.carriertestoverride.ui.components.rememberAppIcon
+import com.riteldevelopment.carriertestoverride.ui.components.rememberCardInteractionSource
+import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
+import androidx.compose.foundation.shape.CircleShape
 
 /** Everything the screen can do, hoisted so the screen itself stays previewable and stateless. */
 data class OverrideActions(
@@ -128,6 +137,8 @@ data class OverrideActions(
     val onRescan: () -> Unit,
     val onCancel: () -> Unit,
     val onOpenShizuku: () -> Unit,
+    val onOpenGitHub: () -> Unit,
+    val onReportIssue: () -> Unit,
     val onOpenLanguageSettings: () -> Unit,
     val onChooseTargetApps: () -> Unit,
     val onToggleTargetApp: (String) -> Unit,
@@ -148,75 +159,31 @@ fun OverrideScreen(
     modifier: Modifier = Modifier,
 ) {
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
-    // The title starts large and collapses as the form scrolls under it. This screen is a long single
-    // column whose top block is the one the user returns to — which SIM, and who it is pretending to
-    // be — so the bar giving that space back on the way down and taking it again on the way up is
-    // worth more here than a fixed strip would be.
-    val compactHeight = !windowSizeClass.isHeightAtLeastBreakpoint(
-        WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
-    )
     val wide = windowSizeClass.isWidthAtLeastBreakpoint(
-        WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+        androidx.window.core.layout.WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
     )
     val listState = rememberLazyListState()
-    val scrollBehavior = if (compactHeight) {
-        TopAppBarDefaults.pinnedScrollBehavior()
-    } else {
-        // Guarded on the list rather than left at the default `{ true }`. This screen's failure states
-        // are short — a Shizuku refusal or a failed SIM scan is three blocks — and on content that does
-        // not scroll, a fling would still collapse the title with nothing able to scroll it back.
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-            canScroll = { listState.canScrollForward || listState.canScrollBackward },
-        )
-    }
-    val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
-        exitDirection = FloatingToolbarExitDirection.Bottom,
-    )
-    // The bar stops reacting to scroll for as long as an operation is in flight, because it is also the
-    // only place that operation narrates itself: letting it leave would take the stage text, the
-    // progress bar and Cancel off the bottom of the screen for a user who scrolled down to re-read a
-    // warning. An already-departed bar comes back rather than snapping, since a rescan can be started
-    // from the overflow menu while the bar is out of sight.
-    //
-    // Pinning is the detached nested-scroll connection below and nothing else. The behaviour object
-    // itself stays passed to the toolbar throughout, because that is what supplies the offset modifier:
-    // withdrawing it does not mean "stop listening to scroll", it means "place the bar at rest in this
-    // frame" — precisely the snap this exists to avoid. The offset is walked back to zero instead.
-    val busy = state.busy != null
-    val settle = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    LaunchedEffect(busy) {
-        if (busy && toolbarScrollBehavior.state.offset != 0f) {
-            animate(
-                initialValue = toolbarScrollBehavior.state.offset,
-                targetValue = 0f,
-                animationSpec = settle,
-            ) { value, _ -> toolbarScrollBehavior.state.offset = value }
-        }
-    }
     Scaffold(
-        modifier = modifier
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            // Detached rather than merely ignored, so the offset cannot drift while the bar is pinned
-            // and then snap it away the instant the operation finishes.
-            .then(if (busy) Modifier else Modifier.nestedScroll(toolbarScrollBehavior)),
+        modifier = modifier,
         topBar = {
-            val title = @Composable { Text(stringResource(R.string.screen_title)) }
-            val topActions: @Composable RowScope.() -> Unit = {
-                ShizukuButton(onClick = actions.onOpenShizuku)
-                OverflowMenu(state = state, actions = actions)
-            }
-            if (compactHeight) {
-                TopAppBar(title = title, actions = topActions, scrollBehavior = scrollBehavior)
-            } else {
-                MediumFlexibleTopAppBar(
-                    title = title,
-                    actions = topActions,
-                    scrollBehavior = scrollBehavior,
-                )
-            }
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.screen_title),
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                    )
+                },
+                actions = {
+                    ShizukuButton(
+                        status = state.shizuku,
+                        onClick = actions.onOpenShizuku,
+                    )
+                    OverflowMenu(state = state, actions = actions)
+                },
+            )
         },
         bottomBar = {
-            ActionBar(state = state, actions = actions, scrollBehavior = toolbarScrollBehavior)
+            ActionBar(state = state, actions = actions)
         },
     ) { padding ->
         OverrideBody(
@@ -296,9 +263,6 @@ private fun CompactBody(
         // warning is inserted in the middle of the column when a snapshot is unverified, and for that
         // insertion to read as the list making room, the blocks below it have to slide rather than jump
         // to their new offsets. Keys are already stable, which is what makes this work at all.
-        item("shizuku") {
-            ShizukuStatusRow(status = state.shizuku, modifier = Modifier.animateItem())
-        }
         item("sims") {
             SimBlock(state = state, actions = actions, modifier = Modifier.animateItem())
         }
@@ -329,12 +293,7 @@ private fun CompactBody(
             ResultPanel(
                 result = state.result,
                 busy = state.busy,
-                modifier = Modifier.animateItem(),
-            )
-        }
-        item("risk") {
-            HazardNote(
-                text = stringResource(R.string.risk_notice),
+                onReportIssue = actions.onReportIssue,
                 modifier = Modifier.animateItem(),
             )
         }
@@ -358,9 +317,6 @@ private fun WideBody(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(BlockGap),
     ) {
-        item("wide-shizuku") {
-            WideContainer(modifier = Modifier.animateItem()) { ShizukuStatusRow(status = state.shizuku) }
-        }
         item("wide-sims") {
             WideContainer(modifier = Modifier.animateItem()) { SimBlock(state = state, actions = actions) }
         }
@@ -419,8 +375,11 @@ private fun WideBody(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(BlockGap),
                     ) {
-                        ResultPanel(result = state.result, busy = state.busy)
-                        HazardNote(text = stringResource(R.string.risk_notice))
+                        ResultPanel(
+                            result = state.result,
+                            busy = state.busy,
+                            onReportIssue = actions.onReportIssue,
+                        )
                         DeviceLine(state.device)
                     }
                 }
@@ -489,47 +448,91 @@ private fun TargetAppsBlock(
     )
 }
 
-/**
- * The one place this screen sends people when it cannot proceed.
- *
- * Shizuku's own launcher icon and nothing else. It sat next to a leave-the-app glyph for one revision,
- * on the reasoning that an app icon states an identity but not a verb; in the bar it just read as two
- * marks for one control. An app icon in an app bar is already a recognised idiom for "go to that app",
- * and the status line directly below says whether Shizuku is running, so the verb was never carrying
- * the weight the extra glyph cost.
- *
- * The glyph survives as the fallback for a phone with no Shizuku installed, where there is no icon to
- * draw. The action still leads somewhere useful there — the view model answers a missing package with
- * an install hint rather than silence — so the control must not vanish, or that hint is unreachable.
- */
+/** Shizuku's launcher icon with one small status glyph; the state is visible without another status row. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ShizukuButton(onClick: () -> Unit) {
+private fun ShizukuButton(
+    status: ShizukuStatus,
+    onClick: () -> Unit,
+) {
     val icon = rememberAppIcon(KnownPackages.SHIZUKU)
-    val label = stringResource(R.string.open_shizuku)
+    val openLabel = stringResource(R.string.open_shizuku)
+    val statusLabel = when (status) {
+        ShizukuStatus.NotRunning -> stringResource(R.string.shizuku_not_running)
+        is ShizukuStatus.Connected -> stringResource(
+            R.string.shizuku_connected,
+            status.uid,
+            stringResource(
+                if (status.granted) R.string.shizuku_granted else R.string.shizuku_not_granted
+            ),
+        )
+        is ShizukuStatus.Unavailable -> stringResource(
+            R.string.shizuku_unavailable,
+            status.reason,
+        )
+    }
+    val visual = when (status) {
+        is ShizukuStatus.Connected -> when {
+            !status.privileged -> ShizukuStatusVisual(Icons.Filled.Warning, MaterialTheme.colorScheme.error)
+            !status.granted -> ShizukuStatusVisual(Icons.Filled.Lock, MaterialTheme.colorScheme.tertiary)
+            else -> ShizukuStatusVisual(Icons.Filled.CheckCircle, LocalOverrideColors.current.success)
+        }
+        else -> ShizukuStatusVisual(Icons.Filled.Warning, MaterialTheme.colorScheme.error)
+    }
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Below
         ),
-        tooltip = { PlainTooltip { Text(label) } },
+        tooltip = { PlainTooltip { Text("$openLabel · $statusLabel") } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick) {
-            if (icon != null) {
-                Image(
-                    bitmap = icon,
-                    contentDescription = label,
-                    modifier = Modifier.size(24.dp),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = label,
-                )
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(48.dp)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "$openLabel - $statusLabel"
+                },
+        ) {
+            Box(
+                modifier = Modifier.size(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (icon != null) {
+                    Image(
+                        bitmap = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(1.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = visual.icon,
+                        contentDescription = null,
+                        tint = visual.tint,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
 }
+
+private data class ShizukuStatusVisual(val icon: ImageVector, val tint: Color)
 
 /**
  * The destructive action lives here rather than as a third button: it is rare, and it wipes persistent
@@ -539,17 +542,30 @@ private fun ShizukuButton(onClick: () -> Unit) {
 @Composable
 private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
     var expanded by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+    val itemModifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+    val itemShape = MaterialTheme.shapes.medium
     IconButton(onClick = { expanded = true }) {
         Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_options))
     }
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+        modifier = Modifier.widthIn(min = 240.dp, max = 360.dp),
+        shape = MaterialTheme.shapes.large,
+        containerColor = scheme.surfaceContainer,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
+    ) {
         DropdownMenuItem(
             onClick = {
                 expanded = false
                 actions.onRescan()
             },
             text = { Text(stringResource(R.string.menu_rescan_sims)) },
-            shape = MenuDefaults.leadingItemShape,
+            shape = itemShape,
+            modifier = itemModifier,
             leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
             enabled = !state.isBusy,
             colors = MenuDefaults.itemColors(),
@@ -560,10 +576,32 @@ private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
                 actions.onOpenLanguageSettings()
             },
             text = { Text(stringResource(R.string.menu_app_language)) },
-            shape = MenuDefaults.middleItemShape,
+            shape = itemShape,
+            modifier = itemModifier,
             leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
             enabled = !state.isBusy,
             colors = MenuDefaults.itemColors(),
+        )
+        DropdownMenuItem(
+            onClick = {
+                expanded = false
+                actions.onOpenGitHub()
+            },
+            text = { Text(stringResource(R.string.menu_github_project)) },
+            shape = itemShape,
+            modifier = itemModifier,
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_github),
+                    contentDescription = null,
+                )
+            },
+            enabled = !state.isBusy,
+            colors = MenuDefaults.itemColors(),
+        )
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            color = scheme.outlineVariant.copy(alpha = 0.45f),
         )
         DropdownMenuItem(
             onClick = {
@@ -580,7 +618,8 @@ private fun OverflowMenu(state: OverrideUiState, actions: OverrideActions) {
                     },
                 )
             },
-            shape = MenuDefaults.trailingItemShape,
+            shape = itemShape,
+            modifier = itemModifier,
             leadingIcon = {
                 Icon(
                     Icons.Filled.Delete,
@@ -613,6 +652,8 @@ private fun TargetBlock(
 ) {
     val motion = MaterialTheme.motionScheme
     var customExpanded by rememberSaveable { mutableStateOf(state.preset == null) }
+    val interactionSource = rememberCardInteractionSource()
+    val surfaceShape = MaterialTheme.shapes.large
     Column(modifier = modifier) {
         MicroLabel(stringResource(R.string.label_pretend_to_be))
         Spacer(Modifier.height(8.dp))
@@ -637,12 +678,17 @@ private fun TargetBlock(
         )
         Spacer(Modifier.height(10.dp))
         Surface(
-            shape = MaterialTheme.shapes.large,
+            modifier = Modifier
+                .clip(surfaceShape)
+                .cardRipple(interactionSource),
+            shape = surfaceShape,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             Column {
                 ListItem(
-                    onClick = { customExpanded = !customExpanded },
+                    modifier = Modifier.cardHeaderClick(interactionSource) {
+                        customExpanded = !customExpanded
+                    },
                     trailingContent = {
                         DisclosureChevron(
                             expanded = customExpanded,
@@ -857,23 +903,27 @@ private fun NetworkLayer(
  * The primary action, and the place the busy narration replaces it in.
  *
  * A floating toolbar rather than a flat bar welded to the bottom edge: the form above it is long, and a
- * bar that lifts off the content reads as a control rather than as the end of the page. It gives its
- * space back on the way down and takes it again on the way up — but only while nothing is running,
- * because the stage text, the progress bar and Cancel all live in here and there is nowhere else on
- * screen that says an operation is in progress at all.
- *
- * [scrollBehavior] is not the switch for that: it is always supplied, and always the same instance the
- * caller pins by detaching from nested scroll. It stays here because it also carries the modifier that
- * *places* the bar, so a bar that has scrolled away is only able to glide back while it is attached.
+ * bar that lifts off the content reads as a control rather than as the end of the page. It remains
+ * visible while the form scrolls, so the primary action never requires a reverse swipe to reach.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ActionBar(
     state: OverrideUiState,
     actions: OverrideActions,
-    scrollBehavior: FloatingToolbarScrollBehavior,
 ) {
     val motion = MaterialTheme.motionScheme
+    val scheme = MaterialTheme.colorScheme
+    val toolbarColors = FloatingToolbarDefaults.standardFloatingToolbarColors().copy(
+        toolbarContainerColor = scheme.surfaceContainerLow,
+        toolbarContentColor = scheme.onSurfaceVariant,
+    )
+    val secondaryButtonColors = ButtonDefaults.outlinedButtonColors(
+        containerColor = scheme.surfaceContainerHighest,
+        contentColor = scheme.onSurface,
+        disabledContainerColor = scheme.surfaceContainerHigh,
+        disabledContentColor = scheme.onSurface.copy(alpha = 0.38f),
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -882,8 +932,7 @@ private fun ActionBar(
         HorizontalFloatingToolbar(
             expanded = true,
             modifier = Modifier.fillMaxWidth(),
-            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
-            scrollBehavior = scrollBehavior,
+            colors = toolbarColors,
         ) {
             // Crossfaded on whether an operation is running, not on the operation's own state.
             // `Crossfade` keys its content on the value it is given, so handing it the BusyState
@@ -933,9 +982,12 @@ private fun ActionBar(
                                         onClick = actions.onApply,
                                         shapes = ButtonDefaults.shapes(),
                                         enabled = state.canApply,
+                                        colors = secondaryButtonColors,
                                         interactionSource = interaction,
                                         modifier = modifier,
-                                    ) { Text(label) }
+                                    ) {
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 } else {
                                     Button(
                                         onClick = actions.onApply,
@@ -943,7 +995,9 @@ private fun ActionBar(
                                         enabled = state.canApply,
                                         interactionSource = interaction,
                                         modifier = modifier,
-                                    ) { Text(label) }
+                                    ) {
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                             },
                             menuContent = {},
@@ -965,15 +1019,20 @@ private fun ActionBar(
                                         enabled = state.canRestore,
                                         interactionSource = interaction,
                                         modifier = modifier,
-                                    ) { Text(label) }
+                                    ) {
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 } else {
                                     OutlinedButton(
                                         onClick = actions.onRestore,
                                         shapes = ButtonDefaults.shapes(),
                                         enabled = state.canRestore,
+                                        colors = secondaryButtonColors,
                                         interactionSource = interaction,
                                         modifier = modifier,
-                                    ) { Text(label) }
+                                    ) {
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                             },
                             menuContent = {},
@@ -1006,10 +1065,8 @@ private fun BusyBar(busy: BusyState, onCancel: () -> Unit) {
             // The morphing indicator, not a spinner: it reads as "working" at a glance and pairs with
             // the stage text rather than competing with it.
             //
-            // Everything here takes the toolbar's own content colour rather than a surface role. This
-            // sits inside a vibrant floating toolbar, whose container is primaryContainer — an
-            // onSurfaceVariant grey is mixed against the wrong background there, and how wrong depends
-            // on whichever accent the user's wallpaper produced.
+            // Keep the content colour tied to the quiet toolbar surface so dynamic palettes do not
+            // weaken the stage text or progress indicator.
             LoadingIndicator(
                 modifier = Modifier.size(28.dp),
                 color = LocalContentColor.current,
