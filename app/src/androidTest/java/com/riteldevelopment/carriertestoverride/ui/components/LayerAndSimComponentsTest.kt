@@ -138,8 +138,8 @@ class LayerAndSimComponentsTest {
             }
         }
 
-        val firstIdentity = compose.onNodeWithText("46001").getUnclippedBoundsInRoot()
-        val secondIdentity = compose.onNodeWithText("23430").getUnclippedBoundsInRoot()
+        val firstIdentity = compose.onNodeWithText("46001", substring = true).getUnclippedBoundsInRoot()
+        val secondIdentity = compose.onNodeWithText("23430", substring = true).getUnclippedBoundsInRoot()
         assertEquals(firstIdentity.top, secondIdentity.top)
     }
 }

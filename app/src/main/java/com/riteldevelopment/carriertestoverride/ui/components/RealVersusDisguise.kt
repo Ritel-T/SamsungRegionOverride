@@ -38,9 +38,10 @@ import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.data.countryIsoForMccMnc
-import com.riteldevelopment.carriertestoverride.data.describeRegion
+import com.riteldevelopment.carriertestoverride.data.flagEmoji
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
+import java.util.Locale
 
 /**
  * The gutter between the two columns. The label, numeric and detail rows all reserve exactly the same
@@ -97,11 +98,8 @@ fun RealVersusDisguise(
         sim.realOperatorNumeric.isBlank() -> unknownLabel
         else -> sim.realOperatorNumeric
     }
-    // With no SIM the value line already says so; repeating it here would be noise. The empty string
-    // still occupies a line, which keeps the block from changing height when a SIM appears.
-    val realDetail = if (sim == null) "" else {
-        describe(sim.realCountryIso, sim.realOperatorName, unknownLabel)
-    }
+    val realCountry = if (sim == null) noSimLabel else countryDisplay(sim.realCountryIso, unknownLabel)
+    val realIdentity = if (sim == null) "" else identityDisplay(realNumeric, sim.realOperatorName, unknownLabel)
 
     // What Apply would leave in force, switch by switch, rather than the whole target regardless. A
     // disarmed layer writes nothing: with the network layer off the MCC stays as it is, and with the
@@ -125,10 +123,15 @@ fun RealVersusDisguise(
     // nothing else, so reading the platform's country back would pair a British operator numeric with
     // the real country beside it — a region nobody is pretending to be, on the one line whose whole job
     // is to name the region being pretended.
-    val disguiseDetail = when {
-        live -> describe(sim.disguiseCountryIso, sim.operatorName, unknownLabel)
-        else -> describe(previewCountryIso, targetCarrierName, unknownLabel)
-    }
+    val disguiseCountry = countryDisplay(
+        if (live) sim.disguiseCountryIso else previewCountryIso,
+        unknownLabel,
+    )
+    val disguiseIdentity = identityDisplay(
+        disguiseNumeric,
+        if (live) sim.operatorName else targetCarrierName,
+        unknownLabel,
+    )
 
     val successColor = LocalOverrideColors.current.success
     val accentColor = MaterialTheme.colorScheme.primary
@@ -158,11 +161,9 @@ fun RealVersusDisguise(
         label = "disguiseHighlight",
     )
 
-    // Display rather than headline, and heavier. Expressive's type guidance is to spend the scale on the
-    // one element the screen exists for instead of spreading emphasis evenly, and here that is the pair
-    // of operator numerics the whole comparison is about. Everything around them stays where it was, so
-    // the extra weight buys hierarchy rather than noise.
-    val numericStyle = MaterialTheme.typography.displaySmallEmphasized.merge(TabularFigures)
+    // The country is the answer a person is looking for. Codes remain useful evidence, but they belong
+    // in the quieter supporting line instead of taking the visual lead.
+    val countryStyle = MaterialTheme.typography.headlineSmallEmphasized
 
     Column(
         modifier = modifier
@@ -192,16 +193,14 @@ fun RealVersusDisguise(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Crossfade(
-                targetState = realNumeric,
+                targetState = realCountry,
                 modifier = Modifier.weight(1f),
                 animationSpec = motion.fastEffectsSpec(),
-                label = "realNumeric",
+                label = "realCountry",
             ) { value ->
                 Text(
                     text = value,
-                    // The no-SIM placeholder is prose, not a figure: at headline scale it would either
-                    // dominate the block or get clipped, and it has no digits to align anyway.
-                    style = if (value == noSimLabel) MaterialTheme.typography.titleMedium else numericStyle,
+                    style = if (value == noSimLabel) MaterialTheme.typography.titleMedium else countryStyle,
                     color = inkColor.fade(1f - slide),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -214,14 +213,14 @@ fun RealVersusDisguise(
                 DirectionMark(color = outlineColor, rtl = rtl)
             }
             Crossfade(
-                targetState = disguiseNumeric,
+                targetState = disguiseCountry,
                 modifier = Modifier.weight(1f),
                 animationSpec = motion.fastEffectsSpec(),
-                label = "disguiseNumeric",
+                label = "disguiseCountry",
             ) { value ->
                 Text(
                     text = value,
-                    style = numericStyle,
+                    style = countryStyle,
                     color = disguiseColor.fade(slide),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -233,19 +232,19 @@ fun RealVersusDisguise(
 
         Row {
             Crossfade(
-                targetState = realDetail,
+                targetState = realIdentity,
                 modifier = Modifier.weight(1f),
                 animationSpec = motion.fastEffectsSpec(),
-                label = "realDetail",
+                label = "realIdentity",
             ) { detail ->
                 DetailLine(text = detail, color = quietColor.fade(1f - slide))
             }
             Spacer(Modifier.width(Gutter))
             Crossfade(
-                targetState = disguiseDetail,
+                targetState = disguiseIdentity,
                 modifier = Modifier.weight(1f),
                 animationSpec = motion.fastEffectsSpec(),
-                label = "disguiseDetail",
+                label = "disguiseIdentity",
             ) { detail ->
                 DetailLine(text = detail, color = disguiseColor.fade(slide))
             }
@@ -309,8 +308,16 @@ private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier
     }
 }
 
-private fun describe(countryIso: String, operatorName: String, unknown: String): String =
-    describeRegion(countryIso, operatorName).ifEmpty { unknown }
+private fun countryDisplay(countryIso: String, unknown: String): String {
+    val iso = countryIso.trim().uppercase(Locale.ROOT)
+    val flag = flagEmoji(countryIso)
+    return listOf(flag, iso.takeIf { it.length == 2 }).filterNotNull().joinToString(" ")
+        .ifEmpty { unknown }
+}
+
+private fun identityDisplay(numeric: String, operatorName: String, unknown: String): String =
+    listOf(numeric.ifBlank { unknown }, operatorName.ifBlank { unknown })
+        .joinToString(" · ")
 
 @Composable
 private fun DetailLine(

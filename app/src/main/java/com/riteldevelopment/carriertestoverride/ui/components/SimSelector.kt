@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
+import com.riteldevelopment.carriertestoverride.data.flagEmoji
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
 import java.util.Locale
 
@@ -85,7 +86,6 @@ fun SimSelector(
     val motion = MaterialTheme.motionScheme
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Held through the exit for the same reason the data-SIM notice below is: a rescan that succeeds
         // clears the message in the same frame the block starts collapsing, and reading it live would
@@ -99,7 +99,10 @@ fun SimSelector(
             exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
                 shrinkVertically(animationSpec = motion.defaultSpatialSpec()),
         ) {
-            ScanErrorBlock(message = lastScanError.orEmpty())
+            Column {
+                ScanErrorBlock(message = lastScanError.orEmpty())
+                Spacer(Modifier.height(8.dp))
+            }
         }
 
         // The scan failed and produced nothing: "we could not read" is the whole story. Drawing empty
@@ -135,11 +138,14 @@ fun SimSelector(
         }
 
         if (sims.isEmpty() && scanError == null) {
-            Text(
-                text = stringResource(R.string.no_subscription),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.no_subscription),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         // Only worth saying when there is a data SIM to switch to. On a single-SIM phone whose data is
@@ -163,6 +169,7 @@ fun SimSelector(
         ) {
             wording?.let { (dataSlot, selectedSlot) ->
                 Text(
+                    modifier = Modifier.padding(top = 8.dp),
                     text = stringResource(
                         R.string.not_data_sim,
                         // Via the resource, not SimInfo.displayName, so these can never name the slots
@@ -263,18 +270,32 @@ private fun SimCard(
         }
 
         Spacer(Modifier.height(6.dp))
+        val iso = sim.countryIso.uppercase(Locale.ROOT).ifBlank { Absent }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            flagEmoji(sim.countryIso).takeIf { it.isNotEmpty() }?.let { flag ->
+                Text(
+                    text = flag,
+                    style = MaterialTheme.typography.titleLargeEmphasized,
+                )
+            }
+            Text(
+                text = iso,
+                style = MaterialTheme.typography.titleLargeEmphasized,
+                color = scheme.onSurface,
+                maxLines = 1,
+            )
+        }
         Text(
-            text = sim.operatorNumeric.ifBlank { Absent },
-            style = MaterialTheme.typography.titleMediumEmphasized.merge(TabularFigures),
-            color = scheme.onSurface,
-            maxLines = 1,
-        )
-        Text(
-            text = sim.countryIso.uppercase(Locale.ROOT).ifBlank { Absent } + " · " +
+            text = listOf(
+                sim.operatorNumeric.ifBlank { Absent },
                 sim.operatorName.ifBlank { Absent },
-            style = MaterialTheme.typography.bodySmall,
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall.merge(TabularFigures),
             color = scheme.onSurfaceVariant,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
 

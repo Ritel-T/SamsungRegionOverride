@@ -82,7 +82,7 @@ fun PresetField(
                 )
                 Text(
                     text = preset?.let {
-                        "${it.mccMnc} · ${it.countryIso.uppercase(Locale.ROOT)}"
+                        "${it.countryIso.uppercase(Locale.ROOT)} · ${it.mccMnc}"
                     } ?: stringResource(R.string.preset_edited_by_hand),
                     style = MaterialTheme.typography.bodySmall.merge(TabularFigures),
                     color = scheme.onSurfaceVariant,
