@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,17 +51,17 @@ import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 
 /**
- * Making the apps re-read the region that was just written.
+ * Manually refreshing apps that may cache the region they just read.
  *
  * Changing telephony is only half the job — Galaxy Store and the rest latch their region at startup, so
- * an override that has landed is invisible to them until their process is gone. Apply and restore already
- * force-stop these apps; this panel is the same thing on demand, plus the two options that only make
- * sense when a human is asking for them: throwing storage away, and opening the app afterwards.
+ * an override that has landed may be invisible until their process is gone. The panel makes that refresh
+ * an explicit user action, with the two options that only make sense when a human is asking for them:
+ * throwing storage away, and opening the app afterwards.
  *
  * One button per app rather than one button for all of them. Relaunching brings an app to the foreground,
- * so a bulk run would throw three apps up in sequence and leave the user wherever the last one landed —
- * fine as an automatic step after apply, wrong as something you press deliberately. Per-app also means
- * the report describes exactly one app, and it is the shape a user-chosen app list drops into unchanged.
+ * so each refresh stays an explicit, single-app action and leaves the user in control of what appears
+ * next. Per-app also means the report describes exactly one app, and it is the shape a user-chosen app
+ * list drops into unchanged.
  *
  * The wipe level stays shared: it is a statement about how hard to reset, not about which app, and the
  * middle level does not work everywhere. Hiding that behind the buttons would make the tool claim a wipe
@@ -82,6 +83,8 @@ fun TargetAppsPanel(
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val interactionSource = rememberCardInteractionSource()
+    val surfaceShape = MaterialTheme.shapes.extraLarge
     val containerColor by animateColorAsState(
         targetValue = if (expanded) scheme.surfaceContainerLow else scheme.surfaceContainer,
         animationSpec = motion.fastEffectsSpec(),
@@ -89,13 +92,15 @@ fun TargetAppsPanel(
     )
     Surface(
         modifier = modifier
-            .fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+            .fillMaxWidth()
+            .clip(surfaceShape)
+            .cardRipple(interactionSource),
+        shape = surfaceShape,
         color = containerColor,
     ) {
         Column {
             ListItem(
-                onClick = { expanded = !expanded },
+                modifier = Modifier.cardHeaderClick(interactionSource) { expanded = !expanded },
                 leadingContent = { TargetAppIconStack(apps) },
                 trailingContent = {
                     DisclosureChevron(expanded = expanded, onToggle = { expanded = !expanded })
@@ -196,20 +201,33 @@ fun TargetAppsPanel(
                     // what makes the empty overflow indicator safe: these are three mutually exclusive
                     // choices, one of them hidden behind a menu would be worse than three cramped ones,
                     // and a long translation ellipsizes inside its third instead of moving out of sight.
-                    ButtonGroup(
-                        overflowIndicator = {},
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        color = scheme.surfaceContainerHighest,
+                        tonalElevation = 1.dp,
+                        border = BorderStroke(
+                            1.dp,
+                            scheme.outlineVariant.copy(alpha = 0.65f),
+                        ),
                     ) {
-                        WipeMode.entries.forEachIndexed { index, mode ->
-                            toggleableItem(
-                                checked = wipeMode == mode,
-                                label = labels[index],
-                                onCheckedChange = { checked -> if (checked) onWipeModeChange(mode) },
-                                weight = 1f,
-                                enabled = enabled,
-                            )
+                        ButtonGroup(
+                            overflowIndicator = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(2.dp),
+                        ) {
+                            WipeMode.entries.forEachIndexed { index, mode ->
+                                toggleableItem(
+                                    checked = wipeMode == mode,
+                                    label = labels[index],
+                                    onCheckedChange = { checked -> if (checked) onWipeModeChange(mode) },
+                                    weight = 1f,
+                                    enabled = enabled,
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
