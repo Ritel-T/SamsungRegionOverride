@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">SIM\'leri yeniden tara</string>
     <string name="menu_app_language">Uygulama dili</string>
     <string name="menu_clear_all">Tüm CarrierConfig geçersiz kılmalarını temizle&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Çalışmıyor — önce Shizuku\'yu başlatın</string>
     <string name="shizuku_connected">Bağlandı · UID %1$d · %2$s</string>
     <string name="shizuku_granted">izin verildi</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">Sonraki yeniden bağlantıda IMS/VoLTE\'yi bozabilir. Kısa süre kullanıp işiniz bitince geri yükleyin.</string>
     <string name="layer_still_live">Hâlâ etkin. Bu anahtarı kapatmak yalnızca sonraki uygulamada katmanı dışarıda bırakır; Geri yükle işlemi katmanı kaldırır.</string>
     <string name="pending_state_warning">Önceki yazma işlemi, sonucu kaydedilmeden sona erdi. Yeni bir maskeleme başlatmadan önce geri yükleyin. Geri yükleme tamamlanamazsa temel geçersiz kılmaları temizlemek için yeniden başlatın ve yeni oturumdan önce SIM kimliği uyarılarını izleyin.</string>
-    <string name="risk_notice">Yalnızca geçici kullanım içindir. Sahte Ağ kimliği yeniden bağlantıda IMS/VoLTE\'yi bozabilir; Ülke eklemek bu bağlantıyı tetikleyebilir. IMS başlangıçta sorunsuz görünebilir. İşiniz biter bitmez maskelemeyi sonlandırın. Yeniden başlatma temel geçersiz kılmaları kaldırır.</string>
 
     <string name="action_start_disguise">Maskelemeyi başlat</string>
     <string name="action_update_disguise">Güncelle</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Kapat</string>
     <string name="action_copy">Kopyala</string>
     <string name="action_copied">Kopyalandı</string>
-    <string name="action_more">DAHA FAZLA</string>
-    <string name="action_less">DAHA AZ</string>
-    <string name="action_runtime_probe">ÇALIŞMA ZAMANI TESTİ</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Enstrümantasyon ana bilgisayarı hazırlanıyor</string>
     <string name="busy_shizuku">Shizuku bekleniyor</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Ülke, operatör veya kod</string>
     <string name="preset_no_match">Eşleşme yok. Bunu kapatıp değerleri doğrudan yazın.</string>
 
-    <string name="target_apps_heading">HEDEF UYGULAMALAR</string>
+    <string name="target_apps_heading">Hedef uygulamalar</string>
     <string name="target_apps_none">Uygulama seçilmedi. Bölge yine de değişir; hiçbir şey durdurulmaz veya silinmez.</string>
     <string name="target_app_stop_open">Durdur ve aç</string>
     <string name="target_app_force_stop">Zorla durdur</string>
@@ -99,11 +93,11 @@
     <string name="target_app_loading">Yüklü uygulamalar okunuyor&#8230;</string>
     <string name="target_app_no_match">Eşleşen uygulama yok.</string>
     <string name="target_app_not_installed">%1$s · yüklü değil</string>
-    <string name="target_apps_loading_summary">Bölgeyi yeniden okumaları için bu uygulamalar uygulama ve geri yükleme sırasında durdurulur.</string>
-    <string name="target_apps_empty_summary">Hiçbir şey seçilmedi — uygulama ve geri yükleme sırasında hiçbir uygulama durdurulmaz.</string>
+    <string name="target_apps_loading_summary">Bölgeyi değiştirdikten sonra bu uygulamaları manuel olarak yenileyebilirsiniz.</string>
+    <string name="target_apps_empty_summary">Hiçbir şey seçilmedi — hiçbir uygulama manuel olarak yenilenmez.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">Uygulama ve geri yükleme sırasında %1$d uygulama durdurulur.</item>
-        <item quantity="other">Uygulama ve geri yükleme sırasında %1$d uygulama durdurulur.</item>
+        <item quantity="one">%1$d uygulama manuel olarak yenilenebilir.</item>
+        <item quantity="other">%1$d uygulama manuel olarak yenilenebilir.</item>
     </plurals>
     <string name="wipe_keep">Koru</string>
     <string name="wipe_cache">Önbellek</string>
@@ -176,4 +170,9 @@
     <string name="notification_layer_network">Ağ</string>
     <string name="notification_channel_name">Etkin bölge geçersiz kılma</string>
     <string name="notification_channel_description">Bir SIM geçersiz kılınmış bölge bildirirken gösterilir.</string>
+    <string name="menu_github_project">GitHub projesi</string>
+    <string name="action_share">Paylaş</string>
+    <string name="action_report_issue">Sorun bildir</string>
+    <string name="diagnostic_title">Tanılama</string>
+    <string name="error_open_github">GitHub açılamadı: %1$s</string>
 </resources>

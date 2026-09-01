@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Повторно найти SIM</string>
     <string name="menu_app_language">Язык приложения</string>
     <string name="menu_clear_all">Удалить все подмены CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Не запущено — сначала запустите Shizuku</string>
     <string name="shizuku_connected">Подключено · UID %1$d · %2$s</string>
     <string name="shizuku_granted">разрешено</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">При следующем подключении может нарушить работу IMS/VoLTE. Используйте кратковременно и затем восстановите.</string>
     <string name="layer_still_live">Подмена ещё активна. Выключение исключает слой лишь при следующем применении; функция «Восстановить» удалит его.</string>
     <string name="pending_state_warning">Предыдущая запись завершилась до сохранения результата. Перед новой подменой выполните восстановление. Если оно не завершится, перезагрузите устройство, чтобы удалить основные подмены, и учтите предупреждение о SIM перед новым сеансом.</string>
-    <string name="risk_notice">Только для временного использования. Подмена сети может нарушить IMS/VoLTE при переподключении, а добавление страны может его вызвать. Сначала IMS может выглядеть исправным. Завершите подмену сразу после использования. Перезагрузка удаляет основные подмены.</string>
 
     <string name="action_start_disguise">Начать подмену</string>
     <string name="action_update_disguise">Обновить</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Закрыть</string>
     <string name="action_copy">Копировать</string>
     <string name="action_copied">Скопировано</string>
-    <string name="action_more">БОЛЬШЕ</string>
-    <string name="action_less">МЕНЬШЕ</string>
-    <string name="action_runtime_probe">ПРОВЕРКА СРЕДЫ</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Подготовка узла инструментирования</string>
     <string name="busy_shizuku">Ожидание Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Страна, оператор или код</string>
     <string name="preset_no_match">Совпадений нет. Закройте окно и введите значения вручную.</string>
 
-    <string name="target_apps_heading">ЦЕЛЕВЫЕ ПРИЛОЖЕНИЯ</string>
+    <string name="target_apps_heading">Целевые приложения</string>
     <string name="target_apps_none">Приложения не выбраны. Регион всё равно изменится; ничего не будет остановлено или удалено.</string>
     <string name="target_app_stop_open">Остановить и открыть</string>
     <string name="target_app_force_stop">Остановить принудительно</string>
@@ -99,13 +93,13 @@
     <string name="target_app_loading">Чтение установленных приложений&#8230;</string>
     <string name="target_app_no_match">Подходящих приложений нет.</string>
     <string name="target_app_not_installed">%1$s · не установлено</string>
-    <string name="target_apps_loading_summary">При применении и восстановлении эти приложения останавливаются, чтобы заново прочитать регион.</string>
-    <string name="target_apps_empty_summary">Ничего не выбрано — при применении и восстановлении приложения не останавливаются.</string>
+    <string name="target_apps_loading_summary">Эти приложения можно вручную обновить после смены региона.</string>
+    <string name="target_apps_empty_summary">Ничего не выбрано — приложения не будут обновляться вручную.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">При применении и восстановлении останавливается %1$d приложение.</item>
-        <item quantity="few">При применении и восстановлении останавливаются %1$d приложения.</item>
-        <item quantity="many">При применении и восстановлении останавливаются %1$d приложений.</item>
-        <item quantity="other">При применении и восстановлении останавливается %1$d приложения.</item>
+        <item quantity="one">%1$d приложение можно обновить вручную.</item>
+        <item quantity="few">%1$d приложения можно обновить вручную.</item>
+        <item quantity="many">%1$d приложений можно обновить вручную.</item>
+        <item quantity="other">%1$d приложений можно обновить вручную.</item>
     </plurals>
     <string name="wipe_keep">Сохранить</string>
     <string name="wipe_cache">Кэш</string>
@@ -178,4 +172,9 @@
     <string name="notification_layer_network">Сеть</string>
     <string name="notification_channel_name">Активная подмена региона</string>
     <string name="notification_channel_description">Показывается, пока SIM сообщает подменённый регион.</string>
+    <string name="menu_github_project">Проект GitHub</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_report_issue">Сообщить о проблеме</string>
+    <string name="diagnostic_title">Диагностика</string>
+    <string name="error_open_github">Не удалось открыть GitHub: %1$s</string>
 </resources>
