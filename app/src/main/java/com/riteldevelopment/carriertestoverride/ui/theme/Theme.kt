@@ -193,7 +193,16 @@ val LocalOverrideColors: ProvidableCompositionLocal<OverrideColors> =
  * The Material 3 defaults are kept as-is. No custom font is shipped: the system face and its locale
  * fallback cover every translated UI, and keep this tool visually consistent with the rest of the phone.
  */
-internal val OverrideTypography = Typography()
+internal val OverrideTypography = Typography().run {
+    // A very small positive tracking keeps the prominent headings open on Samsung's dense display
+    // rasterizer. Body copy, labels and tabular codes retain Material's native spacing.
+    copy(
+        headlineSmall = headlineSmall.copy(letterSpacing = 0.1.sp),
+        titleLarge = titleLarge.copy(letterSpacing = 0.12.sp),
+        titleMedium = titleMedium.copy(letterSpacing = 0.2.sp),
+        titleSmall = titleSmall.copy(letterSpacing = 0.15.sp),
+    )
+}
 
 /**
  * The expressive shape scale.
