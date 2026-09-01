@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.PersistableBundle;
 import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
@@ -60,13 +61,13 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         int resultCode = Activity.RESULT_CANCELED;
         UiAutomation automation = null;
         try {
-            // FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES matters here. The no-argument overload connects
-            // with flags 0, which registers this as a UI-test automation service and suppresses every
-            // other bound accessibility service for the life of the connection — so a TalkBack user
-            // would go silent twice per operation (the capability probe runs one instrumentation and the
-            // real work runs another). Nothing here needs any accessibility capability; only
-            // adoptShellPermissionIdentity is wanted, and that is unaffected by the flag.
-            automation = getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+            // This instrumentation only needs shell permission adoption, not a view hierarchy. Keeping
+            // accessibility disabled avoids Android 17's asynchronous CONNECTING state; Instrumentation
+            // calls UiAutomation.disconnect() from finish(), and disconnecting that half-open connection
+            // throws on the beta build. The flag is available from API 31; older releases keep the old
+            // connection mode, which is the only mode those platform versions expose reliably.
+            int automationFlags = automationFlagsForSdk(Build.VERSION.SDK_INT);
+            automation = getUiAutomation(automationFlags);
             if (automation == null) {
                 throw new IllegalStateException("UiAutomation connection is unavailable");
             }
@@ -135,6 +136,13 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             }
             finish(resultCode, result);
         }
+    }
+
+    @SuppressLint("InlinedApi")
+    static int automationFlagsForSdk(int sdkInt) {
+        return sdkInt >= Build.VERSION_CODES.S
+                ? UiAutomation.FLAG_DONT_USE_ACCESSIBILITY
+                : UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES;
     }
 
     private static PersistableBundle buildOverrideBundle(Bundle arguments) {
