@@ -1,11 +1,14 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -139,9 +140,8 @@ fun TargetAppsPanel(
                             .padding(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        FilledTonalButton(
+                        ElasticFilledTonalButton(
                             onClick = onChoose,
-                            shapes = ButtonDefaults.shapes(),
                             enabled = enabled,
                         ) {
                             Text(stringResource(R.string.action_choose))
@@ -170,17 +170,31 @@ fun TargetAppsPanel(
                             },
                             leadingContent = { AppIcon(app.packageName) },
                             trailingContent = {
-                                FilledTonalButton(
+                                ElasticFilledTonalButton(
                                     onClick = { onRun(app) },
-                                    shapes = ButtonDefaults.shapes(),
                                     enabled = enabled && app.installed,
                                 ) {
-                                    Text(
-                                        stringResource(
-                                            if (relaunch) R.string.target_app_stop_open
-                                            else R.string.target_app_force_stop
+                                    AnimatedContent(
+                                        targetState = relaunch,
+                                        transitionSpec = {
+                                            (fadeIn(animationSpec = motion.fastEffectsSpec()) togetherWith
+                                                fadeOut(animationSpec = motion.fastEffectsSpec()))
+                                                .using(
+                                                    SizeTransform(clip = false) { _, _ ->
+                                                        motion.fastSpatialSpec()
+                                                    }
+                                                )
+                                        },
+                                        contentAlignment = Alignment.Center,
+                                        label = "targetAppActionLabel",
+                                    ) { openAfterward ->
+                                        Text(
+                                            stringResource(
+                                                if (openAfterward) R.string.target_app_stop_open
+                                                else R.string.target_app_force_stop
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -215,9 +229,10 @@ fun TargetAppsPanel(
                     ) {
                         ButtonGroup(
                             overflowIndicator = {},
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(2.dp),
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             WipeMode.entries.forEachIndexed { index, mode ->
                                 toggleableItem(
