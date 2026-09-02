@@ -317,23 +317,20 @@ private fun WideBody(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(BlockGap),
     ) {
-        item("wide-sims") {
-            WideContainer(modifier = Modifier.animateItem()) {
-                SimBlock(
-                    state = state,
-                    actions = actions,
-                    modifier = Modifier.fillMaxWidth(0.5f),
-                )
-            }
-        }
-        item("wide-identity-target") {
+        item("wide-primary") {
             WideContainer(modifier = Modifier.animateItem()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(BlockGap),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    IdentityBlock(state = state, modifier = Modifier.weight(1f))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(BlockGap),
+                    ) {
+                        SimBlock(state = state, actions = actions)
+                        IdentityBlock(state = state)
+                    }
                     TargetBlock(state = state, actions = actions, modifier = Modifier.weight(1f))
                 }
             }
