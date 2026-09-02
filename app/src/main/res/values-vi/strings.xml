@@ -105,15 +105,6 @@
     <string name="wipe_cache_summary">Xóa bộ nhớ đệm không trả về kết quả trên một số bản One UI; báo cáo sẽ cho biết kết quả.</string>
     <string name="wipe_data_summary">Xóa dữ liệu ứng dụng. Bạn sẽ bị đăng xuất và dữ liệu cục bộ sẽ bị xóa.</string>
 
-    <string name="dialog_apply_title">Bắt đầu lần giả lập tạm thời này?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">Quốc gia ứng dụng %1$s</string>
-    <string name="dialog_apply_network">Nhà mạng SIM %1$s</string>
-    <string name="dialog_apply_name">Tên: %1$s</string>
-    <string name="dialog_apply_framework">Kết nối vô tuyến vẫn dùng mạng thật, nhưng danh tính và cấu hình nhà mạng do Android báo cáo sẽ thay đổi.</string>
-    <string name="dialog_apply_risk_both">Quốc gia có thể kích hoạt IMS kết nối lại khi Mạng đang bị giả. Cuộc gọi có thể ngừng ngay hoặc sau đó. Hãy kết thúc giả lập sau khi dùng các ứng dụng đích.</string>
-    <string name="dialog_apply_risk_network">Mạng có thể làm hỏng IMS trong bất kỳ lần kết nối lại nào sau này dù hiện tại vẫn gọi được. Hãy kết thúc giả lập sau khi dùng các ứng dụng đích.</string>
-    <string name="dialog_apply_risk_country">Quốc gia làm mới CarrierConfig. Hành vi tùy thuộc firmware; hãy kết thúc giả lập sau khi dùng các ứng dụng đích.</string>
     <string name="dialog_restore_without_markers_title">Không có bản ghi cho SIM này</string>
     <string name="dialog_restore_without_markers_body">Nếu vẫn khôi phục, ứng dụng sẽ dùng trạng thái hiện tại của các công tắc lớp. Xóa Quốc gia ứng dụng sẽ xóa mọi giá trị kiểm thử CarrierConfig tạm thời trên subId này. Khi không có snapshot, khởi động lại là cách đặt lại đáng tin cậy hơn.</string>
     <string name="dialog_restore_anyway">Vẫn khôi phục</string>

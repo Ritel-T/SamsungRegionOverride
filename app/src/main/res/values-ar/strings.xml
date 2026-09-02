@@ -110,15 +110,6 @@
     <string name="wipe_cache_summary">لا يعيد مسح ذاكرة التخزين المؤقت نتيجة في بعض إصدارات One UI؛ يوضح التقرير ما حدث.</string>
     <string name="wipe_data_summary">يمسح بيانات التطبيق. سيتم تسجيل خروجك وإزالة البيانات المحلية.</string>
 
-    <string name="dialog_apply_title">بدء هذا التمويه المؤقت؟</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">بلد التطبيق %1$s</string>
-    <string name="dialog_apply_network">مشغّل SIM %1$s</string>
-    <string name="dialog_apply_name">الاسم: %1$s</string>
-    <string name="dialog_apply_framework">يظل الاتصال اللاسلكي على شبكته الحقيقية، لكن تتغير هوية شركة الاتصالات وإعداداتها التي يبلغ عنها Android.</string>
-    <string name="dialog_apply_risk_both">قد يؤدي البلد إلى إعادة اتصال IMS أثناء تزييف الشبكة. قد تتوقف المكالمات الآن أو لاحقًا. أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
-    <string name="dialog_apply_risk_network">قد تعطل الشبكة IMS عند أي إعادة اتصال لاحقة حتى لو كانت المكالمات تعمل الآن. أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
-    <string name="dialog_apply_risk_country">يحدّث البلد CarrierConfig. يختلف السلوك حسب البرنامج الثابت؛ أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
     <string name="dialog_restore_without_markers_title">لا يوجد سجل لهذه الشريحة</string>
     <string name="dialog_restore_without_markers_body">تستخدم الاستعادة رغم ذلك مفاتيح الطبقات كما هي الآن. يؤدي مسح بلد التطبيق إلى إزالة جميع قيم اختبار CarrierConfig المؤقتة على subId هذا. عند غياب لقطة محفوظة، تكون إعادة التشغيل أكثر موثوقية لإعادة الضبط.</string>
     <string name="dialog_restore_anyway">استعادة على أي حال</string>
