@@ -106,15 +106,6 @@
     <string name="wipe_cache_summary">Cache clear returns nothing on some One UI builds; the report says which.</string>
     <string name="wipe_data_summary">Erases app data. You will be signed out and local data will be removed.</string>
 
-    <string name="dialog_apply_title">Start this temporary disguise?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">App country %1$s</string>
-    <string name="dialog_apply_network">SIM operator %1$s</string>
-    <string name="dialog_apply_name">Name: %1$s</string>
-    <string name="dialog_apply_framework">The radio remains on its real network, but Android\'s carrier identity and configuration change.</string>
-    <string name="dialog_apply_risk_both">Country may trigger an IMS reconnect while Network is fake. Calls may stop now or later. End the disguise after using the target apps.</string>
-    <string name="dialog_apply_risk_network">Network can break IMS on any later reconnect even if calls work now. End the disguise after using the target apps.</string>
-    <string name="dialog_apply_risk_country">Country refreshes CarrierConfig. Behaviour varies by firmware; end the disguise after using the target apps.</string>
     <string name="dialog_restore_without_markers_title">Nothing recorded for this SIM</string>
     <string name="dialog_restore_without_markers_body">Restoring anyway uses the layer switches as they stand. Clearing app country removes every transient CarrierConfig test value on this subId. With no snapshot, reboot is the more reliable reset.</string>
     <string name="dialog_restore_anyway">Restore anyway</string>

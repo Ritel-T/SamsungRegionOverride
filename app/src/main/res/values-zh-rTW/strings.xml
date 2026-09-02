@@ -105,15 +105,6 @@
     <string name="wipe_cache_summary">部分 One UI 版本清除快取不會傳回結果；報告會說明具體情況。</string>
     <string name="wipe_data_summary">清除應用程式資料。你將登出，本機資料也會被移除。</string>
 
-    <string name="dialog_apply_title">開始此次臨時偽裝？</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">應用程式國家/地區 %1$s</string>
-    <string name="dialog_apply_network">SIM 電信業者 %1$s</string>
-    <string name="dialog_apply_name">名稱：%1$s</string>
-    <string name="dialog_apply_framework">基頻仍連線至真實網路，但 Android 回報的電信業者身分和設定會變更。</string>
-    <string name="dialog_apply_risk_both">「應用程式國家/地區」可能在 SIM 電信業者身分為偽造值時觸發 IMS 重新連線。通話可能立即或稍後中斷。使用目標應用程式後請結束偽裝。</string>
-    <string name="dialog_apply_risk_network">即使通話目前正常，偽造的 SIM 電信業者身分也可能在之後任何一次 IMS 重新連線時導致其失效。使用目標應用程式後請結束偽裝。</string>
-    <string name="dialog_apply_risk_country">「應用程式國家/地區」會重新整理 CarrierConfig，具體行為因韌體而異。使用目標應用程式後請結束偽裝。</string>
     <string name="dialog_restore_without_markers_title">未記錄此 SIM 卡的資訊</string>
     <string name="dialog_restore_without_markers_body">仍要還原時，將依目前的層開關執行。清除「應用程式國家/地區」會移除此 subId 的所有暫時 CarrierConfig 測試值。沒有快照時，重新啟動是更可靠的重設方式。</string>
     <string name="dialog_restore_anyway">仍要還原</string>

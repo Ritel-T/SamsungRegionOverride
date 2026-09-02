@@ -105,15 +105,6 @@
     <string name="wipe_cache_summary">部分 One UI 版本清除缓存不会返回结果；报告会说明具体情况。</string>
     <string name="wipe_data_summary">清除应用数据。你将退出登录，本地数据也会被移除。</string>
 
-    <string name="dialog_apply_title">开始此次临时伪装？</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">应用国家/地区 %1$s</string>
-    <string name="dialog_apply_network">SIM 运营商 %1$s</string>
-    <string name="dialog_apply_name">名称：%1$s</string>
-    <string name="dialog_apply_framework">基带仍连接真实网络，但 Android 报告的运营商身份和配置会改变。</string>
-    <string name="dialog_apply_risk_both">“应用国家/地区”可能在 SIM 运营商身份为伪造值时触发 IMS 重连。通话可能立即或稍后中断。使用目标应用后请结束伪装。</string>
-    <string name="dialog_apply_risk_network">即使通话现在正常，伪造的 SIM 运营商身份也可能在之后任何一次 IMS 重连时导致其失效。使用目标应用后请结束伪装。</string>
-    <string name="dialog_apply_risk_country">“应用国家/地区”会刷新 CarrierConfig，具体行为因固件而异。使用目标应用后请结束伪装。</string>
     <string name="dialog_restore_without_markers_title">未记录此 SIM 卡的信息</string>
     <string name="dialog_restore_without_markers_body">仍要恢复时，将按当前层开关执行。清除“应用国家/地区”会移除此 subId 的所有临时 CarrierConfig 测试值。没有快照时，重启是更可靠的重置方式。</string>
     <string name="dialog_restore_anyway">仍要恢复</string>
