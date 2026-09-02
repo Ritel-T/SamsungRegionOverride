@@ -84,15 +84,8 @@ sealed interface LocalizedText {
     }
 }
 
-/** A confirmation the user must answer before anything privileged happens. */
+/** A modal request that needs an explicit user decision. */
 sealed interface DialogRequest {
-    /** Final review before writing both layers. */
-    data class ConfirmApply(
-        val sim: SimInfo,
-        val target: com.riteldevelopment.carriertestoverride.data.RegionTarget,
-        val layers: LayerSelection,
-    ) : DialogRequest
-
     /** This tool has no record of an override on this SIM, but the user asked to restore anyway. */
     data class RestoreWithoutMarkers(val sim: SimInfo) : DialogRequest
 

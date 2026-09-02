@@ -65,7 +65,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TooltipBox
@@ -101,6 +100,7 @@ import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 import com.riteldevelopment.carriertestoverride.ui.components.BlockGap
 import com.riteldevelopment.carriertestoverride.ui.components.DisclosureChevron
+import com.riteldevelopment.carriertestoverride.ui.components.ElasticTextButton
 import com.riteldevelopment.carriertestoverride.ui.components.HazardNote
 import com.riteldevelopment.carriertestoverride.ui.components.LayerSection
 import com.riteldevelopment.carriertestoverride.ui.components.MicroLabel
@@ -145,7 +145,6 @@ data class OverrideActions(
     val onConfirmTargetApps: (DialogRequest.ChooseTargetApps) -> Unit,
     val onResetTargetApps: () -> Unit,
     val onDismissDialog: () -> Unit,
-    val onConfirmApply: (DialogRequest.ConfirmApply) -> Unit,
     val onConfirmRestoreWithoutMarkers: (SimInfo) -> Unit,
     val onConfirmClearAll: (SimInfo) -> Unit,
     val onConfirmWipeData: (List<TargetApp>) -> Unit,
@@ -199,7 +198,6 @@ fun OverrideScreen(
         dialog = state.dialog,
         targetAppsAreDefault = state.targetAppsAreDefault,
         onDismiss = actions.onDismissDialog,
-        onConfirmApply = actions.onConfirmApply,
         onConfirmRestore = actions.onConfirmRestoreWithoutMarkers,
         onConfirmClearAll = actions.onConfirmClearAll,
         onConfirmWipeData = actions.onConfirmWipeData,
@@ -1086,7 +1084,9 @@ private fun BusyBar(busy: BusyState, onCancel: () -> Unit) {
                 modifier = Modifier.weight(1f),
             )
             if (busy.cancellable) {
-                TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+                ElasticTextButton(onClick = onCancel) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         }
         Spacer(Modifier.height(8.dp))

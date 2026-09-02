@@ -73,7 +73,6 @@ class MainActivity : ComponentActivity() {
                         onConfirmTargetApps = viewModel::confirmTargetApps,
                         onResetTargetApps = viewModel::resetTargetApps,
                         onDismissDialog = viewModel::dismissDialog,
-                        onConfirmApply = viewModel::confirmApply,
                         onConfirmRestoreWithoutMarkers = viewModel::confirmRestoreWithoutMarkers,
                         onConfirmClearAll = viewModel::confirmClearAll,
                         onConfirmWipeData = viewModel::confirmWipeData,

@@ -270,7 +270,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     // ---------------------------------------------------------------- intents
 
-    /** Validates, then asks for confirmation. Nothing privileged happens here. */
+    /** Validates the current selection, then starts the temporary override. */
     fun requestApply() {
         val current = _state.value
         val sim = current.selectedSim ?: return fail(R.string.error_no_sim_selected)
@@ -307,14 +307,18 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             return fail(R.string.error_target_already_reported)
         }
 
-        _state.update {
-            it.copy(
-                dialog = DialogRequest.ConfirmApply(
-                    sim = sim,
-                    target = RegionTarget(mccMnc, iso, name),
-                    layers = layers,
-                )
+        val presetId = current.presetId
+        val target = RegionTarget(mccMnc, iso, name)
+        runOperation(
+            DiagnosticContext(
+                operation = OperationKind.APPLY,
+                slotIndex = sim.slotIndex,
+                layers = layers,
+                targetCountry = target.countryIso,
             )
+        ) {
+            repository.apply(sim, target, layers, ::reportStage)
+                .also { outcome -> if (!outcome.isError) rememberApplied(presetId) }
         }
     }
 
@@ -482,22 +486,6 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     }
 
     // ---------------------------------------------------------------- confirmed actions
-
-    fun confirmApply(request: DialogRequest.ConfirmApply) {
-        dismissDialog()
-        val presetId = _state.value.presetId
-        runOperation(
-            DiagnosticContext(
-                operation = OperationKind.APPLY,
-                slotIndex = request.sim.slotIndex,
-                layers = request.layers,
-                targetCountry = request.target.countryIso,
-            )
-        ) {
-            repository.apply(request.sim, request.target, request.layers, ::reportStage)
-                .also { outcome -> if (!outcome.isError) rememberApplied(presetId) }
-        }
-    }
 
     /** The user chose to restore using the current layer switches despite having no markers. */
     fun confirmRestoreWithoutMarkers(sim: SimInfo) {
