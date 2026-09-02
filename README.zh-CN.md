@@ -38,11 +38,26 @@
 - **报错信息可安全分享。**复制、分享和提交问题只使用脱敏摘要，不导出完整 logcat、SIM 标识或
   已安装应用列表。
 
+## Galaxy Store 改区效果
+
+在参考设备上，Galaxy Store 使用真实 SIM 地区时会直接提示当前国家/地区不可用。开启“SIM
+运营商”层并重新打开应用后，无需换卡即可进入所选的韩国商店。
+
+<table>
+  <tr>
+    <th>改区前</th>
+    <th>切换地区后</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/store-before.png" width="360" alt="Galaxy Store 提示当前国家或地区不可用。"></td>
+    <td><img src="docs/images/store-after.png" width="360" alt="切换地区后打开的 Galaxy Store 韩国商店首页。"></td>
+  </tr>
+</table>
+
 ## Material 3 Expressive 新设计
 
-4.0 的界面已全面重做为 **Material 3 Expressive（MD3E）**：更有表现力的形状与加载动画、按钮
-弹性反馈、覆盖整张卡片的触摸效果、更清晰的生效状态、横竖屏自适应布局，以及始终可操作的底部
-按钮区。
+4.0 的界面已全面重做为 **M3 Expressive**：更有表现力的形状与加载动画、按钮弹性反馈、覆盖
+整张卡片的触摸效果、更清晰的生效状态、横竖屏自适应布局，以及始终可操作的底部按钮区。
 
 <p align="center">
   <img src="docs/images/material3-expressive-progress.gif" width="720"

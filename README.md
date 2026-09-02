@@ -41,11 +41,28 @@ restore are recommended.
 - **Private diagnostics.** A compact report can be copied or shared without exporting raw logcat, SIM
   identifiers or the installed-app list.
 
+## Galaxy Store before and after
+
+On the reference Galaxy, Galaxy Store initially refused to open for the real SIM region. Applying the
+SIM operator layer and reopening the app changed it to the selected Korean storefront, without swapping
+the SIM.
+
+<table>
+  <tr>
+    <th>Before</th>
+    <th>After switching region</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/store-before.png" width="360" alt="Galaxy Store saying that it is not supported in the current country."></td>
+    <td><img src="docs/images/store-after.png" width="360" alt="Galaxy Store open on its Korean storefront after the region switch."></td>
+  </tr>
+</table>
+
 ## Material 3 Expressive
 
-Version 4 rebuilds the interface with **Material 3 Expressive (MD3E)**: expressive shapes and loading
-motion, elastic buttons, full-card touch feedback, clearer live-state colors, adaptive portrait and
-landscape layouts, and an always-available bottom action bar.
+Version 4 rebuilds the interface with **M3 Expressive**: expressive shapes and loading motion, elastic
+buttons, full-card touch feedback, clearer live-state colors, adaptive portrait and landscape layouts,
+and an always-available bottom action bar.
 
 <p align="center">
   <img src="docs/images/material3-expressive-progress.gif" width="720"
