@@ -3,6 +3,7 @@ package com.riteldevelopment.carriertestoverride.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -23,7 +24,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,19 +34,28 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +82,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.hypot
 import kotlin.math.max
@@ -83,6 +99,175 @@ val BlockGap: Dp = 14.dp
 internal fun rememberCardInteractionSource(): MutableInteractionSource = remember {
     MutableInteractionSource()
 }
+
+/** A standalone button widens itself because ButtonGroup has no neighbour to redistribute width from. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun ElasticTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.textButtonColors(),
+    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val motion = remember { StandaloneButtonMotion() }
+    TextButton(
+        onClick = rememberElasticButtonClick(motion, onClick),
+        shapes = ButtonDefaults.shapes(),
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+        contentPadding = expandedButtonPadding(contentPadding, motion),
+        interactionSource = motion.interactionSource,
+        content = content,
+    )
+}
+
+/** Filled counterpart used by standalone Target apps actions. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun ElasticFilledTonalButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val motion = remember { StandaloneButtonMotion() }
+    FilledTonalButton(
+        onClick = rememberElasticButtonClick(motion, onClick),
+        shapes = ButtonDefaults.shapes(),
+        modifier = modifier,
+        enabled = enabled,
+        contentPadding = expandedButtonPadding(ButtonDefaults.ContentPadding, motion),
+        interactionSource = motion.interactionSource,
+        content = content,
+    )
+}
+
+private class StandaloneButtonMotion {
+    val interactionSource = MutableInteractionSource()
+    val expansion = Animatable(0f)
+    var expansionAnimation: Job? = null
+    var fullWidthReached: CompletableDeferred<Unit>? = null
+    var clickAnimation: Job? = null
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun rememberElasticButtonClick(
+    motion: StandaloneButtonMotion,
+    onClick: () -> Unit,
+): () -> Unit {
+    val currentOnClick = rememberUpdatedState(onClick)
+    val scope = rememberCoroutineScope()
+    val motionSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    return remember(motion, scope, motionSpec) {
+        {
+            if (motion.clickAnimation?.isActive != true) {
+                motion.clickAnimation = scope.launch {
+                    // Do not rely on the InteractionSource collector having observed Press yet. A quick
+                    // tap can reach onClick first, so the click itself starts or joins the same expansion.
+                    val fullWidthReached = expandStandaloneButton(motion, motionSpec)
+                    fullWidthReached.await()
+                    delay(StandaloneButtonExpandedHoldMillis)
+                    motion.expansionAnimation?.cancel()
+                    motion.expansion.animateTo(0f, motionSpec)
+
+                    // Dialog dismissal and app launching can remove this composable immediately. Run
+                    // them only after both halves of the gesture have been drawn, or the return motion
+                    // is cancelled and the button appears to snap back to its resting width.
+                    currentOnClick.value()
+                }
+            }
+            Unit
+        }
+    }
+}
+
+@Composable
+private fun expandedButtonPadding(
+    base: PaddingValues,
+    motion: StandaloneButtonMotion,
+): PaddingValues {
+    val motionSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    LaunchedEffect(motion) {
+        var activePress: PressInteraction.Press? = null
+        var releaseAnimation: Job? = null
+        motion.interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    releaseAnimation?.cancel()
+                    activePress = interaction
+                    expandStandaloneButton(motion, motionSpec)
+                }
+
+                is PressInteraction.Release -> {
+                    if (interaction.press !== activePress) return@collect
+                    // A valid release is followed by onClick, which owns the full-width gate and the
+                    // return animation. Leaving it alone here prevents release from reversing a quick
+                    // press before it has reached maximum width.
+                    activePress = null
+                }
+
+                is PressInteraction.Cancel -> {
+                    if (interaction.press !== activePress) return@collect
+                    motion.expansionAnimation?.cancel()
+                    releaseAnimation?.cancel()
+                    motion.fullWidthReached?.cancel()
+                    releaseAnimation = launch {
+                        motion.expansion.animateTo(0f, motionSpec)
+                    }
+                    activePress = null
+                }
+
+                else -> Unit
+            }
+        }
+    }
+    val extra = motion.expansion.value.dp
+    val layoutDirection = LocalLayoutDirection.current
+    return PaddingValues(
+        start = base.calculateStartPadding(layoutDirection) + extra,
+        top = base.calculateTopPadding(),
+        end = base.calculateEndPadding(layoutDirection) + extra,
+        bottom = base.calculateBottomPadding(),
+    )
+}
+
+private fun CoroutineScope.expandStandaloneButton(
+    motion: StandaloneButtonMotion,
+    motionSpec: AnimationSpec<Float>,
+): CompletableDeferred<Unit> {
+    val running = motion.expansionAnimation
+    val existingGate = motion.fullWidthReached
+    if (running?.isActive == true && existingGate != null && !existingGate.isCancelled) {
+        return existingGate
+    }
+
+    running?.cancel()
+    val fullWidthReached = CompletableDeferred<Unit>()
+    motion.fullWidthReached = fullWidthReached
+    motion.expansionAnimation = launch {
+        try {
+            motion.expansion.animateTo(StandaloneButtonExpansion.value, motionSpec) {
+                // The expressive spring may overshoot and settle. The first frame at the requested
+                // maximum is the earliest point at which the action or return animation may begin.
+                if (value >= StandaloneButtonExpansion.value) {
+                    fullWidthReached.complete(Unit)
+                }
+            }
+            fullWidthReached.complete(Unit)
+        } catch (cancelled: CancellationException) {
+            if (!fullWidthReached.isCompleted) fullWidthReached.cancel(cancelled)
+            throw cancelled
+        }
+    }
+    return fullWidthReached
+}
+
+private val StandaloneButtonExpansion = 8.dp
+private const val StandaloneButtonExpandedHoldMillis = 32L
 
 /**
  * Draws a press state over the whole card while keeping the touch point in card coordinates.
