@@ -2,139 +2,120 @@
 
 [简体中文](README.zh-CN.md) | English
 
-Temporarily changes the SIM region that Android reports to region-sensitive apps. It is designed for
-short sessions: start a disguise, open the Samsung or other target app, then end the disguise and
-restore mobile service.
+**Keep your SIM inserted and keep using mobile data while temporarily changing the SIM region seen by
+Galaxy Store, Samsung Members, TikTok and other region-sensitive apps. No spare SIM and no Wi-Fi
+handoff are needed once Shizuku is running. Restore the real region with one tap when you are done.**
 
-The primary target is recent Samsung firmware. It has been tested on an **SM-S938B** running Android 16 /
-One UI 8.5 and Android 17 / One UI 9 Beta. Other Samsung and non-Samsung builds are compatibility targets.
+On the tested Galaxy, mobile data remained available throughout apply and restore. The SIM operator
+layer can still affect IMS calling or messaging after a reconnect, so this is designed for short,
+reversible sessions rather than a permanent identity change.
 
-No root is required. The radio remains attached to the real carrier and the phone number does not
-change, but Android's carrier identity, CarrierConfig, data profiles and IMS behaviour can change. Do
-not treat this as a harmless cosmetic switch.
+[Download the latest signed APK](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest)
+
+> **Upgrading from 3.x:** version 4 uses the new Android package id `com.ritelt.regionoverride`, so it
+> installs beside version 3 instead of replacing it. End every version 3 disguise before uninstalling
+> the old app. Saved restore data and the Shizuku grant do not move between package ids.
+
+<table>
+  <tr>
+    <th>Ready</th>
+    <th>Disguise active</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/app-ready.png" width="420" alt="Samsung Region Override ready to start a South Korea SKT disguise on SIM 1."></td>
+    <td><img src="docs/images/app-active.png" width="420" alt="Samsung Region Override showing a live South Korea SKT disguise beside the real China Unicom identity."></td>
+  </tr>
+</table>
+
+## Highlights
+
+- **No SIM swap.** The real card, phone number and carrier attachment stay in place.
+- **No Wi-Fi detour.** After Shizuku is running, the app works locally and has no Internet permission;
+  the tested phone kept mobile data online while switching and restoring.
+- **Change only what the target app needs.** App country and SIM operator are independent layers.
+- **Easy to undo.** The main action becomes **End & restore** while a disguise is live, and an ongoing
+  notification provides **Restore now** from anywhere.
+- **Made for dual SIM.** The data SIM is clearly marked, because that is the SIM region most apps read.
+- **Refresh apps on your terms.** Target apps are never stopped automatically. Force-stop, clear cache
+  or data, and reopen an app only when you choose to.
+- **Private diagnostics.** A compact report can be copied or shared without exporting raw logcat, SIM
+  identifiers or the installed-app list.
+
+## Material 3 Expressive
+
+Version 4 rebuilds the interface with **Material 3 Expressive (MD3E)**: expressive shapes and loading
+motion, elastic buttons, full-card touch feedback, clearer live-state colors, adaptive portrait and
+landscape layouts, and an always-available bottom action bar.
 
 <p align="center">
-  <img src="docs/images/screenshot-main.png" width="380"
-       alt="The app: SIM 1 on 46001 CN China Unicom marked DATA and selected, SIM 2 on 23415 GB Vodafone, a 23430 GB EE disguise previewed below, and the region picker under that.">
+  <img src="docs/images/material3-expressive-progress.gif" width="720"
+       alt="The result card smoothly changing shape while Samsung Region Override runs a five-stage operation.">
 </p>
 
-## The 60-second workflow
+The result card is present before the first run, becomes the operation progress surface while work is in
+flight, and collapses back to a concise outcome. Technical details and reporting actions stay one tap
+away without crowding the main workflow.
 
-1. Start Shizuku and grant this app access.
-2. Select the SIM, target region and the layers the target app needs.
-3. Tap **Start disguise** and wait for the result.
-4. Open and use the target app.
-5. Return here, or use the ongoing notification, and tap **End & restore**.
-6. Confirm mobile service is back. If IMS is still unavailable, toggle that SIM off and on in Settings
-   or reboot.
+## Quick start
 
-Turning a layer switch off only excludes it from the next apply. It does **not** remove an already-live
-layer; Restore does that. While a disguise is live, Restore becomes the primary bottom-bar action and
-the notification keeps a one-tap **Restore now** shortcut available.
+1. Install the APK from [Releases](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest).
+2. Start Shizuku and grant Samsung Region Override access.
+3. Select the SIM carrying mobile data, then choose a country/carrier preset.
+4. Enable only the layer or layers your target app needs.
+5. Tap **Start disguise** and wait for the result card to finish.
+6. If the target app still shows its old region, expand **Target apps** and use **Force stop** or
+   **Stop & open** for that app.
+7. When finished, return to the app or notification and tap **End & restore**.
 
-## What it looks like
+Turning a layer switch off only excludes it from the next apply. It does not remove a layer that is
+already live; use Restore for that. A reboot is the definitive reset for the core transient overrides.
 
-Galaxy Store and Samsung Members both refuse to open on a mainland China SIM. The Network layer alone
-is enough for both — no country override, so IMS keeps its own carrier domain and calls stay up.
+## Which layer should I use?
 
-| Before | Network layer live | After |
-|:--:|:--:|:--:|
-| <img src="docs/images/store-before.png" width="250" alt="Galaxy Store refusing to open, with a dialog reading that the Galaxy Store isn't supported in this country."> | <img src="docs/images/disguise-live.png" width="250" alt="The app showing a real 46001 CN China Unicom identity beside a live 45005 KR SKT disguise, with App country off and SIM operator on."> | <img src="docs/images/store-after.png" width="250" alt="Galaxy Store open on its Korean storefront, with the override's flag chip in the status bar."> |
-
-A live disguise stays on screen as a Live Update: a flag chip in the status bar, and a notification whose
-**Restore now** button ends the session from wherever you are.
-
-<p align="center">
-  <img src="docs/images/notification.png" width="560"
-       alt="An ongoing notification reading: Pretending to be KR SKT, SIM 1 is really CN China Unicom, with a Restore now button.">
-</p>
-
-## The two layers
-
-| UI layer | Android mechanism | Typical readers | Main trade-off |
+| Layer | Useful for | What changes | Main trade-off |
 |---|---|---|---|
-| **SIM operator / Network** | `ITelephony.setCarrierTestOverride` | Galaxy Store and Samsung apps | A fake MCC/MNC can make a later IMS registration use the wrong carrier domain and fail |
-| **App country / Country** | `CarrierConfigManager.overrideConfig` | TikTok and other apps that read the SIM ISO | Reloads CarrierConfig and can trigger the reconnect that exposes a live fake Network identity |
+| **App country** | TikTok and apps that read the SIM country ISO | CarrierConfig country ISO; optionally the displayed carrier name | Reloading CarrierConfig can trigger an IMS reconnect if a fake SIM operator is already live |
+| **SIM operator** | Galaxy Store, Samsung Members and Samsung apps that read MCC/MNC | MCC/MNC, test IMSI, SPN and PNN | A future IMS reconnect may try to register as the fake carrier and interrupt calls or IMS messaging |
+| **Both** | Apps that compare both signals | App country first, then SIM operator | Best signal coverage, but it does not remove the SIM operator layer's IMS risk |
 
-The Network layer writes MCC/MNC, a synthetic test IMSI, SPN and PNN. ICCID, GID, APN and carrier
-privilege rules remain null. The Country layer writes `sim_country_iso_override_string` and can
-optionally override the subscription display name.
+Start with the narrower layer. App country alone is normally the first choice for TikTok-style country
+checks; SIM operator is the relevant signal for Galaxy Store and other Samsung carrier checks. Account
+country, IP address, CSC, GPS, app version, server-side experiments and cached data can still override
+either signal.
 
-Apps read the SIM that carries mobile data, and only that one. On a dual-SIM phone a disguise written
-to the idle slot applies cleanly, reports success, and changes nothing any app can see — the override
-really did land, and every field this tool reads back agrees it did. The SIM selector marks the data
-slot **DATA** and says so plainly when the selected SIM is not it. Switch which SIM carries data in
-Android Settings, not here.
+## Restore from anywhere
 
-App behaviour is not guaranteed by a single signal. Account country, IP address, CSC, app version,
-server-side experiments and cached data can also participate. Use the Target apps panel to refresh a
-selected app after changing the region if it has cached the old state.
+When a disguise is live, a compact flag chip keeps the current region visible in the status bar. The
+ongoing notification shows the real and disguised identities and keeps a direct Restore action available
+outside the app.
 
-## Calls, IMS and recovery
+<p align="center">
+  <img src="docs/images/live-status-chip.png" width="420"
+       alt="Samsung Region Override status chip showing the South Korea flag while a disguise is live.">
+</p>
 
-The key finding is narrower than “both switches break calls”:
+<p align="center">
+  <img src="docs/images/restore-notification.png" width="720"
+       alt="Samsung Region Override notification over Android Settings, showing a South Korea SKT disguise, the real China Unicom identity and a Restore now button.">
+</p>
 
-- The fake **Network MCC/MNC is the latent identity problem**.
-- The **Country CarrierConfig reload is a common reconnect trigger**, not the fake identity itself.
-- Network-only can preserve the old IMS session and appear healthy. It may still fail later after signal
-  loss, airplane mode, a SIM/UICC cycle, a CarrierConfig refresh or another IMS reconnect.
-- An 8-second `isImsRegistered(subId)` observation reports only the current state. It is not a promise
-  about the next reconnect.
+Notification permission is optional. Refusing it does not block apply or restore; it removes the live
+status indicator, reminder and shortcut.
 
-On the tested China Unicom SIM, Samsung IMS kept the China Unicom profile and APN but derived
-`ims.mnc030.mcc234.3gppnetwork.org` from the fake EE MCC/MNC. The network returned SIP `403
-Forbidden`. Restoring the real identity before cycling UICC applications returned IMS registration.
-
-The current restore path therefore:
-
-1. restores Network first when it was live;
-2. warms the real country cache and waits for the final CarrierConfig clear to settle;
-3. never cycles UICC while a known fake Network identity may remain;
-4. restores the captured subscription display name;
-5. cycles UICC only when IMS is down and Network is known real;
-6. waits for IMS registration and reports an unconfirmed recovery as a warning, not a success.
-
-See [the IMS investigation](docs/ims-investigation.md) for the reproduced sequences and AOSP paths.
-
-## Recovery safeguards
-
-- Real MCC/MNC, operator name, country ISO and display name are captured before the first layer, even
-  when only one layer is selected. This prevents Network-first from saving a fake country as “real”.
-- A synchronous pending journal is written immediately before privileged writes. If a process dies
-  after Android changes but before the long report returns, the next launch still errs toward Restore.
-- Snapshots are bound to a one-way SIM/card fingerprint when the firmware exposes one. A recycled
-  `subId` is not allowed to write an old SIM's snapshot onto a replacement card. The raw ICCID never
-  leaves the shell service.
-- All core overrides are transient. A reboot is the definitive reset, although a carrier display-name
-  side effect may still need the captured-name restore.
-
-## Requirements
+## Requirements and tested scope
 
 - Android 10 (API 29) or newer.
-- A recent Samsung phone is the supported focus; other Android implementations are experimental.
-- Shizuku 13+, running as shell or root and granted to this app.
-- A valid subscription. The Network layer additionally needs the SIM in `READY` state.
+- Shizuku 13+ running as shell or root and authorized for this app. Root is not required.
+- A valid subscription; the SIM operator layer additionally requires the SIM to be `READY`.
+- Recent Samsung firmware is the supported focus. Other Samsung and non-Samsung implementations are
+  experimental compatibility targets.
 
-The app requests notification permission only when a disguise first becomes live. Refusing it does not
-block operations; it removes the persistent reminder and Restore shortcut.
-
-## Languages
-
-The UI ships in English, Simplified Chinese, Traditional Chinese, Japanese, Korean, French, German,
-Spanish, Brazilian Portuguese, Russian, Turkish, Arabic, Indonesian, Thai and Vietnamese. Android 13+
-lists them under the system's per-app language settings; the overflow menu opens that page. Older
-Android releases follow the system language.
-
-Technical Binder/instrumentation reports remain in English so stable machine markers and bug reports do
-not change with the UI locale.
-
-The result card is intentionally compact. Expand it only when you need the local operation detail or the
-safe `SRO-DIAGNOSTIC/1` summary. Copying, sharing or reporting an issue uses the summary and does not
-upload raw logcat or phone/SIM identifiers. See [Diagnostics](docs/diagnostics.md) for the collection flow.
+Development and hands-on testing currently center on a Galaxy S25 Ultra (SM-S938B), including Android 16 /
+One UI 8.5 and Android 17 / One UI 9 Beta. Other devices and carrier combinations can behave differently.
 
 ## Target apps
 
-The default list is user-editable:
+The editable default list contains:
 
 | Package | App |
 |---|---|
@@ -142,21 +123,77 @@ The default list is user-editable:
 | `com.samsung.android.voc` | Samsung Members |
 | `com.zhiliaoapp.musically` | TikTok |
 
-The Target apps panel can manually force-stop an app, optionally clear cache or all app data, and relaunch
-it. Applying or restoring a disguise does not stop target apps automatically.
-Clearing **Data** signs the user out and removes downloads, drafts and local settings. Cache-only clear
-is a documented timeout/no-op on the tested One UI build and is reported honestly.
+Applying or restoring never stops these apps automatically. **Keep** preserves all storage, **Cache**
+requests a cache-only clear, and **Data** removes the app's complete local data after the selected app is
+stopped. Data clearing signs the user out and can delete downloads, drafts and settings. Cache-only clear
+is reported honestly when the firmware times out or does not support it.
+
+## Calls, IMS and recovery
+
+The SIM operator layer changes a framework-wide identity, not a value visible only to Galaxy Store. An
+existing IMS session can remain healthy immediately after apply, then fail later after signal loss,
+airplane mode, a SIM/UICC cycle, a CarrierConfig refresh or another reconnect.
+
+The reproduced failure on the reference phone was:
+
+1. a reconnect occurred while the fake MCC/MNC was live;
+2. Samsung IMS kept the real carrier profile but derived its home domain from the fake MCC/MNC;
+3. registration against that mismatched domain was rejected;
+4. restoring the real identity before a controlled UICC cycle recovered IMS.
+
+The app therefore applies App country before SIM operator, restores SIM operator before App country,
+never cycles UICC while a fake operator may remain, restores the captured display name, and reports an
+unconfirmed IMS recovery as a warning rather than success. The post-apply IMS sample describes the
+current moment; it cannot promise that a later reconnect will stay healthy.
+
+See [IMS failure investigation](docs/ims-investigation.md) for the reproduced sequences and framework
+references.
+
+## How it works
+
+The implementation keeps recovery possible even when a privileged call is interrupted:
+
+- **SIM operator:** resolves Samsung's runtime `ITelephony.setCarrierTestOverride` signature and invokes
+  it through a Shizuku UserService running with shell identity. No Binder transaction number is fixed in
+  the source.
+- **App country:** invokes `CarrierConfigManager.overrideConfig` from a short-lived instrumentation under
+  the app package identity after adopting only the required shell phone-state permissions. Android 17
+  uses a completed UiAutomation handshake to avoid the platform's connecting/finish race.
+- **Ordering:** when both layers are selected, Country completes its reload before Network is written.
+  Restore reverses that order so the real operator is back before any country reload can reconnect IMS.
+- **Recovery state:** real MCC/MNC, operator name, country ISO and subscription display name are captured
+  before the first write. A synchronous pending journal records a write before it crosses Binder.
+- **SIM safety:** snapshots are bound to a one-way card fingerprint when the firmware exposes one. The
+  raw ICCID never leaves the shell service, and a reused subscription id cannot silently restore another
+  card's values.
+
+Compose runs in a separate `:ui` process while a minimal default-process service keeps the Android 17
+instrumentation target alive. CarrierConfig reload waits are bounded; partial results preserve enough
+state to offer Restore instead of pretending nothing changed.
+
+## Diagnostics and privacy
+
+The result card keeps full local operation details on the device. **Copy**, **Share** and **Report issue**
+use only an allow-listed `SRO-DIAGNOSTIC/1` summary containing broad device/runtime categories and the
+failed layer. It excludes subscription ids, ICCID, IMSI, IMEI, EID, phone number, card fingerprint, ADB
+serial, full build fingerprint, package list, raw exception messages, logcat and dumpsys.
+
+The app has no Internet permission, telemetry or account system. It does not automatically read or upload
+global logs. See [Diagnostics](docs/diagnostics.md) for the reporting flow.
+
+## Languages
+
+The UI includes English, Simplified Chinese, Traditional Chinese, Japanese, Korean, French, German,
+Spanish, Brazilian Portuguese, Russian, Turkish, Arabic, Indonesian, Thai and Vietnamese. Android 13+
+exposes them in per-app language settings; older releases follow the system language.
 
 ## Build and test
 
-Download the signed APK from [GitHub Releases](https://github.com/Ritel-T/SamsungRegionOverride/releases).
-Each release publishes the APK SHA-256 and signing-certificate SHA-256; verify both before installing.
-
-JDK 17 or newer is required. The wrapper pins Gradle 9.7.1 and AGP 9.3.2 supplies Kotlin 2.2.10.
-Shizuku 13.1.5 AARs are vendored and checksum-pinned under `app/libs`.
+The Android application id is `com.ritelt.regionoverride`. JDK 17 or newer is required; CI uses JDK 21.
+The wrapper pins Gradle 9.7.1, AGP 9.3.2 provides Kotlin 2.2.10, and the project compiles/targets API 37.
 
 ```bash
-./gradlew :app:testDebugUnitTest :app:assembleDebug
+./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
 Debug APK:
@@ -165,51 +202,26 @@ Debug APK:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Maintainers can build the signed release variant using the environment-variable workflow documented in
-[docs/RELEASING.md](docs/RELEASING.md). Signing material must remain outside the repository.
+Release signing uses the environment-variable workflow in [Release procedure](docs/RELEASING.md).
+Signing material and generated APKs stay outside Git. Each GitHub Release publishes the signed APK, its
+SHA-256 and the signing-certificate SHA-256.
 
-The test suite covers the two known Samsung/AOSP UICC toggle signatures, refuses unknown overloads,
-guards against UICC recovery while a fake Network remains live, and verifies Network-first country
-snapshot derivation. Device-side Compose tests also guard single-selection semantics, one-toggle-per-row
-accessibility, progressive Target Apps disclosure and its expand/collapse actions, the still-live layer
-warning, badge size across a state flip, and the absence of false progress announcements.
-
-`connectedDebugAndroidTest` uninstalls the app when it finishes, which discards the override snapshots
-a restore needs. Do not run it against a device with an override applied.
-
-## Architecture
-
-1. Compose runs in `:ui` and keeps a minimal default-process instrumentation host bound.
-2. Shizuku starts `CarrierOverrideUserService` as uid 2000.
-3. The Network layer reflects the runtime `ITelephony` signature rather than hard-coding a Binder
-   transaction number.
-4. Samsung rejects direct shell CarrierConfig writes on the tested firmware, so a short-lived
-   instrumentation adopts shell phone-state permissions under the app package identity.
-5. Every asynchronous CarrierConfig write is bounded and reports whether the reload broadcast arrived.
-
-`RuntimeProbe` remains available for device-specific signature and IMS diagnostics. Do not publish raw
-`dumpsys` or logcat output without reviewing it for phone identifiers.
-
-`sim-fingerprint SUB_ID` prints only the locally used SHA-256 prefix, never the raw ICCID.
-
-## Privacy and scope
-
-The app has no Internet permission, telemetry or account system. It operates locally through Shizuku.
-It does not provide carrier entitlements, paid content or network access. Use it only on devices and
-accounts you control, and follow the target service's terms and local law.
-
-Samsung, Galaxy Store, Samsung Members, TikTok/ByteDance, Google and Shizuku do not sponsor or endorse
-this project.
+`connectedDebugAndroidTest` uninstalls the app when it finishes and therefore discards restore snapshots.
+Do not run it on a device with an active or pending disguise.
 
 ## Known limits
 
-- Testing so far is limited to SM-S938B on Android 16 / One UI 8.5 and Android 17 / One UI 9 Beta.
-- The current selector displays up to two active consumer-phone subscriptions.
+- The current selector presents up to two active consumer-phone subscriptions.
 - Presets are convenience data, not a live carrier database.
-- A firmware that hides the card identifier marks new snapshots as unverified. If an identifier later
-  becomes readable, the app refuses to attach it automatically to those old snapshots; reboot clears
-  core overrides, after which app storage must be cleared before a new session.
-- Some applications may continue to use account, IP or cached region after both layers change.
+- Some applications continue to use account, IP or cached region after both layers change.
+- Firmware that hides the card identifier cannot bind new snapshots to a verified card identity; the UI
+  explains the conservative reset path if identity availability later changes.
+- The app changes local framework test overrides. It does not grant carrier entitlements, paid content or
+  network access.
+
+Use it only on devices and accounts you control, and follow the target service's terms and local law.
+Samsung, Galaxy Store, Samsung Members, TikTok/ByteDance, Google and Shizuku do not sponsor or endorse
+this project.
 
 ## License
 
