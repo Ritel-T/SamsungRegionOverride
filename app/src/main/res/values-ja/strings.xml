@@ -105,15 +105,6 @@
     <string name="wipe_cache_summary">一部の One UI ではキャッシュ消去の結果が返されません。結果はレポートに表示されます。</string>
     <string name="wipe_data_summary">アプリデータを消去します。ログアウトされ、ローカルデータも削除されます。</string>
 
-    <string name="dialog_apply_title">この一時的な偽装を開始しますか？</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">アプリの国/地域 %1$s</string>
-    <string name="dialog_apply_network">SIM 事業者 %1$s</string>
-    <string name="dialog_apply_name">名前：%1$s</string>
-    <string name="dialog_apply_framework">無線接続は実際のネットワークのままですが、Android が報告する通信事業者 ID と設定は変更されます。</string>
-    <string name="dialog_apply_risk_both">SIM 事業者が偽装されている間に「アプリの国/地域」が IMS 再接続を発生させることがあります。通話はすぐに、または後で利用できなくなる可能性があります。対象アプリを使用したら偽装を終了してください。</string>
-    <string name="dialog_apply_risk_network">現在通話できていても、偽の SIM 事業者情報はその後の IMS 再接続時に機能しなくなる可能性があります。対象アプリを使用したら偽装を終了してください。</string>
-    <string name="dialog_apply_risk_country">「アプリの国/地域」は CarrierConfig を更新します。動作はファームウェアによって異なるため、対象アプリを使用したら偽装を終了してください。</string>
     <string name="dialog_restore_without_markers_title">この SIM の記録がありません</string>
     <string name="dialog_restore_without_markers_body">このまま復元すると、現在のレイヤースイッチに従って処理します。「アプリの国/地域」を消去すると、この subId の一時的な CarrierConfig テスト値がすべて削除されます。スナップショットがない場合は、再起動の方が確実にリセットできます。</string>
     <string name="dialog_restore_anyway">このまま復元</string>

@@ -105,15 +105,6 @@
     <string name="wipe_cache_summary">일부 One UI 버전에서는 캐시 삭제 결과가 반환되지 않습니다. 자세한 내용은 보고서에 표시됩니다.</string>
     <string name="wipe_data_summary">앱 데이터를 삭제합니다. 로그아웃되며 로컬 데이터도 제거됩니다.</string>
 
-    <string name="dialog_apply_title">이 임시 위장을 시작할까요?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">앱 국가/지역 %1$s</string>
-    <string name="dialog_apply_network">SIM 통신사 %1$s</string>
-    <string name="dialog_apply_name">이름: %1$s</string>
-    <string name="dialog_apply_framework">무선 연결은 실제 네트워크를 유지하지만 Android가 보고하는 통신사 ID와 설정은 변경됩니다.</string>
-    <string name="dialog_apply_risk_both">SIM 통신사 정보가 위조된 상태에서 앱 국가/지역이 IMS 재연결을 유발할 수 있습니다. 통화가 즉시 또는 나중에 중단될 수 있습니다. 대상 앱 사용 후 위장을 종료하세요.</string>
-    <string name="dialog_apply_risk_network">지금 통화가 되더라도 위조된 SIM 통신사 정보 때문에 이후 IMS 재연결 시 작동하지 않을 수 있습니다. 대상 앱 사용 후 위장을 종료하세요.</string>
-    <string name="dialog_apply_risk_country">앱 국가/지역은 CarrierConfig를 새로 고칩니다. 펌웨어에 따라 동작이 다르므로 대상 앱 사용 후 위장을 종료하세요.</string>
     <string name="dialog_restore_without_markers_title">이 SIM에 저장된 기록이 없습니다</string>
     <string name="dialog_restore_without_markers_body">계속 복원하면 현재 레이어 스위치에 따라 처리합니다. 앱 국가/지역을 지우면 이 subId의 모든 임시 CarrierConfig 테스트 값이 제거됩니다. 스냅샷이 없으면 재부팅이 더 확실한 초기화 방법입니다.</string>
     <string name="dialog_restore_anyway">계속 복원</string>
