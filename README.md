@@ -36,8 +36,8 @@ reversible sessions rather than a permanent identity change.
 - **Easy to undo.** The main action becomes **End & restore** while a disguise is live, and an ongoing
   notification provides **Restore now** from anywhere.
 - **Made for dual SIM.** The data SIM is clearly marked, because that is the SIM region most apps read.
-- **Refresh apps on your terms.** Target apps are never stopped automatically. Force-stop, clear cache
-  or data, and reopen an app only when you choose to.
+- **Refresh target apps in one tap.** Convenient controls restart a target app so it can re-read and
+  apply the selected region; clearing its cache or data remains optional.
 - **Private diagnostics.** A compact report can be copied or shared without exporting raw logcat, SIM
   identifiers or the installed-app list.
 
