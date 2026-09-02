@@ -107,15 +107,6 @@
     <string name="wipe_cache_summary">A limpeza do cache não retorna um resultado em algumas versões da One UI; o relatório informa quais.</string>
     <string name="wipe_data_summary">Apaga os dados do app. Sua conta será desconectada e os dados locais serão removidos.</string>
 
-    <string name="dialog_apply_title">Iniciar este disfarce temporário?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">País dos apps: %1$s</string>
-    <string name="dialog_apply_network">Operadora do chip: %1$s</string>
-    <string name="dialog_apply_name">Nome: %1$s</string>
-    <string name="dialog_apply_framework">O rádio continua na rede real, mas a identidade e a configuração da operadora no Android são alteradas.</string>
-    <string name="dialog_apply_risk_both">País pode provocar uma reconexão do IMS enquanto Rede está falsificada. As chamadas podem parar agora ou depois. Encerre o disfarce após usar os apps de destino.</string>
-    <string name="dialog_apply_risk_network">Rede pode interromper o IMS em qualquer reconexão posterior, mesmo que as chamadas funcionem agora. Encerre o disfarce após usar os apps de destino.</string>
-    <string name="dialog_apply_risk_country">País atualiza o CarrierConfig. O comportamento varia conforme o firmware; encerre o disfarce após usar os apps de destino.</string>
     <string name="dialog_restore_without_markers_title">Nada registrado para este chip</string>
     <string name="dialog_restore_without_markers_body">A restauração ainda usa o estado atual das opções de camada. Limpar o país dos apps remove todos os valores de teste temporários do CarrierConfig neste subId. Sem um instantâneo, reiniciar é a forma mais confiável de redefinir.</string>
     <string name="dialog_restore_anyway">Restaurar mesmo assim</string>

@@ -108,15 +108,6 @@
     <string name="wipe_cache_summary">На некоторых версиях One UI очистка кэша не возвращает результат; это будет указано в отчёте.</string>
     <string name="wipe_data_summary">Удаляет данные приложения. Вы выйдете из учётной записи, а локальные данные будут удалены.</string>
 
-    <string name="dialog_apply_title">Начать эту временную подмену?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">Страна для приложений: %1$s</string>
-    <string name="dialog_apply_network">Оператор SIM: %1$s</string>
-    <string name="dialog_apply_name">Название: %1$s</string>
-    <string name="dialog_apply_framework">Радиомодуль остаётся в реальной сети, но Android меняет идентификатор и конфигурацию оператора.</string>
-    <string name="dialog_apply_risk_both">Страна может вызвать переподключение IMS при подменённой сети. Звонки могут отключиться сразу или позже. Завершите подмену после использования целевых приложений.</string>
-    <string name="dialog_apply_risk_network">Сеть может нарушить IMS при любом последующем переподключении, даже если сейчас звонки работают. Завершите подмену после использования целевых приложений.</string>
-    <string name="dialog_apply_risk_country">Страна обновляет CarrierConfig. Поведение зависит от прошивки; завершите подмену после использования целевых приложений.</string>
     <string name="dialog_restore_without_markers_title">Для этой SIM нет записей</string>
     <string name="dialog_restore_without_markers_body">Восстановление всё равно использует текущее положение переключателей слоёв. Очистка страны для приложений удалит все временные тестовые значения CarrierConfig для этой subId. Без снимка перезагрузка обеспечивает более надёжный сброс.</string>
     <string name="dialog_restore_anyway">Всё равно восстановить</string>

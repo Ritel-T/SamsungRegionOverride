@@ -106,15 +106,6 @@
     <string name="wipe_cache_summary">Bazı One UI sürümlerinde önbellek temizleme sonuç döndürmez; raporda hangileri olduğu belirtilir.</string>
     <string name="wipe_data_summary">Uygulama verilerini siler. Oturumunuz kapanır ve yerel veriler kaldırılır.</string>
 
-    <string name="dialog_apply_title">Bu geçici maskeleme başlatılsın mı?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">Uygulama ülkesi %1$s</string>
-    <string name="dialog_apply_network">SIM operatörü %1$s</string>
-    <string name="dialog_apply_name">Ad: %1$s</string>
-    <string name="dialog_apply_framework">Radyo gerçek ağında kalır ancak Android\'in operatör kimliği ve yapılandırması değişir.</string>
-    <string name="dialog_apply_risk_both">Ağ sahteyken Ülke, IMS yeniden bağlantısını tetikleyebilir. Aramalar hemen veya daha sonra kesilebilir. Hedef uygulamaları kullandıktan sonra maskelemeyi bitirin.</string>
-    <string name="dialog_apply_risk_network">Aramalar şu anda çalışsa bile Ağ, sonraki herhangi bir yeniden bağlantıda IMS\'yi bozabilir. Hedef uygulamaları kullandıktan sonra maskelemeyi bitirin.</string>
-    <string name="dialog_apply_risk_country">Ülke, CarrierConfig\'i yeniler. Davranış ürün yazılımına göre değişir; hedef uygulamaları kullandıktan sonra maskelemeyi bitirin.</string>
     <string name="dialog_restore_without_markers_title">Bu SIM için kayıt yok</string>
     <string name="dialog_restore_without_markers_body">Yine de geri yüklemek, katman anahtarlarını mevcut hâliyle kullanır. Uygulama ülkesini temizlemek, bu subId üzerindeki tüm geçici CarrierConfig test değerlerini kaldırır. Anlık görüntü yoksa yeniden başlatma daha güvenilir bir sıfırlamadır.</string>
     <string name="dialog_restore_anyway">Yine de geri yükle</string>
