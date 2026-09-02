@@ -21,11 +21,17 @@ From a clean tag candidate, run:
 Before publishing:
 
 1. Confirm `versionName` matches the proposed `vX.Y.Z` tag and `versionCode` increased.
-2. Verify the release APK with the newest installed `apksigner` and record its certificate SHA-256.
-3. Install that exact signed APK on the reference device and cold-launch it.
-4. Confirm the real SIM numeric/country and IMS registration are unchanged by installation.
-5. Publish the renamed APK plus its SHA-256 file from the exact tagged commit.
-6. Read the GitHub Release back and compare its tag, target commit, assets, sizes and digests.
+2. Confirm the APK application id with `apkanalyzer manifest application-id`; version 4 and later use
+   `com.ritelt.regionoverride`.
+3. Verify the release APK with the newest installed `apksigner` and record its certificate SHA-256.
+4. Install that exact signed APK on the reference device and cold-launch it.
+5. Confirm the real SIM numeric/country and IMS registration are unchanged by installation.
+6. Publish the renamed APK plus its SHA-256 file from the exact tagged commit.
+7. Read the GitHub Release back and compare its tag, target commit, assets, sizes and digests.
+
+Version 4 changed the application id from `com.riteldevelopment.carriertestoverride` to
+`com.ritelt.regionoverride`, so Android treats it as a separate app. Restore every version 3 disguise
+before uninstalling version 3; its snapshots and Shizuku grant do not migrate to version 4.
 
 The release key is the permanent Android update identity. Keep an encrypted offline backup; losing it
 means existing release installations cannot be upgraded under the same package name.

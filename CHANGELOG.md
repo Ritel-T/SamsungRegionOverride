@@ -1,12 +1,21 @@
 # Changelog
 
-## Unreleased
+## 4.0.0 - 2026-09-03
 
-- Refined the Compose screen with a fixed top bar, compact Shizuku status, country-first SIM details,
-  full-card disclosure ripples and an always-visible action bar.
+- Redesigned the Compose interface with Material 3 Expressive, adaptive wide-screen layouts, compact
+  Shizuku status, country-first SIM details, full-card disclosure ripples and an always-visible action bar.
 - Made target-app stopping an explicit manual action instead of part of apply/restore, and kept operation
   details behind a compact result-card disclosure.
 - Added a privacy-safe `SRO-DIAGNOSTIC/1` summary that users can copy, share or attach to a GitHub issue.
+- Added expressive press feedback across grouped and standalone actions, including a complete quick-tap
+  expand-and-return cycle before the action runs, and animated Copy into a confirmation check.
+- Restored the most recently applied preset when the app starts again.
+- Started valid disguises directly instead of asking for a second confirmation.
+- Stabilized Country apply and restore on Android 17 by letting the platform `am` command own the
+  instrumentation watcher and by waiting for One UI 9's UiAutomation connection before finishing.
+- Changed the Android application id to `com.ritelt.regionoverride`. Version 4 installs beside version
+  3 rather than updating it in place, so any version 3 disguise must be restored before migration.
+- Rewrote the user guide around the everyday workflow and replaced the legacy interface media.
 
 ## 3.8.0 - 2026-08-23
 
