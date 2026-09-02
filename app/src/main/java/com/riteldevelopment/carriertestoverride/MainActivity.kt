@@ -115,8 +115,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         /** Set on the pending intent behind the notification's Restore action. */
-        const val ACTION_RESTORE = "com.riteldevelopment.carriertestoverride.action.RESTORE"
+        const val ACTION_RESTORE = "com.ritelt.regionoverride.action.RESTORE"
 
-        const val EXTRA_SUB_ID = "com.riteldevelopment.carriertestoverride.extra.SUB_ID"
+        const val EXTRA_SUB_ID = "com.ritelt.regionoverride.extra.SUB_ID"
     }
 }

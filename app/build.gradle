@@ -23,14 +23,14 @@ android {
     compileSdkMinor = 1
 
     defaultConfig {
-        applicationId = "com.riteldevelopment.carriertestoverride"
+        applicationId = "com.ritelt.regionoverride"
         minSdk = 29
         // Opts into the API 37 runtime behaviour changes. Worth re-checking on the reference device
         // after any SDK bump: this app leans on reflected telephony internals and a Shizuku user
         // service, and both are exactly the sort of thing a platform release tightens.
         targetSdk = 37
-        versionCode = 12
-        versionName = "3.8.0"
+        versionCode = 13
+        versionName = "4.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Keep AGP's generated per-app language list to translations this project actually ships;
         // locale resources bundled inside dependencies must not appear as partially translated UI.
