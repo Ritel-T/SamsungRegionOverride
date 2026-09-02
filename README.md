@@ -6,9 +6,9 @@
 Galaxy Store, Samsung Members, TikTok and other region-sensitive apps. No spare SIM and no Wi-Fi
 handoff are needed once Shizuku is running. Restore the real region with one tap when you are done.**
 
-On the tested Galaxy, mobile data remained available throughout apply and restore. The SIM operator
-layer can still affect IMS calling or messaging after a reconnect, so this is designed for short,
-reversible sessions rather than a permanent identity change.
+On the tested Galaxy, mobile data remained available throughout apply and restore. The SIM operator layer
+can still affect calling or messaging if IMS reconnects later, so short sessions followed by a prompt
+restore are recommended.
 
 [Download the latest signed APK](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest)
 
@@ -67,8 +67,8 @@ away without crowding the main workflow.
    **Stop & open** for that app.
 7. When finished, return to the app or notification and tap **End & restore**.
 
-Turning a layer switch off only excludes it from the next apply. It does not remove a layer that is
-already live; use Restore for that. A reboot is the definitive reset for the core transient overrides.
+Turning a layer switch off only affects the next apply; it does not clear the current override. Once a
+layer is live, tap the Restore button to clear it.
 
 ## Which layer should I use?
 
@@ -76,12 +76,11 @@ already live; use Restore for that. A reboot is the definitive reset for the cor
 |---|---|---|---|
 | **App country** | TikTok and apps that read the SIM country ISO | CarrierConfig country ISO; optionally the displayed carrier name | Reloading CarrierConfig can trigger an IMS reconnect if a fake SIM operator is already live |
 | **SIM operator** | Galaxy Store, Samsung Members and Samsung apps that read MCC/MNC | MCC/MNC, test IMSI, SPN and PNN | A future IMS reconnect may try to register as the fake carrier and interrupt calls or IMS messaging |
-| **Both** | Apps that compare both signals | App country first, then SIM operator | Best signal coverage, but it does not remove the SIM operator layer's IMS risk |
+| **Both** | Apps that compare both signals | App country first, then SIM operator | Broader signal coverage; restore the SIM operator layer when you finish |
 
-Start with the narrower layer. App country alone is normally the first choice for TikTok-style country
-checks; SIM operator is the relevant signal for Galaxy Store and other Samsung carrier checks. Account
-country, IP address, CSC, GPS, app version, server-side experiments and cached data can still override
-either signal.
+Start with the narrower layer. App country is a useful first choice for TikTok-style country checks;
+Galaxy Store and other Samsung carrier checks normally use SIM operator. Account country, IP address,
+CSC, GPS, app version, server-side experiments and cached data can also take part, so results vary by app.
 
 ## Restore from anywhere
 
@@ -99,16 +98,16 @@ outside the app.
        alt="Samsung Region Override notification over Android Settings, showing a South Korea SKT disguise, the real China Unicom identity and a Restore now button.">
 </p>
 
-Notification permission is optional. Refusing it does not block apply or restore; it removes the live
-status indicator, reminder and shortcut.
+Notification permission is optional. Apply and Restore still work without it; the live status indicator,
+reminder and shortcut simply remain hidden.
 
 ## Requirements and tested scope
 
 - Android 10 (API 29) or newer.
 - Shizuku 13+ running as shell or root and authorized for this app. Root is not required.
-- A valid subscription; the SIM operator layer additionally requires the SIM to be `READY`.
-- Recent Samsung firmware is the supported focus. Other Samsung and non-Samsung implementations are
-  experimental compatibility targets.
+- An active SIM or eSIM; the selected SIM must be `READY` when using the SIM operator layer.
+- Recent Samsung firmware is the supported focus. Other Samsung and non-Samsung implementations have not
+  been tested as thoroughly.
 
 Development and hands-on testing currently center on a Galaxy S25 Ultra (SM-S938B), including Android 16 /
 One UI 8.5 and Android 17 / One UI 9 Beta. Other devices and carrier combinations can behave differently.
@@ -123,10 +122,10 @@ The editable default list contains:
 | `com.samsung.android.voc` | Samsung Members |
 | `com.zhiliaoapp.musically` | TikTok |
 
-Applying or restoring never stops these apps automatically. **Keep** preserves all storage, **Cache**
-requests a cache-only clear, and **Data** removes the app's complete local data after the selected app is
-stopped. Data clearing signs the user out and can delete downloads, drafts and settings. Cache-only clear
-is reported honestly when the firmware times out or does not support it.
+With **Open it afterwards** enabled, the shortcut in each card stops and reopens that target app in one
+tap. **Keep** preserves storage, **Cache** requests a cache clear, and **Data** removes all local app data.
+Clearing data signs you out and can delete downloads, drafts and settings. If cache clearing is
+unsupported or times out, the result card shows what actually happened.
 
 ## Calls, IMS and recovery
 
@@ -141,17 +140,17 @@ The reproduced failure on the reference phone was:
 3. registration against that mismatched domain was rejected;
 4. restoring the real identity before a controlled UICC cycle recovered IMS.
 
-The app therefore applies App country before SIM operator, restores SIM operator before App country,
-never cycles UICC while a fake operator may remain, restores the captured display name, and reports an
-unconfirmed IMS recovery as a warning rather than success. The post-apply IMS sample describes the
-current moment; it cannot promise that a later reconnect will stay healthy.
+The app therefore applies App country before SIM operator and restores SIM operator before App country.
+It cycles UICC only after the real operator is confirmed, then restores the captured display name and
+flags an IMS state that is not yet confirmed. The post-apply IMS sample describes the current moment;
+later reconnects can still behave differently.
 
 See [IMS failure investigation](docs/ims-investigation.md) for the reproduced sequences and framework
 references.
 
 ## How it works
 
-The implementation keeps recovery possible even when a privileged call is interrupted:
+The implementation is designed to leave a reliable restore path for every change:
 
 - **SIM operator:** resolves Samsung's runtime `ITelephony.setCarrierTestOverride` signature and invokes
   it through a Shizuku UserService running with shell identity. No Binder transaction number is fixed in
@@ -162,14 +161,15 @@ The implementation keeps recovery possible even when a privileged call is interr
 - **Ordering:** when both layers are selected, Country completes its reload before Network is written.
   Restore reverses that order so the real operator is back before any country reload can reconnect IMS.
 - **Recovery state:** real MCC/MNC, operator name, country ISO and subscription display name are captured
-  before the first write. A synchronous pending journal records a write before it crosses Binder.
+  before the first write. A synchronous pending journal lets the app resume recovery after an interrupted
+  process.
 - **SIM safety:** snapshots are bound to a one-way card fingerprint when the firmware exposes one. The
   raw ICCID never leaves the shell service, and a reused subscription id cannot silently restore another
   card's values.
 
 Compose runs in a separate `:ui` process while a minimal default-process service keeps the Android 17
 instrumentation target alive. CarrierConfig reload waits are bounded; partial results preserve enough
-state to offer Restore instead of pretending nothing changed.
+state to keep Restore available and explain what completed.
 
 ## Diagnostics and privacy
 
