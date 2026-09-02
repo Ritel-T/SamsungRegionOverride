@@ -17,6 +17,8 @@ import android.telephony.SubscriptionManager;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +42,9 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
     static final String ACTION_CLEAR_TRANSIENT = "clear_transient";
     static final String ACTION_CLEAR_ALL = "clear_all";
 
+    static final String RESULT_MESSAGE_BASE64 = "sro_message_b64";
+    static final String RESULT_ERROR_BASE64 = "sro_error_b64";
+
     /** Bounds the reload wait so a device that never broadcasts still finishes the operation. */
     private static final long SETTLE_CEILING_MILLIS = 6000L;
 
@@ -61,11 +66,7 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         int resultCode = Activity.RESULT_CANCELED;
         UiAutomation automation = null;
         try {
-            // This instrumentation only needs shell permission adoption, not a view hierarchy. Keeping
-            // accessibility disabled avoids Android 17's asynchronous CONNECTING state; Instrumentation
-            // calls UiAutomation.disconnect() from finish(), and disconnecting that half-open connection
-            // throws on the beta build. The flag is available from API 31; older releases keep the old
-            // connection mode, which is the only mode those platform versions expose reliably.
+            // Permission adoption does not require accessibility or view-hierarchy access.
             int automationFlags = automationFlagsForSdk(Build.VERSION.SDK_INT);
             automation = getUiAutomation(automationFlags);
             if (automation == null) {
@@ -79,7 +80,7 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             if (ACTION_PROBE.equals(action)) {
                 result.putString("message", inspectRuntime());
             } else {
-                int subId = arguments.getInt(ARG_SUB_ID, -1);
+                int subId = intArgument(arguments.get(ARG_SUB_ID), -1);
                 if (subId < 0) {
                     throw new IllegalArgumentException("Invalid subId: " + subId);
                 }
@@ -127,6 +128,7 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             result.putString("error", throwable.getClass().getName()
                     + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage()));
         } finally {
+            encodeResultForCommandHost(result);
             if (automation != null) {
                 try {
                     automation.dropShellPermissionIdentity();
@@ -140,9 +142,31 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
 
     @SuppressLint("InlinedApi")
     static int automationFlagsForSdk(int sdkInt) {
+        // Android 17 / One UI 9 can return from FLAG_DONT_USE_ACCESSIBILITY while UiAutomation is
+        // still CONNECTING. A fast instrumentation then reaches finish(), whose unconditional
+        // disconnect throws "Cannot call disconnect() while connecting" after the CarrierConfig
+        // write has already run. Keeping existing accessibility services active forces the normal
+        // connection handshake to complete before getUiAutomation() returns, so finish is safe.
+        if (sdkInt >= 37) {
+            return UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES;
+        }
         return sdkInt >= Build.VERSION_CODES.S
                 ? UiAutomation.FLAG_DONT_USE_ACCESSIBILITY
                 : UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES;
+    }
+
+    private static void encodeResultForCommandHost(Bundle result) {
+        encodeResultValue(result, "message", RESULT_MESSAGE_BASE64);
+        encodeResultValue(result, "error", RESULT_ERROR_BASE64);
+    }
+
+    private static void encodeResultValue(Bundle result, String sourceKey, String encodedKey) {
+        String value = result.getString(sourceKey);
+        if (value == null) {
+            return;
+        }
+        result.putString(encodedKey, Base64.getEncoder().encodeToString(
+                value.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static PersistableBundle buildOverrideBundle(Bundle arguments) {
@@ -153,7 +177,7 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
         }
         PersistableBundle values = new PersistableBundle();
         values.putString(KEY_COUNTRY_ISO, iso);
-        if (arguments.getBoolean(ARG_OVERRIDE_NAME, true)) {
+        if (booleanArgument(arguments.get(ARG_OVERRIDE_NAME), true)) {
             String carrierName = arguments.getString(ARG_CARRIER_NAME, "").trim();
             if (carrierName.isEmpty()) {
                 throw new IllegalArgumentException(
@@ -169,6 +193,36 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             values.putBoolean(KEY_OVERRIDE_NAME, false);
         }
         return values;
+    }
+
+    static int intArgument(Object value, int fallback) {
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    static boolean booleanArgument(Object value, boolean fallback) {
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        if (value instanceof String) {
+            String normalized = ((String) value).trim();
+            if ("true".equalsIgnoreCase(normalized)) {
+                return true;
+            }
+            if ("false".equalsIgnoreCase(normalized)) {
+                return false;
+            }
+        }
+        return fallback;
     }
 
     private String restoreCountryCacheIfAvailable(CarrierConfigManager manager, int subId,
