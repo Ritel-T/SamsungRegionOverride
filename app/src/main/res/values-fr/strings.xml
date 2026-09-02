@@ -107,15 +107,6 @@
     <string name="wipe_cache_summary">L’effacement du cache ne renvoie rien sur certaines versions de One UI ; le rapport indique lesquelles.</string>
     <string name="wipe_data_summary">Efface les données de l’application. Vous serez déconnecté et les données locales seront supprimées.</string>
 
-    <string name="dialog_apply_title">Démarrer ce déguisement temporaire ?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">Pays des applications : %1$s</string>
-    <string name="dialog_apply_network">Opérateur SIM : %1$s</string>
-    <string name="dialog_apply_name">Nom : %1$s</string>
-    <string name="dialog_apply_framework">La radio reste connectée à son réseau réel, mais l’identité et la configuration de l’opérateur Android changent.</string>
-    <string name="dialog_apply_risk_both">Pays peut déclencher une reconnexion IMS alors que Réseau est falsifié. Les appels peuvent s’interrompre maintenant ou plus tard. Mettez fin au déguisement après avoir utilisé les applications cibles.</string>
-    <string name="dialog_apply_risk_network">Réseau peut interrompre IMS lors de toute reconnexion ultérieure, même si les appels fonctionnent maintenant. Mettez fin au déguisement après avoir utilisé les applications cibles.</string>
-    <string name="dialog_apply_risk_country">Pays actualise CarrierConfig. Le comportement varie selon le firmware ; mettez fin au déguisement après avoir utilisé les applications cibles.</string>
     <string name="dialog_restore_without_markers_title">Aucun enregistrement pour cette SIM</string>
     <string name="dialog_restore_without_markers_body">La restauration utilise tout de même l’état actuel des interrupteurs de couche. Effacer le pays des applications supprime toutes les valeurs de test CarrierConfig temporaires de ce subId. En l’absence de sauvegarde, le redémarrage est la réinitialisation la plus fiable.</string>
     <string name="dialog_restore_anyway">Restaurer quand même</string>

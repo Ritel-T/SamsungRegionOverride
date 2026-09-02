@@ -106,15 +106,6 @@
     <string name="wipe_cache_summary">Das Leeren des Cache liefert bei manchen One UI-Versionen kein Ergebnis; der Bericht zeigt dies an.</string>
     <string name="wipe_data_summary">Löscht die App-Daten. Sie werden abgemeldet und lokale Daten werden entfernt.</string>
 
-    <string name="dialog_apply_title">Diese vorübergehende Tarnung starten?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">App-Land %1$s</string>
-    <string name="dialog_apply_network">SIM-Anbieter %1$s</string>
-    <string name="dialog_apply_name">Name: %1$s</string>
-    <string name="dialog_apply_framework">Das Funkmodul bleibt im echten Netz, aber Androids Anbieteridentität und -konfiguration ändern sich.</string>
-    <string name="dialog_apply_risk_both">Das Land kann eine IMS-Neuverbindung auslösen, während das Netzwerk gefälscht ist. Anrufe können sofort oder später ausfallen. Beenden Sie die Tarnung nach Nutzung der Ziel-Apps.</string>
-    <string name="dialog_apply_risk_network">Das Netzwerk kann IMS bei jeder späteren Neuverbindung stören, selbst wenn Anrufe jetzt funktionieren. Beenden Sie die Tarnung nach Nutzung der Ziel-Apps.</string>
-    <string name="dialog_apply_risk_country">Das Land aktualisiert CarrierConfig. Das Verhalten hängt von der Firmware ab; beenden Sie die Tarnung nach Nutzung der Ziel-Apps.</string>
     <string name="dialog_restore_without_markers_title">Für diese SIM ist nichts erfasst</string>
     <string name="dialog_restore_without_markers_body">Bei einer Wiederherstellung werden die Ebenenschalter in ihrer aktuellen Stellung verwendet. Durch Löschen des App-Lands werden alle vorübergehenden CarrierConfig-Testwerte dieser subId entfernt. Ohne Momentaufnahme ist ein Neustart die zuverlässigere Rücksetzung.</string>
     <string name="dialog_restore_anyway">Trotzdem wiederherstellen</string>

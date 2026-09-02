@@ -107,15 +107,6 @@
     <string name="wipe_cache_summary">Borrar la caché no devuelve ningún resultado en algunas versiones de One UI; el informe indica cuáles.</string>
     <string name="wipe_data_summary">Borra los datos de la aplicación. Se cerrará tu sesión y se eliminarán los datos locales.</string>
 
-    <string name="dialog_apply_title">¿Iniciar este disfraz temporal?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">País de las aplicaciones: %1$s</string>
-    <string name="dialog_apply_network">Operador de la SIM: %1$s</string>
-    <string name="dialog_apply_name">Nombre: %1$s</string>
-    <string name="dialog_apply_framework">La radio permanece en su red real, pero cambian la identidad y la configuración del operador en Android.</string>
-    <string name="dialog_apply_risk_both">País puede iniciar una reconexión de IMS mientras Red está falseada. Las llamadas pueden interrumpirse ahora o más tarde. Finaliza el disfraz después de usar las aplicaciones de destino.</string>
-    <string name="dialog_apply_risk_network">Red puede interrumpir IMS en cualquier reconexión posterior, aunque las llamadas funcionen ahora. Finaliza el disfraz después de usar las aplicaciones de destino.</string>
-    <string name="dialog_apply_risk_country">País actualiza CarrierConfig. El comportamiento varía según el firmware; finaliza el disfraz después de usar las aplicaciones de destino.</string>
     <string name="dialog_restore_without_markers_title">No hay nada registrado para esta SIM</string>
     <string name="dialog_restore_without_markers_body">La restauración usará igualmente el estado actual de los interruptores de capa. Borrar el país de las aplicaciones elimina todos los valores de prueba temporales de CarrierConfig en este subId. Sin una instantánea, reiniciar es la forma más fiable de restablecerlo.</string>
     <string name="dialog_restore_anyway">Restaurar de todos modos</string>
