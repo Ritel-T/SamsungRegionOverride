@@ -1,9 +1,14 @@
 package com.riteldevelopment.carriertestoverride.ui.theme
 
+import android.content.Context
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -15,9 +20,10 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /*
@@ -60,15 +66,27 @@ private val LightScheme = lightColorScheme(
     onPrimary = Color.White,
     primaryContainer = Petrol90,
     onPrimaryContainer = Petrol10,
+    primaryFixed = Petrol90,
+    primaryFixedDim = Petrol80,
+    onPrimaryFixed = Petrol10,
+    onPrimaryFixedVariant = Petrol30,
     secondary = Slate40,
     onSecondary = Color.White,
     secondaryContainer = Slate90,
     onSecondaryContainer = Color(0xFF051F24),
+    secondaryFixed = Slate90,
+    secondaryFixedDim = Slate80,
+    onSecondaryFixed = Slate10,
+    onSecondaryFixedVariant = Slate30,
     // Tertiary is reserved for the PARTIAL outcome — one layer landed, the other did not.
     tertiary = Amber40,
     onTertiary = Color.White,
     tertiaryContainer = Amber90,
     onTertiaryContainer = Amber20,
+    tertiaryFixed = Amber90,
+    tertiaryFixedDim = Amber80,
+    onTertiaryFixed = Amber20,
+    onTertiaryFixedVariant = Amber30,
     error = Crimson40,
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD5),
@@ -86,6 +104,8 @@ private val LightScheme = lightColorScheme(
     surfaceContainer = Color(0xFFE7ECEC),
     surfaceContainerHigh = Color(0xFFE2E6E7),
     surfaceContainerHighest = Color(0xFFDCE1E1),
+    surfaceBright = Color(0xFFF9FCFC),
+    surfaceDim = Color(0xFFD3D8D8),
 )
 
 private val DarkScheme = darkColorScheme(
@@ -93,14 +113,26 @@ private val DarkScheme = darkColorScheme(
     onPrimary = Petrol10,
     primaryContainer = Petrol30,
     onPrimaryContainer = Petrol90,
+    primaryFixed = Petrol90,
+    primaryFixedDim = Petrol80,
+    onPrimaryFixed = Petrol10,
+    onPrimaryFixedVariant = Petrol30,
     secondary = Slate80,
     onSecondary = Slate20,
     secondaryContainer = Slate30,
     onSecondaryContainer = Slate90,
+    secondaryFixed = Slate90,
+    secondaryFixedDim = Slate80,
+    onSecondaryFixed = Slate10,
+    onSecondaryFixedVariant = Slate30,
     tertiary = Amber80,
     onTertiary = Amber20,
     tertiaryContainer = Amber30,
     onTertiaryContainer = Amber90,
+    tertiaryFixed = Amber90,
+    tertiaryFixedDim = Amber80,
+    onTertiaryFixed = Amber20,
+    onTertiaryFixedVariant = Amber30,
     error = Crimson80,
     onError = Color(0xFF601410),
     errorContainer = Color(0xFF8C1D18),
@@ -118,6 +150,8 @@ private val DarkScheme = darkColorScheme(
     surfaceContainer = Color(0xFF1B2122),
     surfaceContainerHigh = Color(0xFF252B2C),
     surfaceContainerHighest = Color(0xFF303637),
+    surfaceBright = Color(0xFF343A3B),
+    surfaceDim = Color(0xFF0E1415),
 )
 
 /**
@@ -159,7 +193,32 @@ val LocalOverrideColors: ProvidableCompositionLocal<OverrideColors> =
  * The Material 3 defaults are kept as-is. No custom font is shipped: the system face and its locale
  * fallback cover every translated UI, and keep this tool visually consistent with the rest of the phone.
  */
-internal val OverrideTypography = Typography()
+internal val OverrideTypography = Typography().run {
+    // A very small positive tracking keeps the prominent headings open on Samsung's dense display
+    // rasterizer. Body copy, labels and tabular codes retain Material's native spacing.
+    copy(
+        headlineSmall = headlineSmall.copy(letterSpacing = 0.1.sp),
+        titleLarge = titleLarge.copy(letterSpacing = 0.12.sp),
+        titleMedium = titleMedium.copy(letterSpacing = 0.2.sp),
+        titleSmall = titleSmall.copy(letterSpacing = 0.15.sp),
+    )
+}
+
+/**
+ * The expressive shape scale.
+ *
+ * Material 3 Expressive treats corner radius as a carrier of hierarchy rather than a constant, so the
+ * steps are spread further apart than the classic scale: small chrome stays tight, and the surfaces a
+ * finger actually lands on — cards, sheets, the action bar — get noticeably rounder. The jump from
+ * `medium` to `large` is where most of this screen's blocks sit, so that is where the difference reads.
+ */
+private val ExpressiveShapes = Shapes(
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(36.dp),
+)
 
 /**
  * Lining, fixed-width digits. MCC/MNC values are compared digit by digit (46000 vs 23430), so the
@@ -168,9 +227,152 @@ internal val OverrideTypography = Typography()
  */
 val TabularFigures: TextStyle = TextStyle(
     fontFeatureSettings = "tnum, lnum",
-    fontWeight = FontWeight.Medium,
-    letterSpacing = 0.5.sp,
+    letterSpacing = 0.sp,
 )
+
+/**
+ * A dynamic scheme built from the platform's *tonal palette* resources.
+ *
+ * Not [dynamicLightColorScheme] / [dynamicDarkColorScheme], and the difference is not cosmetic. Android
+ * exposes the system palette twice: the original `system_accentN_*` / `system_neutralN_*` tone ramps
+ * from API 31, and a second, role-named set — `system_primary_light`, `system_surface_dark` and so on —
+ * added in API 34. Compose's dynamic schemes read the role-named set.
+ *
+ * On the One UI build this was tested against, only the tone ramps follow the user's chosen palette. The
+ * role-named colours sit at their AOSP defaults forever, so Compose's own helpers return a stock blue no
+ * matter what the phone's colour settings say — the palette appeared to be ignored because the app was
+ * reading a channel the vendor never writes to. Measured on SM-S938B: `system_accent1_600` was #744F8E
+ * while `dynamicLightColorScheme().primary` was #38608F.
+ *
+ * This is deliberately a Samsung fallback, not the default for every Android device. Other vendors'
+ * role resources carry system contrast choices that a fixed tone mapping cannot reproduce, so they use
+ * Compose's official dynamic scheme below. Samsung is the exception because the tested One UI build
+ * leaves those role resources at stock blue while updating the tone ramps correctly.
+ *
+ * Suffixes are inverse tones — `_0` is white, `_1000` black, so `_600` is tone 40 and `_100` is tone 90.
+ */
+@RequiresApi(Build.VERSION_CODES.S)
+private fun tonalPaletteScheme(context: Context, dark: Boolean): ColorScheme {
+    fun c(id: Int) = Color(context.resources.getColor(id, context.theme))
+
+    // The neutral ramp in tone order. Every published stop is listed, not only the ones the roles below
+    // happen to bracket: an omitted stop does not fail, it silently widens the blend that spans it.
+    val neutrals = listOf(
+        0 to android.R.color.system_neutral1_1000,
+        10 to android.R.color.system_neutral1_900,
+        20 to android.R.color.system_neutral1_800,
+        30 to android.R.color.system_neutral1_700,
+        40 to android.R.color.system_neutral1_600,
+        50 to android.R.color.system_neutral1_500,
+        60 to android.R.color.system_neutral1_400,
+        70 to android.R.color.system_neutral1_300,
+        80 to android.R.color.system_neutral1_200,
+        90 to android.R.color.system_neutral1_100,
+        95 to android.R.color.system_neutral1_50,
+        99 to android.R.color.system_neutral1_10,
+        100 to android.R.color.system_neutral1_0,
+    )
+
+    /*
+     * A neutral at an arbitrary tone, blended from the two ramp stops that bracket it.
+     *
+     * The ramp is quantised to ten-tone steps; Material's surface roles are not. The dark scheme alone
+     * puts them at tones 4, 6, 10, 12, 17, 22 and 24, and rounding each to its nearest stop lands five
+     * of them — background, surface, surfaceDim, surfaceContainerLow and surfaceContainer — on the same
+     * single colour. That is not a lost nuance. This screen stacks those roles: the page is `surface`,
+     * the layer blocks and the identity card are `surfaceContainerLow`, the target-apps panel is
+     * `surfaceContainer`. Collapsed, every one of those blocks loses its edge and the screen reads as
+     * unstructured text on a flat ground. Blending the neighbouring stops gives the ladder back.
+     *
+     * Compose's Color lerp runs in Oklab, so the midpoints are perceptually spaced rather than spaced
+     * in sRGB, which is what a tonal palette means by "tone" in the first place.
+     */
+    fun surfaceAt(tone: Int): Color {
+        val lower = neutrals.last { it.first <= tone }
+        val upper = neutrals.first { it.first >= tone }
+        if (lower.first == upper.first) return c(lower.second)
+        val fraction = (tone - lower.first).toFloat() / (upper.first - lower.first)
+        return lerp(c(lower.second), c(upper.second), fraction)
+    }
+
+    return if (dark) {
+        darkColorScheme(
+            primary = c(android.R.color.system_accent1_200),
+            onPrimary = c(android.R.color.system_accent1_800),
+            primaryContainer = c(android.R.color.system_accent1_600),
+            onPrimaryContainer = c(android.R.color.system_accent1_100),
+            secondary = c(android.R.color.system_accent2_200),
+            onSecondary = c(android.R.color.system_accent2_800),
+            secondaryContainer = c(android.R.color.system_accent2_700),
+            onSecondaryContainer = c(android.R.color.system_accent2_100),
+            background = surfaceAt(6),
+            onBackground = c(android.R.color.system_neutral1_100),
+            surface = surfaceAt(6),
+            onSurface = c(android.R.color.system_neutral1_100),
+            surfaceVariant = c(android.R.color.system_neutral2_700),
+            onSurfaceVariant = c(android.R.color.system_neutral2_200),
+            outline = c(android.R.color.system_neutral2_400),
+            outlineVariant = c(android.R.color.system_neutral2_700),
+            inverseSurface = c(android.R.color.system_neutral1_100),
+            inverseOnSurface = c(android.R.color.system_neutral1_800),
+            inversePrimary = c(android.R.color.system_accent1_600),
+            surfaceTint = c(android.R.color.system_accent1_200),
+            surfaceContainerLowest = surfaceAt(4),
+            surfaceContainerLow = surfaceAt(10),
+            surfaceContainer = surfaceAt(12),
+            surfaceContainerHigh = surfaceAt(17),
+            surfaceContainerHighest = surfaceAt(22),
+            surfaceBright = surfaceAt(24),
+            surfaceDim = surfaceAt(6),
+            primaryFixed = c(android.R.color.system_accent1_100),
+            primaryFixedDim = c(android.R.color.system_accent1_200),
+            onPrimaryFixed = c(android.R.color.system_accent1_900),
+            onPrimaryFixedVariant = c(android.R.color.system_accent1_700),
+            secondaryFixed = c(android.R.color.system_accent2_100),
+            secondaryFixedDim = c(android.R.color.system_accent2_200),
+            onSecondaryFixed = c(android.R.color.system_accent2_900),
+            onSecondaryFixedVariant = c(android.R.color.system_accent2_700),
+        )
+    } else {
+        lightColorScheme(
+            primary = c(android.R.color.system_accent1_600),
+            onPrimary = c(android.R.color.system_accent1_0),
+            primaryContainer = c(android.R.color.system_accent1_100),
+            onPrimaryContainer = c(android.R.color.system_accent1_900),
+            secondary = c(android.R.color.system_accent2_600),
+            onSecondary = c(android.R.color.system_accent2_0),
+            secondaryContainer = c(android.R.color.system_accent2_100),
+            onSecondaryContainer = c(android.R.color.system_accent2_900),
+            background = surfaceAt(98),
+            onBackground = c(android.R.color.system_neutral1_900),
+            surface = surfaceAt(98),
+            onSurface = c(android.R.color.system_neutral1_900),
+            surfaceVariant = c(android.R.color.system_neutral2_100),
+            onSurfaceVariant = c(android.R.color.system_neutral2_700),
+            outline = c(android.R.color.system_neutral2_500),
+            outlineVariant = c(android.R.color.system_neutral2_200),
+            inverseSurface = c(android.R.color.system_neutral1_800),
+            inverseOnSurface = c(android.R.color.system_neutral1_50),
+            inversePrimary = c(android.R.color.system_accent1_200),
+            surfaceTint = c(android.R.color.system_accent1_600),
+            surfaceContainerLowest = surfaceAt(100),
+            surfaceContainerLow = surfaceAt(96),
+            surfaceContainer = surfaceAt(94),
+            surfaceContainerHigh = surfaceAt(92),
+            surfaceContainerHighest = surfaceAt(90),
+            surfaceBright = surfaceAt(98),
+            surfaceDim = surfaceAt(87),
+            primaryFixed = c(android.R.color.system_accent1_100),
+            primaryFixedDim = c(android.R.color.system_accent1_200),
+            onPrimaryFixed = c(android.R.color.system_accent1_900),
+            onPrimaryFixedVariant = c(android.R.color.system_accent1_700),
+            secondaryFixed = c(android.R.color.system_accent2_100),
+            secondaryFixedDim = c(android.R.color.system_accent2_200),
+            onSecondaryFixed = c(android.R.color.system_accent2_900),
+            onSecondaryFixedVariant = c(android.R.color.system_accent2_700),
+        )
+    }
+}
 
 /**
  * Puts the authored outcome hues back over a dynamic scheme.
@@ -180,14 +382,21 @@ val TabularFigures: TextStyle = TextStyle(
  * same wallpaper source as primary. Left alone, PARTIAL and success would arrive as neighbouring hues
  * and stop being distinguishable at a glance, which is the one thing that result exists to say.
  *
- * Error needs no such treatment; a dynamic scheme already holds it at red. Success and the hazard
- * stripe live in [OverrideColors], outside Material's slots, so nothing overwrites them either.
+ * The fixed roles matter to Expressive components as well, so they are kept in the same semantic family
+ * instead of falling back to Material's stock purple. Error needs no such treatment on either path:
+ * Compose's dynamic schemes hold it at red, and [tonalPaletteScheme] never assigns it, so it keeps the
+ * red baked into [darkColorScheme] and [lightColorScheme]. Success and the hazard stripe live in
+ * [OverrideColors], outside Material's slots, so nothing overwrites them either.
  */
 private fun ColorScheme.withAuthoredOutcomes(authored: ColorScheme): ColorScheme = copy(
     tertiary = authored.tertiary,
     onTertiary = authored.onTertiary,
     tertiaryContainer = authored.tertiaryContainer,
     onTertiaryContainer = authored.onTertiaryContainer,
+    tertiaryFixed = authored.tertiaryFixed,
+    tertiaryFixedDim = authored.tertiaryFixedDim,
+    onTertiaryFixed = authored.onTertiaryFixed,
+    onTertiaryFixedVariant = authored.onTertiaryFixedVariant,
 )
 
 @Composable
@@ -199,15 +408,12 @@ fun CarrierOverrideTheme(
 ) {
     val context = LocalContext.current
     val authored = if (darkTheme) DarkScheme else LightScheme
-    val scheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val dynamic = if (darkTheme) {
-            dynamicDarkColorScheme(context)
-        } else {
-            dynamicLightColorScheme(context)
-        }
-        dynamic.withAuthoredOutcomes(authored)
-    } else {
-        authored
+    val scheme = when {
+        !dynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> authored
+        Build.MANUFACTURER.equals("samsung", ignoreCase = true) ->
+            tonalPaletteScheme(context, darkTheme).withAuthoredOutcomes(authored)
+        darkTheme -> dynamicDarkColorScheme(context).withAuthoredOutcomes(authored)
+        else -> dynamicLightColorScheme(context).withAuthoredOutcomes(authored)
     }
 
     CompositionLocalProvider(
@@ -215,6 +421,8 @@ fun CarrierOverrideTheme(
     ) {
         MaterialTheme(
             colorScheme = scheme,
+            motionScheme = MotionScheme.expressive(),
+            shapes = ExpressiveShapes,
             typography = OverrideTypography,
             content = content,
         )

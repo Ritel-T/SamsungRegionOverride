@@ -1,7 +1,7 @@
 // AGP 9 ships built-in Kotlin support, so `org.jetbrains.kotlin.android` must NOT be applied — doing so
 // fails the build with an extension clash. The Kotlin version is therefore whatever AGP vendors:
-// AGP 9.3.1 pins kotlin-gradle-plugin 2.2.10, so the Compose compiler plugin must match it exactly.
+// AGP 9.3.2 pins kotlin-gradle-plugin 2.2.10, so the Compose compiler plugin must match it exactly.
 plugins {
-    id "com.android.application" version "9.3.1" apply false
+    id "com.android.application" version "9.3.2" apply false
     id "org.jetbrains.kotlin.plugin.compose" version "2.2.10" apply false
 }

@@ -44,14 +44,11 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
                     .append(throwable.getClass().getSimpleName())
                     .append(throwable.getMessage() == null ? "" : ": " + throwable.getMessage());
         }
-        result.append("\n");
-        try {
-            result.append(CarrierConfigBridge.inspectRuntime());
-        } catch (Throwable throwable) {
-            result.append("CarrierConfig probe unavailable: ")
-                    .append(throwable.getClass().getSimpleName())
-                    .append(throwable.getMessage() == null ? "" : ": " + throwable.getMessage());
-        }
+        // Do not probe CarrierConfig here. Its probe is itself an instrumentation run, and the real
+        // Country operation starts another one immediately afterwards. Android 17 Beta can receive
+        // that second start before AMS has detached the first run, crashing system_server's
+        // startInstrumentation path and leaving UiAutomation half-connected. The actual Country call
+        // remains the authoritative capability check and reports its own failure in the operation.
         return result.toString();
     }
 
@@ -85,7 +82,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
     @Override
     public String applyRegionOverride(int subId, String mccMnc, String imsi,
             String carrierName, String countryIso, boolean overrideSimIdentity,
-            boolean overrideAppCountry, boolean overrideCarrierName, String[] refreshPackages) {
+            boolean overrideAppCountry, boolean overrideCarrierName) {
         StringBuilder result = new StringBuilder();
         int attempted = 0;
         int succeeded = 0;
@@ -120,7 +117,6 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
         }
         if (succeeded > 0) {
-            appendSection(result, TargetApps.forceStop(refreshPackages));
             appendSection(result, reportVoiceState(subId, imsBefore));
         }
         appendSection(result, "Layers: " + succeeded + "/" + attempted + " succeeded");
@@ -197,8 +193,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
     @Override
     public String restoreTransient(int subId, String originalMccMnc, String originalSpn,
             String originalCountryIso, String originalDisplayName, int originalDisplayNameSource,
-            boolean networkWasLive, boolean restoreSimIdentity, boolean clearAppCountry,
-            String[] refreshPackages) {
+            boolean networkWasLive, boolean restoreSimIdentity, boolean clearAppCountry) {
         StringBuilder result = new StringBuilder();
         int attempted = 0;
         int succeeded = 0;
@@ -237,7 +232,6 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
             appendSection(result, recoverDisplayName(
                     subId, originalDisplayName, originalDisplayNameSource));
-            appendSection(result, TargetApps.forceStop(refreshPackages));
         }
         appendSection(result, "Layers: " + succeeded + "/" + attempted + " succeeded");
         return result.toString();
@@ -252,8 +246,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
     @Override
     public String clearAllCarrierConfigOverrides(int subId) {
         try {
-            return CarrierConfigBridge.clearAll(subId)
-                    + "\n" + TargetApps.forceStop(null);
+            return CarrierConfigBridge.clearAll(subId);
         } catch (Throwable throwable) {
             return failure("Clearing CarrierConfig overrides failed", throwable);
         }

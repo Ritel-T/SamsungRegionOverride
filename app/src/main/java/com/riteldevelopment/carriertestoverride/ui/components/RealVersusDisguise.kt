@@ -2,9 +2,7 @@ package com.riteldevelopment.carriertestoverride.ui.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,9 +38,10 @@ import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
 import com.riteldevelopment.carriertestoverride.data.countryIsoForMccMnc
-import com.riteldevelopment.carriertestoverride.data.describeRegion
+import com.riteldevelopment.carriertestoverride.data.flagEmoji
 import com.riteldevelopment.carriertestoverride.ui.theme.LocalOverrideColors
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
+import java.util.Locale
 
 /**
  * The gutter between the two columns. The label, numeric and detail rows all reserve exactly the same
@@ -100,11 +98,8 @@ fun RealVersusDisguise(
         sim.realOperatorNumeric.isBlank() -> unknownLabel
         else -> sim.realOperatorNumeric
     }
-    // With no SIM the value line already says so; repeating it here would be noise. The empty string
-    // still occupies a line, which keeps the block from changing height when a SIM appears.
-    val realDetail = if (sim == null) "" else {
-        describe(sim.realCountryIso, sim.realOperatorName, unknownLabel)
-    }
+    val realCountry = if (sim == null) noSimLabel else countryDisplay(sim.realCountryIso, unknownLabel)
+    val realIdentity = if (sim == null) "" else identityDisplay(realNumeric, sim.realOperatorName, unknownLabel)
 
     // What Apply would leave in force, switch by switch, rather than the whole target regardless. A
     // disarmed layer writes nothing: with the network layer off the MCC stays as it is, and with the
@@ -128,45 +123,52 @@ fun RealVersusDisguise(
     // nothing else, so reading the platform's country back would pair a British operator numeric with
     // the real country beside it — a region nobody is pretending to be, on the one line whose whole job
     // is to name the region being pretended.
-    val disguiseDetail = when {
-        live -> describe(sim.disguiseCountryIso, sim.operatorName, unknownLabel)
-        else -> describe(previewCountryIso, targetCarrierName, unknownLabel)
-    }
+    val disguiseCountry = countryDisplay(
+        if (live) sim.disguiseCountryIso else previewCountryIso,
+        unknownLabel,
+    )
+    val disguiseIdentity = identityDisplay(
+        disguiseNumeric,
+        if (live) sim.operatorName else targetCarrierName,
+        unknownLabel,
+    )
 
     val successColor = LocalOverrideColors.current.success
     val accentColor = MaterialTheme.colorScheme.primary
     val inkColor = MaterialTheme.colorScheme.onSurface
     val quietColor = MaterialTheme.colorScheme.onSurfaceVariant
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val motion = MaterialTheme.motionScheme
 
     // One driver for every part of the effect, so the highlight, the fades and the values can never
     // disagree about which side is in force.
     val slide by animateFloatAsState(
         targetValue = if (live) 1f else 0f,
-        // Just under critical damping: the highlight settles with a single small overshoot, which reads
-        // as something moving into place. A bouncier spring would throw the capsule clear of the column
-        // it is meant to be marking, and the whole point of the travel is that it lands on one side.
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = motion.defaultSpatialSpec(),
         label = "disguiseSlide",
     )
 
     val disguiseColor by animateColorAsState(
         targetValue = if (live) successColor else accentColor,
+        animationSpec = motion.fastEffectsSpec(),
         label = "disguiseColor",
     )
     val highlightColor by animateColorAsState(
         // Grey rather than nothing while the SIM is itself: an empty left half would read as "this side
         // is switched off", when what it means is "this is the identity in force".
         targetValue = if (live) successColor.copy(alpha = 0.14f) else inkColor.copy(alpha = 0.05f),
+        animationSpec = motion.fastEffectsSpec(),
         label = "disguiseHighlight",
     )
 
-    val numericStyle = MaterialTheme.typography.headlineMedium.merge(TabularFigures)
+    // The country is the answer a person is looking for. Codes remain useful evidence, but they belong
+    // in the quieter supporting line instead of taking the visual lead.
+    val countryStyle = MaterialTheme.typography.headlineSmallEmphasized
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             // Painted before the padding is applied, so the highlight can bleed out past the columns it
             // sits behind while staying inside the card's own clip.
@@ -191,15 +193,14 @@ fun RealVersusDisguise(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Crossfade(
-                targetState = realNumeric,
+                targetState = realCountry,
                 modifier = Modifier.weight(1f),
-                label = "realNumeric",
+                animationSpec = motion.fastEffectsSpec(),
+                label = "realCountry",
             ) { value ->
                 Text(
                     text = value,
-                    // The no-SIM placeholder is prose, not a figure: at headline scale it would either
-                    // dominate the block or get clipped, and it has no digits to align anyway.
-                    style = if (value == noSimLabel) MaterialTheme.typography.titleMedium else numericStyle,
+                    style = if (value == noSimLabel) MaterialTheme.typography.titleMedium else countryStyle,
                     color = inkColor.fade(1f - slide),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -212,13 +213,14 @@ fun RealVersusDisguise(
                 DirectionMark(color = outlineColor, rtl = rtl)
             }
             Crossfade(
-                targetState = disguiseNumeric,
+                targetState = disguiseCountry,
                 modifier = Modifier.weight(1f),
-                label = "disguiseNumeric",
+                animationSpec = motion.fastEffectsSpec(),
+                label = "disguiseCountry",
             ) { value ->
                 Text(
                     text = value,
-                    style = numericStyle,
+                    style = countryStyle,
                     color = disguiseColor.fade(slide),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -230,17 +232,19 @@ fun RealVersusDisguise(
 
         Row {
             Crossfade(
-                targetState = realDetail,
+                targetState = realIdentity,
                 modifier = Modifier.weight(1f),
-                label = "realDetail",
+                animationSpec = motion.fastEffectsSpec(),
+                label = "realIdentity",
             ) { detail ->
                 DetailLine(text = detail, color = quietColor.fade(1f - slide))
             }
             Spacer(Modifier.width(Gutter))
             Crossfade(
-                targetState = disguiseDetail,
+                targetState = disguiseIdentity,
                 modifier = Modifier.weight(1f),
-                label = "disguiseDetail",
+                animationSpec = motion.fastEffectsSpec(),
+                label = "disguiseIdentity",
             ) { detail ->
                 DetailLine(text = detail, color = disguiseColor.fade(slide))
             }
@@ -285,7 +289,13 @@ private fun DrawScope.drawSlidingHighlight(slide: Float, color: Color, rtl: Bool
     )
 }
 
-/** A column heading, carrying the LIVE badge when that column is the identity currently in force. */
+/**
+ * A column heading, carrying the LIVE badge when that column is the identity currently in force.
+ *
+ * The badge animates because it does not fade in place — it hands over. Applying a disguise takes it off
+ * the left heading and puts it on the right one while the highlight slides underneath, and a badge that
+ * cut instantly would arrive before the surface it belongs to.
+ */
 @Composable
 private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier) {
     Row(
@@ -294,12 +304,20 @@ private fun SideLabel(text: String, live: Boolean, modifier: Modifier = Modifier
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         MicroLabel(text = text)
-        if (live) StateBadge(text = stringResource(R.string.badge_live), active = true)
+        AppearingStateBadge(text = stringResource(R.string.badge_live), visible = live)
     }
 }
 
-private fun describe(countryIso: String, operatorName: String, unknown: String): String =
-    describeRegion(countryIso, operatorName).ifEmpty { unknown }
+private fun countryDisplay(countryIso: String, unknown: String): String {
+    val iso = countryIso.trim().uppercase(Locale.ROOT)
+    val flag = flagEmoji(countryIso)
+    return listOf(flag, iso.takeIf { it.length == 2 }).filterNotNull().joinToString(" ")
+        .ifEmpty { unknown }
+}
+
+private fun identityDisplay(numeric: String, operatorName: String, unknown: String): String =
+    listOf(numeric.ifBlank { unknown }, operatorName.ifBlank { unknown })
+        .joinToString(" · ")
 
 @Composable
 private fun DetailLine(

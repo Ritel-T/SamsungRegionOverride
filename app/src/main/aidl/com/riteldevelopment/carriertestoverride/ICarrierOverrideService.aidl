@@ -3,17 +3,12 @@ package com.riteldevelopment.carriertestoverride;
 interface ICarrierOverrideService {
     void destroy() = 16777114;
     String inspectRuntime() = 1;
-    /**
-     * Applies the selected layers, then force-stops refreshPackages so they re-read the region.
-     * A null refreshPackages means "the built-in defaults"; an empty array means "stop nothing",
-     * which is what a user who has deselected every target is asking for.
-     */
+    /** Applies the selected layers. Target apps are refreshed only from the explicit Target Apps panel. */
     String applyRegionOverride(int subId, String mccMnc, String imsi, String carrierName,
             String countryIso, boolean overrideSimIdentity, boolean overrideAppCountry,
-            boolean overrideCarrierName, in String[] refreshPackages) = 2;
+            boolean overrideCarrierName) = 2;
     /**
-     * Puts the layers back, restores the subscription display name if one was captured, recovers IMS,
-     * then force-stops refreshPackages.
+     * Puts the layers back, restores the subscription display name if one was captured and recovers IMS.
      *
      * originalDisplayNameSource is the SubscriptionInfo name source captured alongside the name.
      * Pass DISPLAY_NAME_SOURCE_NONE (-1) when nothing was captured, which skips the name restore
@@ -21,8 +16,7 @@ interface ICarrierOverrideService {
      */
     String restoreTransient(int subId, String originalMccMnc, String originalSpn,
             String originalCountryIso, String originalDisplayName, int originalDisplayNameSource,
-            boolean networkWasLive, boolean restoreSimIdentity, boolean clearAppCountry,
-            in String[] refreshPackages) = 3;
+            boolean networkWasLive, boolean restoreSimIdentity, boolean clearAppCountry) = 3;
     String clearAllCarrierConfigOverrides(int subId) = 4;
     /**
      * Force-stops the given packages, optionally wiping storage first and relaunching afterwards.

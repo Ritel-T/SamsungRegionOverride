@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">إعادة فحص شرائح SIM</string>
     <string name="menu_app_language">لغة التطبيق</string>
     <string name="menu_clear_all">مسح جميع تجاوزات CarrierConfig&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">غير مشغّل - شغّل Shizuku أولاً</string>
     <string name="shizuku_connected">متصل · uid %1$d · %2$s</string>
     <string name="shizuku_granted">ممنوح</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">قد يتوقف IMS/VoLTE عند إعادة الاتصال التالية. استخدمه لفترة وجيزة ثم استعد الإعدادات عند الانتهاء.</string>
     <string name="layer_still_live">لا يزال نشطًا. إيقاف هذا المفتاح يستبعده من التطبيق التالي فقط؛ خيار الاستعادة يزيله.</string>
     <string name="pending_state_warning">انتهت عملية كتابة سابقة قبل تسجيل نتيجتها. استعد الإعدادات قبل بدء تمويه آخر. إذا تعذرت الاستعادة، فأعد التشغيل لمسح التجاوزات الأساسية واتبع أي تحذير بشأن هوية SIM قبل جلسة جديدة.</string>
-    <string name="risk_notice">للاستخدام المؤقت فقط. قد تؤدي هوية شبكة مزيفة إلى تعطيل IMS/VoLTE عند إعادة الاتصال، وقد تؤدي إضافة البلد إلى تشغيل إعادة الاتصال تلك. قد يبدو IMS سليمًا في البداية. أنهِ التمويه فور الانتهاء. تؤدي إعادة التشغيل إلى إزالة التجاوزات الأساسية.</string>
 
     <string name="action_start_disguise">بدء التمويه</string>
     <string name="action_update_disguise">تحديث</string>
@@ -48,9 +45,6 @@
     <string name="action_close">إغلاق</string>
     <string name="action_copy">نسخ</string>
     <string name="action_copied">تم النسخ</string>
-    <string name="action_more">المزيد</string>
-    <string name="action_less">أقل</string>
-    <string name="action_runtime_probe">فحص وقت التشغيل</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">جارٍ إعداد مضيف أدوات القياس</string>
     <string name="busy_shizuku">في انتظار Shizuku</string>
@@ -99,15 +93,15 @@
     <string name="target_app_loading">جارٍ قراءة التطبيقات المثبتة&#8230;</string>
     <string name="target_app_no_match">لا يوجد تطبيق مطابق.</string>
     <string name="target_app_not_installed">%1$s · غير مثبت</string>
-    <string name="target_apps_loading_summary">يؤدي التطبيق والاستعادة إلى إيقاف هذه التطبيقات لتعيد قراءة المنطقة.</string>
-    <string name="target_apps_empty_summary">لم يتم تحديد شيء - لن يتم إيقاف أي تطبيق عند التطبيق أو الاستعادة.</string>
+    <string name="target_apps_loading_summary">يمكنك تحديث هذه التطبيقات يدويًا بعد تغيير المنطقة.</string>
+    <string name="target_apps_empty_summary">لم يتم تحديد أي تطبيق - لن يتم تحديث أي تطبيق يدويًا.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="zero">لن يتم إيقاف أي تطبيق (%1$d) عند التطبيق والاستعادة.</item>
-        <item quantity="one">سيتم إيقاف %1$d تطبيق عند التطبيق والاستعادة.</item>
-        <item quantity="two">سيتم إيقاف %1$d تطبيقين عند التطبيق والاستعادة.</item>
-        <item quantity="few">سيتم إيقاف %1$d تطبيقات عند التطبيق والاستعادة.</item>
-        <item quantity="many">سيتم إيقاف %1$d تطبيقًا عند التطبيق والاستعادة.</item>
-        <item quantity="other">سيتم إيقاف %1$d تطبيق عند التطبيق والاستعادة.</item>
+        <item quantity="zero">يمكن تحديث %1$d تطبيق يدويًا.</item>
+        <item quantity="one">يمكن تحديث %1$d تطبيق يدويًا.</item>
+        <item quantity="two">يمكن تحديث %1$d تطبيقات يدويًا.</item>
+        <item quantity="few">يمكن تحديث %1$d تطبيقات يدويًا.</item>
+        <item quantity="many">يمكن تحديث %1$d تطبيقًا يدويًا.</item>
+        <item quantity="other">يمكن تحديث %1$d تطبيق يدويًا.</item>
     </plurals>
     <string name="wipe_keep">إبقاء</string>
     <string name="wipe_cache">ذاكرة التخزين المؤقت</string>
@@ -116,15 +110,6 @@
     <string name="wipe_cache_summary">لا يعيد مسح ذاكرة التخزين المؤقت نتيجة في بعض إصدارات One UI؛ يوضح التقرير ما حدث.</string>
     <string name="wipe_data_summary">يمسح بيانات التطبيق. سيتم تسجيل خروجك وإزالة البيانات المحلية.</string>
 
-    <string name="dialog_apply_title">بدء هذا التمويه المؤقت؟</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">بلد التطبيق %1$s</string>
-    <string name="dialog_apply_network">مشغّل SIM %1$s</string>
-    <string name="dialog_apply_name">الاسم: %1$s</string>
-    <string name="dialog_apply_framework">يظل الاتصال اللاسلكي على شبكته الحقيقية، لكن تتغير هوية شركة الاتصالات وإعداداتها التي يبلغ عنها Android.</string>
-    <string name="dialog_apply_risk_both">قد يؤدي البلد إلى إعادة اتصال IMS أثناء تزييف الشبكة. قد تتوقف المكالمات الآن أو لاحقًا. أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
-    <string name="dialog_apply_risk_network">قد تعطل الشبكة IMS عند أي إعادة اتصال لاحقة حتى لو كانت المكالمات تعمل الآن. أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
-    <string name="dialog_apply_risk_country">يحدّث البلد CarrierConfig. يختلف السلوك حسب البرنامج الثابت؛ أنهِ التمويه بعد استخدام التطبيقات المستهدفة.</string>
     <string name="dialog_restore_without_markers_title">لا يوجد سجل لهذه الشريحة</string>
     <string name="dialog_restore_without_markers_body">تستخدم الاستعادة رغم ذلك مفاتيح الطبقات كما هي الآن. يؤدي مسح بلد التطبيق إلى إزالة جميع قيم اختبار CarrierConfig المؤقتة على subId هذا. عند غياب لقطة محفوظة، تكون إعادة التشغيل أكثر موثوقية لإعادة الضبط.</string>
     <string name="dialog_restore_anyway">استعادة على أي حال</string>
@@ -180,4 +165,9 @@
     <string name="notification_layer_network">الشبكة</string>
     <string name="notification_channel_name">تجاوز منطقة نشط</string>
     <string name="notification_channel_description">يظهر عندما تبلغ شريحة SIM عن منطقة متجاوزة.</string>
+    <string name="menu_github_project">مشروع GitHub</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_report_issue">الإبلاغ عن مشكلة</string>
+    <string name="diagnostic_title">معلومات التشخيص</string>
+    <string name="error_open_github">تعذر فتح GitHub: %1$s</string>
 </resources>

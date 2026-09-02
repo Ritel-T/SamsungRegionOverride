@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">重新扫描 SIM 卡</string>
     <string name="menu_app_language">应用语言</string>
     <string name="menu_clear_all">清除所有 CarrierConfig 覆盖&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">未运行 - 请先启动 Shizuku</string>
     <string name="shizuku_connected">已连接 · uid %1$d · %2$s</string>
     <string name="shizuku_granted">已授权</string>
@@ -31,7 +29,6 @@
     <string name="network_not_ready">此层需要状态为“就绪”的 SIM 卡；%1$s 当前为%2$s。</string>
     <string name="network_reconnect_warning">可能在下次重连时导致 IMS/VoLTE 失效。请仅短时使用，完成后立即恢复。</string>
     <string name="layer_still_live">仍在生效。关闭此开关只会在下次应用时排除此层；“恢复”才会移除它。</string>
-    <string name="risk_notice">仅限临时使用。伪造的 SIM 运营商身份可能在 IMS/VoLTE 重连时导致其失效；添加“应用国家/地区”可能触发该重连。IMS 起初看似正常，稍后仍可能失效。完成后请尽快结束伪装。重启可移除核心覆盖。</string>
     <string name="pending_state_warning">上一次写入在记录结果前已结束。开始下一次伪装前，请先执行“恢复”。如果“恢复”无法完成，请重启以清除核心覆盖，并在开始新会话前遵循出现的任何 SIM 身份警告。</string>
 
     <string name="action_start_disguise">开始伪装</string>
@@ -48,9 +45,6 @@
     <string name="action_close">关闭</string>
     <string name="action_copy">复制</string>
     <string name="action_copied">已复制</string>
-    <string name="action_more">更多</string>
-    <string name="action_less">收起</string>
-    <string name="action_runtime_probe">运行时探测</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">正在准备插桩宿主</string>
     <string name="busy_shizuku">正在等待 Shizuku</string>
@@ -99,10 +93,10 @@
     <string name="target_app_loading">正在读取已安装应用&#8230;</string>
     <string name="target_app_no_match">没有匹配的应用。</string>
     <string name="target_app_not_installed">%1$s · 未安装</string>
-    <string name="target_apps_loading_summary">应用和恢复时会停止这些应用，使其重新读取地区。</string>
-    <string name="target_apps_empty_summary">未选择任何应用 - 应用和恢复时不会停止应用。</string>
+    <string name="target_apps_loading_summary">修改地区后，可在这里手动刷新这些应用。</string>
+    <string name="target_apps_empty_summary">未选择任何应用 - 不会手动刷新应用。</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="other">应用和恢复时会停止 %1$d 个应用。</item>
+        <item quantity="other">可手动刷新 %1$d 个应用。</item>
     </plurals>
     <string name="wipe_keep">保留</string>
     <string name="wipe_cache">缓存</string>
@@ -111,15 +105,6 @@
     <string name="wipe_cache_summary">部分 One UI 版本清除缓存不会返回结果；报告会说明具体情况。</string>
     <string name="wipe_data_summary">清除应用数据。你将退出登录，本地数据也会被移除。</string>
 
-    <string name="dialog_apply_title">开始此次临时伪装？</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">应用国家/地区 %1$s</string>
-    <string name="dialog_apply_network">SIM 运营商 %1$s</string>
-    <string name="dialog_apply_name">名称：%1$s</string>
-    <string name="dialog_apply_framework">基带仍连接真实网络，但 Android 报告的运营商身份和配置会改变。</string>
-    <string name="dialog_apply_risk_both">“应用国家/地区”可能在 SIM 运营商身份为伪造值时触发 IMS 重连。通话可能立即或稍后中断。使用目标应用后请结束伪装。</string>
-    <string name="dialog_apply_risk_network">即使通话现在正常，伪造的 SIM 运营商身份也可能在之后任何一次 IMS 重连时导致其失效。使用目标应用后请结束伪装。</string>
-    <string name="dialog_apply_risk_country">“应用国家/地区”会刷新 CarrierConfig，具体行为因固件而异。使用目标应用后请结束伪装。</string>
     <string name="dialog_restore_without_markers_title">未记录此 SIM 卡的信息</string>
     <string name="dialog_restore_without_markers_body">仍要恢复时，将按当前层开关执行。清除“应用国家/地区”会移除此 subId 的所有临时 CarrierConfig 测试值。没有快照时，重启是更可靠的重置方式。</string>
     <string name="dialog_restore_anyway">仍要恢复</string>
@@ -175,4 +160,9 @@
     <string name="notification_layer_network">SIM 运营商</string>
     <string name="notification_channel_name">地区伪装已启用</string>
     <string name="notification_channel_description">当 SIM 卡正在报告伪装地区时显示。</string>
+    <string name="menu_github_project">GitHub 项目</string>
+    <string name="action_share">分享</string>
+    <string name="action_report_issue">报告问题</string>
+    <string name="diagnostic_title">诊断信息</string>
+    <string name="error_open_github">无法打开 GitHub：%1$s</string>
 </resources>

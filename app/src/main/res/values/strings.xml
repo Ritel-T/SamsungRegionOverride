@@ -7,8 +7,6 @@
     <string name="menu_rescan_sims">Rescan SIMs</string>
     <string name="menu_app_language">App language</string>
     <string name="menu_clear_all">Clear all CarrierConfig overrides&#8230;</string>
-
-    <string name="label_shizuku">SHIZUKU</string>
     <string name="shizuku_not_running">Not running - start Shizuku first</string>
     <string name="shizuku_connected">Connected · uid %1$d · %2$s</string>
     <string name="shizuku_granted">granted</string>
@@ -32,7 +30,6 @@
     <string name="network_reconnect_warning">May break IMS/VoLTE at the next reconnect. Use briefly and restore when finished.</string>
     <string name="layer_still_live">Still live. Turning this switch off only excludes it from the next apply; Restore removes it.</string>
     <string name="pending_state_warning">A previous write ended before its result was recorded. Restore before starting another disguise. If Restore cannot finish, reboot to clear core overrides and follow any SIM identity warning before a new session.</string>
-    <string name="risk_notice">Temporary use only. A fake Network identity can break IMS/VoLTE when it reconnects; adding Country may trigger that reconnect. IMS may look healthy at first. End the disguise as soon as you finish. Reboot removes the core overrides.</string>
 
     <string name="action_start_disguise">Start disguise</string>
     <string name="action_update_disguise">Update</string>
@@ -48,9 +45,6 @@
     <string name="action_close">Close</string>
     <string name="action_copy">Copy</string>
     <string name="action_copied">Copied</string>
-    <string name="action_more">MORE</string>
-    <string name="action_less">LESS</string>
-    <string name="action_runtime_probe">RUNTIME PROBE</string>
     <string name="busy_step">%1$d/%2$d · %3$s</string>
     <string name="busy_host">Preparing the instrumentation host</string>
     <string name="busy_shizuku">Waiting for Shizuku</string>
@@ -89,7 +83,7 @@
     <string name="preset_search_label">Country, carrier or code</string>
     <string name="preset_no_match">No match. Close this and type the values directly.</string>
 
-    <string name="target_apps_heading">TARGET APPS</string>
+    <string name="target_apps_heading">Target apps</string>
     <string name="target_apps_none">No apps selected. The region still changes; nothing gets stopped or wiped.</string>
     <string name="target_app_stop_open">Stop &amp; open</string>
     <string name="target_app_force_stop">Force stop</string>
@@ -99,11 +93,11 @@
     <string name="target_app_loading">Reading installed apps&#8230;</string>
     <string name="target_app_no_match">No app matches that.</string>
     <string name="target_app_not_installed">%1$s · not installed</string>
-    <string name="target_apps_loading_summary">Apply and restore stop these apps so they re-read the region.</string>
-    <string name="target_apps_empty_summary">Nothing selected - apply and restore will not stop any app.</string>
+    <string name="target_apps_loading_summary">Choose apps to refresh manually after changing the region.</string>
+    <string name="target_apps_empty_summary">Nothing selected - no app will be refreshed.</string>
     <plurals name="target_apps_selected_summary">
-        <item quantity="one">%1$d app is stopped on apply and restore.</item>
-        <item quantity="other">%1$d apps are stopped on apply and restore.</item>
+        <item quantity="one">%1$d app available for manual refresh.</item>
+        <item quantity="other">%1$d apps available for manual refresh.</item>
     </plurals>
     <string name="wipe_keep">Keep</string>
     <string name="wipe_cache">Cache</string>
@@ -112,15 +106,6 @@
     <string name="wipe_cache_summary">Cache clear returns nothing on some One UI builds; the report says which.</string>
     <string name="wipe_data_summary">Erases app data. You will be signed out and local data will be removed.</string>
 
-    <string name="dialog_apply_title">Start this temporary disguise?</string>
-    <string name="dialog_apply_sim">%1$s · sub %2$d</string>
-    <string name="dialog_apply_country">App country %1$s</string>
-    <string name="dialog_apply_network">SIM operator %1$s</string>
-    <string name="dialog_apply_name">Name: %1$s</string>
-    <string name="dialog_apply_framework">The radio remains on its real network, but Android\'s carrier identity and configuration change.</string>
-    <string name="dialog_apply_risk_both">Country may trigger an IMS reconnect while Network is fake. Calls may stop now or later. End the disguise after using the target apps.</string>
-    <string name="dialog_apply_risk_network">Network can break IMS on any later reconnect even if calls work now. End the disguise after using the target apps.</string>
-    <string name="dialog_apply_risk_country">Country refreshes CarrierConfig. Behaviour varies by firmware; end the disguise after using the target apps.</string>
     <string name="dialog_restore_without_markers_title">Nothing recorded for this SIM</string>
     <string name="dialog_restore_without_markers_body">Restoring anyway uses the layer switches as they stand. Clearing app country removes every transient CarrierConfig test value on this subId. With no snapshot, reboot is the more reliable reset.</string>
     <string name="dialog_restore_anyway">Restore anyway</string>
@@ -176,4 +161,9 @@
     <string name="notification_layer_network">Network</string>
     <string name="notification_channel_name">Active region override</string>
     <string name="notification_channel_description">Shown while a SIM is reporting an overridden region.</string>
+    <string name="menu_github_project">GitHub project</string>
+    <string name="action_share">Share</string>
+    <string name="action_report_issue">Report issue</string>
+    <string name="diagnostic_title">Diagnostic</string>
+    <string name="error_open_github">Could not open GitHub: %1$s</string>
 </resources>

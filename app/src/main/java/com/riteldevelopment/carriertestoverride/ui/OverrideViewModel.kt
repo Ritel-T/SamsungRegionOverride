@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
@@ -13,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.riteldevelopment.carriertestoverride.BuildConfig
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.InstrumentationHost
+import com.riteldevelopment.carriertestoverride.data.LayerSelection
 import com.riteldevelopment.carriertestoverride.data.OperationKind
 import com.riteldevelopment.carriertestoverride.data.OperationOutcome
 import com.riteldevelopment.carriertestoverride.data.OverrideException
@@ -55,6 +57,8 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     private val shizuku = ShizukuController()
     private val host = InstrumentationHost(application)
     private val repository = OverrideRepository(shizuku, host, store)
+    private val initialRecentPresetIds = store.recentPresetIds()
+    private val initialPreset = RegionPresets.lastUsedOrDefault(initialRecentPresetIds)
 
     private val _state = MutableStateFlow(
         OverrideUiState(
@@ -63,13 +67,25 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 model = Build.MODEL,
                 apiLevel = Build.VERSION.SDK_INT,
                 appVersion = BuildConfig.VERSION_NAME,
-            )
+            ),
+            presetId = initialPreset.id,
+            mccMnc = initialPreset.mccMnc,
+            countryIso = initialPreset.countryIso,
+            carrierName = initialPreset.carrier,
+            recentPresetIds = initialRecentPresetIds,
         )
     )
     val state: StateFlow<OverrideUiState> = _state.asStateFlow()
 
     private var operationJob: Job? = null
     private var refreshJob: Job? = null
+    /** Null until the user chooses a card or a notification names the restore target. */
+    private var explicitSelectedSubId: Int? = null
+    @Volatile
+    private var activeOperation: OperationControl? = null
+    private var activeDiagnosticContext: DiagnosticContext? = null
+    private var lastStage: OverrideRepository.Stage? = null
+    private var operationStartedAt: Long = 0L
     private val resourcesReleased = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -78,7 +94,6 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             shizuku.status.collect { status -> _state.update { it.copy(shizuku = status) } }
         }
-        _state.update { it.copy(recentPresetIds = store.recentPresetIds()) }
         refreshSims()
         refreshTargetApps()
     }
@@ -118,16 +133,18 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 val promptDue = scan.sims.any { it.disguised } &&
                     !notifier.canPost() &&
                     !store.notificationPromptShown()
+                val scannedSubIds = scan.sims.map(SimInfo::subId)
+                val defaultDataSubId = sims.defaultDataSubId()
                 _state.update { current ->
-                    val preferred = when {
-                        scan.sims.any { it.subId == current.selectedSubId } -> current.selectedSubId
-                        scan.sims.any { it.subId == sims.defaultDataSubId() } -> sims.defaultDataSubId()
-                        else -> scan.sims.firstOrNull()?.subId ?: -1
-                    }
                     current.copy(
                         sims = scan.sims,
                         slotCount = scan.slotCount,
-                        selectedSubId = preferred,
+                        selectedSubId = resolveSelectedSubIdAfterScan(
+                            currentSelectedSubId = current.selectedSubId,
+                            scannedSubIds = scannedSubIds,
+                            defaultDataSubId = defaultDataSubId,
+                            selectionIsExplicit = explicitSelectedSubId != null,
+                        ),
                         simScanError = null,
                         notificationPromptDue = promptDue,
                     )
@@ -178,6 +195,18 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun openGitHubProject() = openExternalUrl(GITHUB_PROJECT_URL)
+
+    fun openGitHubIssue() = openExternalUrl(GITHUB_ISSUE_URL)
+
+    private fun openExternalUrl(url: String) {
+        val context = getApplication<Application>()
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }.onFailure { throwable ->
+            fail(R.string.error_open_github, throwable.javaClass.simpleName)
+        }
+    }
+
     /**
      * Telephony state settles asynchronously after an override, so poll for a few seconds instead of
      * showing a stale identity. Mirrors the 2.x behaviour of 7 reads spread over ~4.8s.
@@ -194,7 +223,10 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     // ---------------------------------------------------------------- editing
 
-    fun selectSim(subId: Int) = _state.update { it.copy(selectedSubId = subId) }
+    fun selectSim(subId: Int) {
+        explicitSelectedSubId = subId
+        _state.update { it.copy(selectedSubId = subId) }
+    }
 
     fun selectPreset(preset: RegionPreset) = _state.update {
         it.copy(
@@ -238,7 +270,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     // ---------------------------------------------------------------- intents
 
-    /** Validates, then asks for confirmation. Nothing privileged happens here. */
+    /** Validates the current selection, then starts the temporary override. */
     fun requestApply() {
         val current = _state.value
         val sim = current.selectedSim ?: return fail(R.string.error_no_sim_selected)
@@ -275,14 +307,18 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             return fail(R.string.error_target_already_reported)
         }
 
-        _state.update {
-            it.copy(
-                dialog = DialogRequest.ConfirmApply(
-                    sim = sim,
-                    target = RegionTarget(mccMnc, iso, name),
-                    layers = layers,
-                )
+        val presetId = current.presetId
+        val target = RegionTarget(mccMnc, iso, name)
+        runOperation(
+            DiagnosticContext(
+                operation = OperationKind.APPLY,
+                slotIndex = sim.slotIndex,
+                layers = layers,
+                targetCountry = target.countryIso,
             )
+        ) {
+            repository.apply(sim, target, layers, ::reportStage)
+                .also { outcome -> if (!outcome.isError) rememberApplied(presetId) }
         }
     }
 
@@ -316,6 +352,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         // the user believing it had been.
         val sim = _state.value.sims.firstOrNull { it.subId == subId }
             ?: return fail(R.string.error_sim_removed)
+        explicitSelectedSubId = subId
         _state.update { it.copy(selectedSubId = subId) }
         val flags = store.flags(subId)
         if (!flags.any) return
@@ -420,33 +457,35 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
      * written, and never run a restore. So a job that is no longer active keeps its real result.
      */
     fun cancelOperation() {
-        val job = operationJob ?: return
-        if (!job.isActive) return
-        job.cancel()
-        _state.update {
-            it.copy(
-                busy = null,
-                result = ResultState(
-                    LocalizedText.resource(R.string.result_cancelled),
-                    tone = ResultTone.IDLE,
-                ),
+        val control = activeOperation ?: return
+        val job = control.job ?: return
+        if (!job.isActive || !control.cancellationRequested.compareAndSet(false, true)) return
+        val context = activeDiagnosticContext
+        val diagnostic = context?.let {
+            diagnosticFor(
+                context = it,
+                result = ResultTone.IDLE,
+                failure = DiagnosticFailure.CANCELLED,
             )
         }
+        // Result publication and cancellation race on different dispatcher threads. Whichever side
+        // wins this CAS owns the visible result; the other side must leave it untouched.
+        if (control.resultPublished.compareAndSet(false, true) && activeOperation === control) {
+            _state.update {
+                it.copy(
+                    busy = null,
+                    result = ResultState(
+                        LocalizedText.resource(R.string.result_cancelled),
+                        tone = ResultTone.IDLE,
+                        diagnostic = diagnostic,
+                    ),
+                )
+            }
+        }
+        job.cancel()
     }
 
     // ---------------------------------------------------------------- confirmed actions
-
-    fun confirmApply(request: DialogRequest.ConfirmApply) {
-        dismissDialog()
-        // Both read here rather than inside the coroutine, so the operation acts on the selection as it
-        // stood when the user confirmed — not on whatever it might be by the time the binder answers.
-        val packages = apps.selectedPackages()
-        val presetId = _state.value.presetId
-        runOperation {
-            repository.apply(request.sim, request.target, request.layers, packages, ::reportStage)
-                .also { outcome -> if (!outcome.isError) rememberApplied(presetId) }
-        }
-    }
 
     /** The user chose to restore using the current layer switches despite having no markers. */
     fun confirmRestoreWithoutMarkers(sim: SimInfo) {
@@ -457,7 +496,9 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     fun confirmClearAll(sim: SimInfo) {
         dismissDialog()
-        runOperation { repository.clearAllCarrierConfig(sim, ::reportStage) }
+        runOperation(
+            DiagnosticContext(operation = OperationKind.CLEAR_ALL, slotIndex = sim.slotIndex)
+        ) { repository.clearAllCarrierConfig(sim, ::reportStage) }
     }
 
     fun confirmWipeData(apps: List<TargetApp>) {
@@ -467,8 +508,17 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private fun startRestore(sim: SimInfo, restoreSim: Boolean, clearCountry: Boolean) {
         if (!restoreSim && !clearCountry) return fail(R.string.error_enable_layer)
-        val packages = apps.selectedPackages()
-        runOperation { repository.restore(sim, restoreSim, clearCountry, packages, ::reportStage) }
+        runOperation(
+            DiagnosticContext(
+                operation = OperationKind.RESTORE,
+                slotIndex = sim.slotIndex,
+                layers = LayerSelection(
+                    simIdentity = restoreSim,
+                    appCountry = clearCountry,
+                    carrierNameOverride = false,
+                ),
+            )
+        ) { repository.restore(sim, restoreSim, clearCountry, ::reportStage) }
     }
 
     /**
@@ -486,7 +536,12 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     private fun startRefreshApps(targets: List<TargetApp>) {
         val current = _state.value
-        runOperation {
+        runOperation(
+            DiagnosticContext(
+                operation = OperationKind.REFRESH_APPS,
+                targetAppCount = targets.size,
+            )
+        ) {
             repository.refreshApps(
                 packages = targets.map { it.packageName },
                 wipeMode = current.wipeMode,
@@ -498,48 +553,88 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
 
     // ---------------------------------------------------------------- execution
 
-    private fun runOperation(block: suspend () -> OperationOutcome) {
+    private fun runOperation(context: DiagnosticContext, block: suspend () -> OperationOutcome) {
         if (operationJob?.isActive == true) return
         // Started lazily so `self` is assigned before the body can reach its own `finally`. Without the
         // identity check below, a cancelled job unwinding late would clear the handle of whichever
         // operation started after it, and the guard above would then wave a second concurrent operation
         // through onto the same subId.
         var self: Job? = null
+        val control = OperationControl()
+        activeOperation = control
+        activeDiagnosticContext = context
+        lastStage = null
+        operationStartedAt = SystemClock.elapsedRealtime()
         val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
                 val outcome = block()
-                _state.update { it.copy(busy = null, result = outcome.toResultState()) }
+                publishResult(control) {
+                    _state.update { it.copy(busy = null, result = outcome.toResultState(context)) }
+                }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (expected: OverrideException) {
-                _state.update {
-                    it.copy(
-                        busy = null,
-                        result = ResultState(expected.localizedText(), tone = ResultTone.ERROR),
-                    )
+                publishResult(control) {
+                    _state.update {
+                        it.copy(
+                            busy = null,
+                            result = ResultState(
+                                expected.localizedText(),
+                                tone = ResultTone.ERROR,
+                                diagnostic = diagnosticFor(
+                                    context = context,
+                                    result = ResultTone.ERROR,
+                                    failure = DiagnosticFailure.VALIDATION,
+                                    exception = expected.javaClass.simpleName,
+                                ),
+                            ),
+                        )
+                    }
                 }
             } catch (throwable: Throwable) {
-                _state.update {
-                    it.copy(
-                        busy = null,
-                        result = ResultState(
-                            headline = LocalizedText.resource(R.string.result_operation_failed),
-                            detail = "${throwable.javaClass.name}: ${throwable.message.orEmpty()}",
-                            tone = ResultTone.ERROR,
-                        ),
-                    )
+                publishResult(control) {
+                    _state.update {
+                        it.copy(
+                            busy = null,
+                            result = ResultState(
+                                headline = LocalizedText.resource(R.string.result_operation_failed),
+                                detail = "${throwable.javaClass.name}: ${throwable.message.orEmpty()}",
+                                tone = ResultTone.ERROR,
+                                diagnostic = diagnosticFor(
+                                    context = context,
+                                    result = ResultTone.ERROR,
+                                    failure = DiagnosticFailure.OPERATION,
+                                    exception = throwable.javaClass.simpleName,
+                                ),
+                            ),
+                        )
+                    }
                 }
             } finally {
-                if (operationJob === self) operationJob = null
+                if (operationJob === self && activeOperation === control) {
+                    operationJob = null
+                    activeOperation = null
+                    activeDiagnosticContext = null
+                    lastStage = null
+                    operationStartedAt = 0L
+                }
                 refreshSimsUntilSettled()
             }
         }
         self = job
+        control.job = job
         operationJob = job
         job.start()
     }
 
+    /** Publishes at most one terminal result for this operation, winning against cancellation atomically. */
+    private inline fun publishResult(control: OperationControl, publish: () -> Unit) {
+        if (activeOperation !== control || control.cancellationRequested.get()) return
+        if (control.resultPublished.compareAndSet(false, true)) publish()
+    }
+
     private fun reportStage(stage: OverrideRepository.Stage) {
+        lastStage = stage
         _state.update { it.copy(busy = BusyState(stage)) }
     }
 
@@ -549,12 +644,17 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 result = ResultState(
                     LocalizedText.resource(messageRes, *args),
                     tone = ResultTone.ERROR,
+                    diagnostic = diagnosticFor(
+                        context = null,
+                        result = ResultTone.ERROR,
+                        failure = DiagnosticFailure.VALIDATION,
+                    ),
                 )
             )
         }
     }
 
-    private fun OperationOutcome.toResultState(): ResultState {
+    private fun OperationOutcome.toResultState(context: DiagnosticContext): ResultState {
         val partial = simLayerFailed || countryLayerFailed
         // `partial` is tested first, and that order is the whole point. Every per-layer failure is
         // reported with an "ERROR: " prefix, so `isError` is always true when one layer failed too —
@@ -585,7 +685,65 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             detail = message,
             probe = probe,
             tone = tone,
+            diagnostic = diagnosticFor(
+                context = context,
+                result = tone,
+                failure = when {
+                    simLayerFailed && countryLayerFailed -> DiagnosticFailure.MULTIPLE_LAYERS
+                    simLayerFailed -> DiagnosticFailure.SIM_LAYER
+                    countryLayerFailed -> DiagnosticFailure.COUNTRY_LAYER
+                    imsUnregistered || imsRecoveryUnconfirmed -> DiagnosticFailure.IMS
+                    isError -> DiagnosticFailure.OPERATION
+                    else -> DiagnosticFailure.NONE
+                },
+                ims = when {
+                    imsUnregistered -> DiagnosticIms.UNREGISTERED
+                    imsRecoveryUnconfirmed -> DiagnosticIms.UNCONFIRMED
+                    kind == OperationKind.APPLY || kind == OperationKind.RESTORE ->
+                        DiagnosticIms.REGISTERED
+                    else -> DiagnosticIms.UNKNOWN
+                },
+                runtime = DiagnosticReport.runtime(
+                    probe = probe,
+                    requested = kind != OperationKind.REFRESH_APPS,
+                ),
+            ),
         )
+    }
+
+    private fun diagnosticFor(
+        context: DiagnosticContext?,
+        result: ResultTone,
+        failure: DiagnosticFailure,
+        ims: DiagnosticIms = DiagnosticIms.UNKNOWN,
+        runtime: DiagnosticRuntime = DiagnosticRuntime.NOT_REQUESTED,
+        exception: String? = null,
+    ): DiagnosticReport = DiagnosticReport(
+        appVersion = _state.value.device.appVersion,
+        manufacturer = _state.value.device.manufacturer,
+        model = _state.value.device.model,
+        apiLevel = _state.value.device.apiLevel,
+        operation = context?.operation,
+        slotIndex = context?.slotIndex?.plus(1),
+        layers = DiagnosticReport.layers(context?.layers),
+        targetCountry = context?.targetCountry,
+        targetAppCount = context?.targetAppCount ?: 0,
+        result = result,
+        ims = ims,
+        shizuku = DiagnosticReport.shizuku(_state.value.shizuku),
+        stage = lastStage,
+        failure = failure,
+        runtime = runtime,
+        exception = exception,
+        durationMs = operationStartedAt.takeIf { it > 0L }
+            ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) },
+    )
+
+    private class OperationControl {
+        @Volatile
+        var job: Job? = null
+        val cancellationRequested = AtomicBoolean(false)
+        val resultPublished = AtomicBoolean(false)
     }
 
     private fun OverrideException.localizedText(): LocalizedText =
@@ -598,6 +756,9 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         const val MAX_NAME = 80
         const val SIM_REFRESH_ATTEMPTS = 7
         const val SIM_REFRESH_INTERVAL_MS = 800L
+        const val GITHUB_PROJECT_URL = "https://github.com/Ritel-T/SamsungRegionOverride"
+        const val GITHUB_ISSUE_URL =
+            "https://github.com/Ritel-T/SamsungRegionOverride/issues/new?template=bug-report.yml"
     }
 }
 

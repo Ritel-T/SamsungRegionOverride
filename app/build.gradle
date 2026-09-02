@@ -18,14 +18,20 @@ def releaseSigningConfigured = [
 
 android {
     namespace = "com.riteldevelopment.carriertestoverride"
-    compileSdk = 36
+    // material3 1.5.0 and Compose 1.12 both declare a minimum compileSdk of 37.
+    compileSdk = 37
+    compileSdkMinor = 1
 
     defaultConfig {
-        applicationId = "com.riteldevelopment.carriertestoverride"
+        applicationId = "com.ritelt.regionoverride"
         minSdk = 29
-        targetSdk = 36
-        versionCode = 12
-        versionName = "3.8.0"
+        // Opts into the API 37 runtime behaviour changes. Worth re-checking on the reference device
+        // after any SDK bump: this app leans on reflected telephony internals and a Shizuku user
+        // service, and both are exactly the sort of thing a platform release tightens.
+        targetSdk = 37
+        versionCode = 13
+        versionName = "4.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Keep AGP's generated per-app language list to translations this project actually ships;
         // locale resources bundled inside dependencies must not appear as partially translated UI.
         resourceConfigurations += [
@@ -42,7 +48,7 @@ android {
     }
 
     androidResources {
-        generateLocaleConfig true
+        generateLocaleConfig = true
     }
 
     // Built-in Kotlin derives its jvmTarget from these, so setting jvmTarget separately is both
@@ -90,29 +96,45 @@ dependencies {
             "libs/provider-13.1.5.aar"
     )
 
-    implementation "androidx.core:core-ktx:1.18.0"
+    implementation "androidx.core:core-ktx:1.19.0"
     implementation "androidx.activity:activity-compose:1.13.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
-    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.10.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.11.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
     // Declared directly because the manifest intentionally moves InitializationProvider to :ui.
-    // The same 1.1.1 is already selected transitively through Lifecycle/Emoji; this makes the class
-    // visible to source-manifest lint without changing the resolved runtime version.
-    implementation "androidx.startup:startup-runtime:1.1.1"
+    // Declaring it here makes the class visible to source-manifest lint, rather than relying on an
+    // incidental Lifecycle/Emoji edge to keep a component named in AndroidManifest.xml available.
+    implementation "androidx.startup:startup-runtime:1.2.0"
 
-    implementation platform("androidx.compose:compose-bom:2026.06.01")
+    implementation platform("androidx.compose:compose-bom:2026.08.00")
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.ui:ui-graphics"
     implementation "androidx.compose.ui:ui-tooling-preview"
     implementation "androidx.compose.foundation:foundation"
-    implementation "androidx.compose.material3:material3"
+    // Pinned above the BOM, which still resolves material3 to 1.4.0. The Material 3 Expressive
+    // components — ButtonGroup, LoadingIndicator, the wavy progress indicators, the MaterialShapes
+    // library and the expressive MotionScheme — first ship in 1.5.0. There is no separate "expressive"
+    // artifact; it is the same module. 1.5.0-alpha27 asks for foundation 1.12.0-beta01 and the BOM
+    // supplies 1.12.0, so the rest of Compose stays BOM-managed.
+    implementation "androidx.compose.material3:material3:1.5.0-alpha27"
+    // WindowSizeClass V2 drives the compact/wide layout under rotation, split screen, DeX and folds.
+    // Only the adaptive core is needed; this single-screen tool has no navigation panes to scaffold.
+    implementation "androidx.compose.material3.adaptive:adaptive:1.4.0-alpha01"
     // material3 no longer brings the icon set transitively, so material-icons-CORE is declared explicitly.
-    // material-icons-EXTENDED is deliberately avoided: it is frozen at 1.7.8 while the rest of Compose is
-    // at 1.11.4, and it drags in thousands of unused vectors. Conventional controls (overflow, check,
-    // warning, lock, chevrons) use the core set; the domain-specific marks — the identity arrow and the
-    // hazard hatching — are drawn locally.
+    // material-icons-EXTENDED is deliberately avoided: the icon artifacts are frozen at 1.7.8 while the
+    // rest of Compose keeps moving, and it drags in thousands of unused vectors. Conventional controls (overflow,
+    // check, warning, lock, chevrons) use the core set; domain-specific marks are drawn locally.
     implementation "androidx.compose.material:material-icons-core"
 
     testImplementation "junit:junit:4.13.2"
+    androidTestImplementation platform("androidx.compose:compose-bom:2026.08.00")
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4-accessibility"
+    // Compose UI Test still requests Espresso 3.5.0 transitively. Android 17 removes the hidden
+    // InputManager.getInstance() method that version reflects into; 3.7.0 uses getSystemService instead.
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.7.0"
+    androidTestImplementation "androidx.test.ext:junit:1.3.0"
+    androidTestImplementation "androidx.test:runner:1.7.0"
     debugImplementation "androidx.compose.ui:ui-tooling"
+    debugImplementation "androidx.compose.ui:ui-test-manifest"
 }

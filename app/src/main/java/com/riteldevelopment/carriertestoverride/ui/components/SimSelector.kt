@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.SimInfo
+import com.riteldevelopment.carriertestoverride.data.flagEmoji
 import com.riteldevelopment.carriertestoverride.ui.theme.TabularFigures
 import java.util.Locale
 
@@ -80,12 +83,26 @@ fun SimSelector(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val motion = MaterialTheme.motionScheme
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (scanError != null) {
-            ScanErrorBlock(message = scanError)
+        // Held through the exit for the same reason the data-SIM notice below is: a rescan that succeeds
+        // clears the message in the same frame the block starts collapsing, and reading it live would
+        // blank the box on its way out.
+        var lastScanError by remember { mutableStateOf<String?>(null) }
+        if (scanError != null) lastScanError = scanError
+        AnimatedVisibility(
+            visible = scanError != null,
+            enter = fadeIn(animationSpec = motion.fastEffectsSpec()) +
+                expandVertically(animationSpec = motion.defaultSpatialSpec()),
+            exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
+                shrinkVertically(animationSpec = motion.defaultSpatialSpec()),
+        ) {
+            Column {
+                ScanErrorBlock(message = lastScanError.orEmpty())
+                Spacer(Modifier.height(8.dp))
+            }
         }
 
         // The scan failed and produced nothing: "we could not read" is the whole story. Drawing empty
@@ -121,11 +138,14 @@ fun SimSelector(
         }
 
         if (sims.isEmpty() && scanError == null) {
-            Text(
-                text = stringResource(R.string.no_subscription),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.no_subscription),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         // Only worth saying when there is a data SIM to switch to. On a single-SIM phone whose data is
@@ -142,11 +162,14 @@ fun SimSelector(
 
         AnimatedVisibility(
             visible = mismatched,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
+            enter = fadeIn(animationSpec = motion.fastEffectsSpec()) +
+                expandVertically(animationSpec = motion.defaultSpatialSpec()),
+            exit = fadeOut(animationSpec = motion.fastEffectsSpec()) +
+                shrinkVertically(animationSpec = motion.defaultSpatialSpec()),
         ) {
             wording?.let { (dataSlot, selectedSlot) ->
                 Text(
+                    modifier = Modifier.padding(top = 8.dp),
                     text = stringResource(
                         R.string.not_data_sim,
                         // Via the resource, not SimInfo.displayName, so these can never name the slots
@@ -162,7 +185,9 @@ fun SimSelector(
     }
 }
 
-private val CardShape = RoundedCornerShape(12.dp)
+/** Resting and selected corner radii. Shared so the empty-slot placeholder matches an unselected card. */
+private val CardCornerResting: Dp = 12.dp
+private val CardCornerSelected: Dp = 26.dp
 private val CardPadding: Dp = 12.dp
 
 /**
@@ -181,25 +206,40 @@ private fun SimCard(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
     val borderColor by animateColorAsState(
         targetValue = if (selected) scheme.primary else scheme.outlineVariant,
+        animationSpec = motion.fastEffectsSpec(),
         label = "simCardBorderColor",
     )
     val borderWidth by animateDpAsState(
         targetValue = if (selected) 2.dp else 1.dp,
+        animationSpec = motion.fastSpatialSpec(),
         label = "simCardBorderWidth",
     )
     val cardColor by animateColorAsState(
         targetValue = if (selected) scheme.surfaceContainerHigh else scheme.surfaceContainerLow,
+        animationSpec = motion.fastEffectsSpec(),
         label = "simCardBackground",
     )
+    // Selection changes the card's *shape*, not just its colour and border. That is the Expressive
+    // move — form carries state — and it is the same argument SelectionMark already makes below: a
+    // difference in shape survives a grayscale screenshot and a colour-blind reader, which a difference
+    // in tone does not. The spring comes from the theme's expressive motion scheme, so it overshoots
+    // slightly rather than easing flatly into place.
+    val cornerRadius by animateDpAsState(
+        targetValue = if (selected) CardCornerSelected else CardCornerResting,
+        animationSpec = motion.slowSpatialSpec(),
+        label = "simCardCorner",
+    )
+    val cardShape = RoundedCornerShape(cornerRadius)
 
     Column(
         modifier = modifier
             // clip first so the selection ripple stays inside the rounded rect.
-            .clip(CardShape)
+            .clip(cardShape)
             .background(cardColor)
-            .border(borderWidth, borderColor, CardShape)
+            .border(borderWidth, borderColor, cardShape)
             .selectable(
                 selected = selected,
                 enabled = enabled,
@@ -209,37 +249,53 @@ private fun SimCard(
             .padding(CardPadding),
     ) {
         Row(
+            modifier = Modifier.heightIn(min = stateBadgeMinimumHeight()),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             MicroLabel(text = stringResource(R.string.sim_number, sim.slotIndex + 1))
             // Toned rather than success-coloured: this is a fact about the phone, not a layer this tool
             // has applied, and the green below already means the latter.
-            if (sim.isDefaultData) {
-                StateBadge(
-                    text = stringResource(R.string.badge_data),
-                    active = true,
-                    activeColor = scheme.secondaryContainer,
-                    onActiveColor = scheme.onSecondaryContainer,
-                )
-            }
+            //
+            // It animates in because it moves: switching which SIM carries data is done in Android
+            // Settings, so the user comes back to this screen to see the badge land on the other card.
+            AppearingStateBadge(
+                text = stringResource(R.string.badge_data),
+                visible = sim.isDefaultData,
+                activeColor = scheme.secondaryContainer,
+                onActiveColor = scheme.onSecondaryContainer,
+            )
             Spacer(Modifier.weight(1f))
             SelectionMark(selected = selected)
         }
 
         Spacer(Modifier.height(6.dp))
+        val iso = sim.countryIso.uppercase(Locale.ROOT).ifBlank { Absent }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            flagEmoji(sim.countryIso).takeIf { it.isNotEmpty() }?.let { flag ->
+                Text(
+                    text = flag,
+                    style = MaterialTheme.typography.titleLargeEmphasized,
+                )
+            }
+            Text(
+                text = iso,
+                style = MaterialTheme.typography.titleLargeEmphasized,
+                color = scheme.onSurface,
+                maxLines = 1,
+            )
+        }
         Text(
-            text = sim.operatorNumeric.ifBlank { Absent },
-            style = MaterialTheme.typography.titleMedium.merge(TabularFigures),
-            color = scheme.onSurface,
-            maxLines = 1,
-        )
-        Text(
-            text = sim.countryIso.uppercase(Locale.ROOT).ifBlank { Absent } + " · " +
+            text = listOf(
+                sim.operatorNumeric.ifBlank { Absent },
                 sim.operatorName.ifBlank { Absent },
-            style = MaterialTheme.typography.bodySmall,
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall.merge(TabularFigures),
             color = scheme.onSurfaceVariant,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
 
@@ -296,7 +352,7 @@ private fun EmptySlotCard(
         modifier = modifier
             .drawBehind {
                 val stroke = 1.dp.toPx()
-                val radius = CornerRadius(12.dp.toPx())
+                val radius = CornerRadius(CardCornerResting.toPx())
                 drawRoundRect(
                     color = outline,
                     topLeft = Offset(stroke / 2f, stroke / 2f),
@@ -328,38 +384,59 @@ private fun EmptySlotCard(
  * backed by a mark that differs in *shape*: a filled disc with a tick when chosen, an empty ring when not.
  * The tick is drawn rather than imported — material-icons-extended is not a dependency, and the ring/disc
  * pair keeps the corner the same size in both states so nothing shifts on selection.
+ *
+ * The two states are ends of one animation rather than two drawings. This is the control the user's thumb
+ * actually lands on, so it is the last place on the screen that should answer with a hard cut: the disc
+ * grows out of the ring's centre while the ring fades, and the tick scales up behind it. One spring drives
+ * all three, so they can never disagree about how far through the change they are.
+ *
+ * The spring is allowed to overshoot but the drawing is not: a radius past the canvas would be cut square
+ * by its own bounds, and a negative one — the undershoot on the way back — would mirror the tick. So the
+ * progress is clamped for drawing while the spring keeps its timing, which is where the snap comes from.
  */
 @Composable
 private fun SelectionMark(selected: Boolean, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
     val onPrimary = MaterialTheme.colorScheme.onPrimary
     val idle = MaterialTheme.colorScheme.outlineVariant
+    val progress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "selectionMark",
+    )
     Canvas(modifier = modifier.size(18.dp)) {
         val radius = size.minDimension / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
-        if (selected) {
-            drawCircle(color = primary, radius = radius, center = center)
+        val settled = progress.coerceIn(0f, 1f)
+
+        if (settled < 1f) {
+            val ring = radius * 0.16f
+            drawCircle(
+                color = idle.copy(alpha = idle.alpha * (1f - settled)),
+                radius = radius - ring / 2f,
+                center = center,
+                style = Stroke(width = ring),
+            )
+        }
+        if (settled > 0f) {
+            drawCircle(color = primary, radius = radius * settled, center = center)
+            // The tick's own vertices are already written relative to the centre, so scaling it is a
+            // matter of scaling the radius they are measured against — no clip, no transform, and one
+            // Path per frame either way.
+            val arm = radius * settled
             val tick = Path().apply {
-                moveTo(center.x - radius * 0.44f, center.y + radius * 0.02f)
-                lineTo(center.x - radius * 0.12f, center.y + radius * 0.34f)
-                lineTo(center.x + radius * 0.46f, center.y - radius * 0.36f)
+                moveTo(center.x - arm * 0.44f, center.y + arm * 0.02f)
+                lineTo(center.x - arm * 0.12f, center.y + arm * 0.34f)
+                lineTo(center.x + arm * 0.46f, center.y - arm * 0.36f)
             }
             drawPath(
                 path = tick,
-                color = onPrimary,
+                color = onPrimary.copy(alpha = onPrimary.alpha * settled),
                 style = Stroke(
                     width = radius * 0.26f,
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round,
                 ),
-            )
-        } else {
-            val ring = radius * 0.16f
-            drawCircle(
-                color = idle,
-                radius = radius - ring / 2f,
-                center = center,
-                style = Stroke(width = ring),
             )
         }
     }
@@ -374,7 +451,7 @@ private fun ScanErrorBlock(message: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.errorContainer)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {

@@ -1,11 +1,12 @@
 package com.riteldevelopment.carriertestoverride.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,19 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,19 +53,27 @@ val AppIconSize = 28.dp
  *
  * The placeholder is a filled square rather than nothing, so a list of rows does not jitter sideways as
  * icons arrive one by one.
+ *
+ * Icons are decoded off the main thread and land a frame or two after the row does, which on a full
+ * picker list means a dozen of them appearing at slightly different moments. Fading them in — and fading
+ * the placeholder out underneath — turns that from a scatter of pops into the list settling. The
+ * placeholder's own alpha is driven by the same value, so the two never both show at full strength.
  */
 @Composable
 fun AppIcon(packageName: String, modifier: Modifier = Modifier) {
     val icon = rememberAppIcon(packageName)
-    val shape = RoundedCornerShape(6.dp)
+    val shape = MaterialTheme.shapes.small
+    val loaded by animateFloatAsState(
+        targetValue = if (icon == null) 0f else 1f,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "appIconFade",
+    )
+    val placeholder = MaterialTheme.colorScheme.surfaceContainerHighest
     Box(
         modifier = modifier
             .size(AppIconSize)
             .clip(shape)
-            .background(
-                if (icon == null) MaterialTheme.colorScheme.surfaceContainerHighest
-                else Color.Transparent
-            ),
+            .background(placeholder.copy(alpha = placeholder.alpha * (1f - loaded).coerceIn(0f, 1f))),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
@@ -74,6 +81,7 @@ fun AppIcon(packageName: String, modifier: Modifier = Modifier) {
                 bitmap = icon,
                 // The row's label names the app; announcing the icon too would only repeat it.
                 contentDescription = null,
+                alpha = loaded.coerceIn(0f, 1f),
                 modifier = Modifier.size(AppIconSize),
             )
         }
@@ -91,6 +99,7 @@ fun AppIcon(packageName: String, modifier: Modifier = Modifier) {
  * The list is every launchable app, which is long, so it is searchable. Selection is a working set held
  * in the dialog: nothing is written until Save, and dismissing changes nothing.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TargetAppPickerDialog(
     request: DialogRequest.ChooseTargetApps,
@@ -116,7 +125,7 @@ fun TargetAppPickerDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 6.dp,
         ) {
@@ -157,7 +166,7 @@ fun TargetAppPickerDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                        LoadingIndicator(modifier = Modifier.size(28.dp))
                         Text(
                             text = stringResource(R.string.target_app_loading),
                             style = MaterialTheme.typography.bodyMedium,
@@ -173,14 +182,17 @@ fun TargetAppPickerDialog(
                     )
                 }
 
-                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     items(results, key = { it.packageName }) { app ->
                         AppPickerRow(
                             app = app,
                             checked = app.packageName in request.selected,
                             onToggle = { onToggle(app.packageName) },
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
 
@@ -192,11 +204,15 @@ fun TargetAppPickerDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     if (showReset) {
-                        TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
+                        ElasticTextButton(onClick = onReset) {
+                            Text(stringResource(R.string.action_reset))
+                        }
                         Spacer(Modifier.weight(1f))
                     }
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-                    TextButton(
+                    ElasticTextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                    ElasticTextButton(
                         onClick = { onConfirm(request) },
                         enabled = !request.loading,
                     ) {
@@ -232,35 +248,34 @@ private fun AppPickerRow(
     checked: Boolean,
     onToggle: () -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AppIcon(app.packageName)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (app.installed) scheme.onSurface else scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+    ListItem(
+        checked = checked,
+        onCheckedChange = { onToggle() },
+        leadingContent = { AppIcon(app.packageName) },
+        supportingContent = {
             Text(
                 text = if (app.installed) app.packageName else {
                     stringResource(R.string.target_app_not_installed, app.packageName)
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        }
-        Spacer(Modifier.width(8.dp))
-        Checkbox(checked = checked, onCheckedChange = { onToggle() })
+        },
+        trailingContent = {
+            Checkbox(checked = checked, onCheckedChange = null)
+        },
+    ) {
+        Text(
+            text = app.label,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
+            color = if (app.installed) {
+                Color.Unspecified
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

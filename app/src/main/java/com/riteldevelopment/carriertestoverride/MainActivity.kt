@@ -65,13 +65,14 @@ class MainActivity : ComponentActivity() {
                         onRescan = viewModel::refreshSims,
                         onCancel = viewModel::cancelOperation,
                         onOpenShizuku = viewModel::openShizuku,
+                        onOpenGitHub = viewModel::openGitHubProject,
+                        onReportIssue = viewModel::openGitHubIssue,
                         onOpenLanguageSettings = viewModel::openLanguageSettings,
                         onChooseTargetApps = viewModel::requestChooseTargetApps,
                         onToggleTargetApp = viewModel::toggleTargetApp,
                         onConfirmTargetApps = viewModel::confirmTargetApps,
                         onResetTargetApps = viewModel::resetTargetApps,
                         onDismissDialog = viewModel::dismissDialog,
-                        onConfirmApply = viewModel::confirmApply,
                         onConfirmRestoreWithoutMarkers = viewModel::confirmRestoreWithoutMarkers,
                         onConfirmClearAll = viewModel::confirmClearAll,
                         onConfirmWipeData = viewModel::confirmWipeData,
@@ -91,8 +92,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // Shizuku may have been started or revoked, a SIM swapped, or a target app installed or removed
-        // while this screen was in the background. Relaunching the target apps sends the user away and
-        // back, so this path runs after every refresh too. All three reads are cheap.
+        // while this screen was in the background. The target-app panel owns any explicit refresh, so
+        // returning here only performs cheap state reads.
         viewModel.refreshShizuku()
         viewModel.refreshSims()
         viewModel.refreshTargetApps()
@@ -114,8 +115,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         /** Set on the pending intent behind the notification's Restore action. */
-        const val ACTION_RESTORE = "com.riteldevelopment.carriertestoverride.action.RESTORE"
+        const val ACTION_RESTORE = "com.ritelt.regionoverride.action.RESTORE"
 
-        const val EXTRA_SUB_ID = "com.riteldevelopment.carriertestoverride.extra.SUB_ID"
+        const val EXTRA_SUB_ID = "com.ritelt.regionoverride.extra.SUB_ID"
     }
 }

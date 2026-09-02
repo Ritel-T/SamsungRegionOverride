@@ -290,6 +290,10 @@ object RegionPresets {
 
     fun byId(id: String?): RegionPreset? = id?.let { wanted -> ALL.firstOrNull { it.id == wanted } }
 
+    /** Restores the newest usable applied preset; a removed catalog entry cannot strand startup. */
+    fun lastUsedOrDefault(recentIds: List<String>): RegionPreset =
+        recentIds.firstNotNullOfOrNull(::byId) ?: DEFAULT
+
     fun search(query: String, locale: Locale = Locale.getDefault()): List<RegionPreset> =
         if (query.isBlank()) ALL else ALL.filter { it.matches(query, locale) }
 }

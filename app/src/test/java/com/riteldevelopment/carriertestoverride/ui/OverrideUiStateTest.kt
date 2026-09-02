@@ -7,6 +7,86 @@ import org.junit.Test
 
 class OverrideUiStateTest {
     @Test
+    fun coldStartRestoresTheFirstUsableRecentPreset() {
+        val expected = RegionPresets.COMMON.last()
+
+        assertEquals(
+            expected,
+            RegionPresets.lastUsedOrDefault(listOf("removed@zz", expected.id)),
+        )
+        assertEquals(RegionPresets.DEFAULT, RegionPresets.lastUsedOrDefault(emptyList()))
+    }
+
+    @Test
+    fun explicitSimSelectionSurvivesATransientMissingScan() {
+        val selectedWhileMissing = resolveSelectedSubIdAfterScan(
+            currentSelectedSubId = 11,
+            scannedSubIds = listOf(22),
+            defaultDataSubId = 22,
+            selectionIsExplicit = true,
+        )
+        val selectedAfterReturn = resolveSelectedSubIdAfterScan(
+            currentSelectedSubId = selectedWhileMissing,
+            scannedSubIds = listOf(11, 22),
+            defaultDataSubId = 22,
+            selectionIsExplicit = true,
+        )
+
+        assertEquals(11, selectedWhileMissing)
+        assertEquals(11, selectedAfterReturn)
+    }
+
+    @Test
+    fun initialSimSelectionPrefersTheVisibleDataSimThenTheFirstVisibleSim() {
+        assertEquals(
+            22,
+            resolveSelectedSubIdAfterScan(
+                currentSelectedSubId = -1,
+                scannedSubIds = listOf(11, 22),
+                defaultDataSubId = 22,
+                selectionIsExplicit = false,
+            ),
+        )
+        assertEquals(
+            11,
+            resolveSelectedSubIdAfterScan(
+                currentSelectedSubId = -1,
+                scannedSubIds = listOf(11),
+                defaultDataSubId = 22,
+                selectionIsExplicit = false,
+            ),
+        )
+        assertEquals(
+            -1,
+            resolveSelectedSubIdAfterScan(
+                currentSelectedSubId = -1,
+                scannedSubIds = emptyList(),
+                defaultDataSubId = 22,
+                selectionIsExplicit = false,
+            ),
+        )
+    }
+
+    @Test
+    fun automaticFallbackPromotesTheDataSimWhenItAppearsInALaterScan() {
+        val firstScan = resolveSelectedSubIdAfterScan(
+            currentSelectedSubId = -1,
+            scannedSubIds = listOf(11),
+            defaultDataSubId = 22,
+            selectionIsExplicit = false,
+        )
+        val secondScan = resolveSelectedSubIdAfterScan(
+            currentSelectedSubId = firstScan,
+            scannedSubIds = listOf(11, 22),
+            defaultDataSubId = 22,
+            selectionIsExplicit = false,
+        )
+
+        assertEquals(11, firstScan)
+        assertEquals(22, secondScan)
+    }
+
+    @Test
     fun mccMncInputNormalizesEveryDecimalDigitToAscii() {
         val input = "\u0662\u06F3\u096A\uFF14\u0E55\uD835\uDFD4A\u2167\u00B2-7"
 

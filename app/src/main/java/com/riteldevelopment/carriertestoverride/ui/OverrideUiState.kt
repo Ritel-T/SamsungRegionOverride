@@ -12,7 +12,7 @@ import com.riteldevelopment.carriertestoverride.data.TargetApp
 import com.riteldevelopment.carriertestoverride.data.WipeMode
 
 /** How a result should read: this drives colour and iconography, never the copy itself. */
-enum class ResultTone { IDLE, PROGRESS, SUCCESS, PARTIAL, ERROR }
+enum class ResultTone { IDLE, SUCCESS, PARTIAL, ERROR }
 
 /**
  * The text shown in the result panel. [detail] is the multi-line report produced by the privileged
@@ -23,6 +23,7 @@ data class ResultState(
     val detail: String? = null,
     val probe: String? = null,
     val tone: ResultTone = ResultTone.IDLE,
+    val diagnostic: DiagnosticReport? = null,
 ) {
     companion object {
         val Initial = ResultState(LocalizedText.Empty, tone = ResultTone.IDLE)
@@ -83,15 +84,8 @@ sealed interface LocalizedText {
     }
 }
 
-/** A confirmation the user must answer before anything privileged happens. */
+/** A modal request that needs an explicit user decision. */
 sealed interface DialogRequest {
-    /** Final review before writing both layers. */
-    data class ConfirmApply(
-        val sim: SimInfo,
-        val target: com.riteldevelopment.carriertestoverride.data.RegionTarget,
-        val layers: LayerSelection,
-    ) : DialogRequest
-
     /** This tool has no record of an override on this SIM, but the user asked to restore anyway. */
     data class RestoreWithoutMarkers(val sim: SimInfo) : DialogRequest
 
