@@ -3,6 +3,7 @@ package com.riteldevelopment.carriertestoverride.ui.components
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
@@ -15,8 +16,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -32,12 +32,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -144,7 +146,7 @@ fun ResultPanel(
  * already-localised stage text so the report slot never implies that an earlier result is still current,
  * without adding fifteen translations for a second progress vocabulary.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ResultProgressBody(busy: BusyState) {
     val stages = OverrideRepository.Stage.entries
@@ -236,12 +238,20 @@ private fun ResultBody(
         contentColor = content,
     )
     val actionPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
+    val copyInteraction = remember { MutableInteractionSource() }
+    val shareInteraction = remember { MutableInteractionSource() }
+    val reportInteraction = remember { MutableInteractionSource() }
     val headerClick = if (hasDetails) {
         Modifier.cardHeaderClick(interactionSource) { detailsExpanded = !detailsExpanded }
     } else {
         Modifier
     }
     var copied by remember(result) { mutableStateOf(false) }
+    val copyWeight by animateFloatAsState(
+        targetValue = if (copied) 1.14f else 1f,
+        animationSpec = motion.defaultSpatialSpec(),
+        label = "copyButtonWidth",
+    )
 
     LaunchedEffect(copied) {
         if (copied) {
@@ -319,62 +329,123 @@ private fun ResultBody(
                     )
                     ProbeBlock(probe = diagnosticText, tint = content)
                 }
-                FlowRow(
+                ButtonGroup(
+                    overflowIndicator = {},
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    TextButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(ClipboardManager::class.java)
-                            clipboard?.setPrimaryClip(
-                                ClipData.newPlainText("SRO diagnostic", diagnosticText)
-                            )
-                            copied = true
-                        },
-                        colors = actionColors,
-                        contentPadding = actionPadding,
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_content_copy),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            stringResource(if (copied) R.string.action_copied else R.string.action_copy),
-                            maxLines = 1,
-                        )
-                    }
-                    TextButton(
-                        onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent.createChooser(
-                                        Intent(Intent.ACTION_SEND)
-                                            .setType("text/plain")
-                                            .putExtra(Intent.EXTRA_TEXT, diagnosticText),
-                                        null,
+                    customItem(
+                        buttonGroupContent = {
+                            TextButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                                    clipboard?.setPrimaryClip(
+                                        ClipData.newPlainText("SRO diagnostic", diagnosticText)
                                     )
+                                    copied = true
+                                },
+                                shapes = ButtonDefaults.shapes(),
+                                colors = actionColors,
+                                contentPadding = actionPadding,
+                                interactionSource = copyInteraction,
+                                modifier = Modifier
+                                    .weight(copyWeight)
+                                    .animateWidth(copyInteraction),
+                            ) {
+                                AnimatedContent(
+                                    targetState = copied,
+                                    contentAlignment = Alignment.CenterStart,
+                                    label = "copyFeedback",
+                                ) { didCopy ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (didCopy) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        } else {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_content_copy),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            stringResource(
+                                                if (didCopy) R.string.action_copied
+                                                else R.string.action_copy
+                                            ),
+                                            maxLines = 1,
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        menuContent = {},
+                    )
+                    customItem(
+                        buttonGroupContent = {
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent.createChooser(
+                                                Intent(Intent.ACTION_SEND)
+                                                    .setType("text/plain")
+                                                    .putExtra(Intent.EXTRA_TEXT, diagnosticText),
+                                                null,
+                                            )
+                                        )
+                                    }
+                                },
+                                shapes = ButtonDefaults.shapes(),
+                                colors = actionColors,
+                                contentPadding = actionPadding,
+                                interactionSource = shareInteraction,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .animateWidth(shareInteraction),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Share,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(stringResource(R.string.action_share), maxLines = 1)
+                            }
+                        },
+                        menuContent = {},
+                    )
+                    customItem(
+                        buttonGroupContent = {
+                            TextButton(
+                                onClick = onReportIssue,
+                                shapes = ButtonDefaults.shapes(),
+                                colors = actionColors,
+                                contentPadding = actionPadding,
+                                interactionSource = reportInteraction,
+                                modifier = Modifier
+                                    .weight(1.35f)
+                                    .animateWidth(reportInteraction),
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    stringResource(R.string.action_report_issue),
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 )
                             }
                         },
-                        colors = actionColors,
-                        contentPadding = actionPadding,
-                    ) {
-                        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_share), maxLines = 1)
-                    }
-                    TextButton(
-                        onClick = onReportIssue,
-                        colors = actionColors,
-                        contentPadding = actionPadding,
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_report_issue), maxLines = 1)
-                    }
+                        menuContent = {},
+                    )
                 }
             }
         }
