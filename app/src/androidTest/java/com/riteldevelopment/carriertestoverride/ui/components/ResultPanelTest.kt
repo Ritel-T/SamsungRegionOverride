@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -31,6 +32,7 @@ import com.riteldevelopment.carriertestoverride.ui.ResultState
 import com.riteldevelopment.carriertestoverride.ui.ResultTone
 import com.riteldevelopment.carriertestoverride.ui.theme.CarrierOverrideTheme
 import org.junit.Before
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -115,6 +117,7 @@ class ResultPanelTest {
         compose.onNodeWithText(nothingRun).assertIsDisplayed()
         compose.onNodeWithText(nothingRun)
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        val idleHeadlineLeft = compose.onNodeWithText(nothingRun).getUnclippedBoundsInRoot().left
         result = ResultState(
             headline = LocalizedText.Literal("Region applied"),
             detail = "SIM operator override written",
@@ -139,6 +142,10 @@ class ResultPanelTest {
         )
         compose.waitForIdle()
         compose.onNodeWithText("Region applied").assertIsDisplayed()
+        assertEquals(
+            idleHeadlineLeft,
+            compose.onNodeWithText("Region applied").getUnclippedBoundsInRoot().left,
+        )
         compose.onNodeWithText(nothingRun).assertDoesNotExist()
         compose.onNodeWithText("SIM operator override written").assertDoesNotExist()
         compose.onNodeWithText("Region applied").performClick()

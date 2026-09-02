@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
@@ -442,7 +443,11 @@ private fun ToneMark(
             tint = tint,
             polygon = MaterialShapes.Boom,
         )
-        ResultTone.IDLE -> Unit
+        ResultTone.IDLE -> OutcomeMark(
+            mark = Icons.Filled.Info,
+            tint = tint,
+            polygon = MaterialShapes.Circle,
+        )
     }
 }
 
