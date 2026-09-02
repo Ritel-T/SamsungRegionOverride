@@ -318,7 +318,13 @@ private fun WideBody(
         verticalArrangement = Arrangement.spacedBy(BlockGap),
     ) {
         item("wide-sims") {
-            WideContainer(modifier = Modifier.animateItem()) { SimBlock(state = state, actions = actions) }
+            WideContainer(modifier = Modifier.animateItem()) {
+                SimBlock(
+                    state = state,
+                    actions = actions,
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                )
+            }
         }
         item("wide-identity-target") {
             WideContainer(modifier = Modifier.animateItem()) {
