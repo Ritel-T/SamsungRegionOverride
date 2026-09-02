@@ -57,6 +57,8 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
     private val shizuku = ShizukuController()
     private val host = InstrumentationHost(application)
     private val repository = OverrideRepository(shizuku, host, store)
+    private val initialRecentPresetIds = store.recentPresetIds()
+    private val initialPreset = RegionPresets.lastUsedOrDefault(initialRecentPresetIds)
 
     private val _state = MutableStateFlow(
         OverrideUiState(
@@ -65,7 +67,12 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                 model = Build.MODEL,
                 apiLevel = Build.VERSION.SDK_INT,
                 appVersion = BuildConfig.VERSION_NAME,
-            )
+            ),
+            presetId = initialPreset.id,
+            mccMnc = initialPreset.mccMnc,
+            countryIso = initialPreset.countryIso,
+            carrierName = initialPreset.carrier,
+            recentPresetIds = initialRecentPresetIds,
         )
     )
     val state: StateFlow<OverrideUiState> = _state.asStateFlow()
@@ -87,7 +94,6 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             shizuku.status.collect { status -> _state.update { it.copy(shizuku = status) } }
         }
-        _state.update { it.copy(recentPresetIds = store.recentPresetIds()) }
         refreshSims()
         refreshTargetApps()
     }

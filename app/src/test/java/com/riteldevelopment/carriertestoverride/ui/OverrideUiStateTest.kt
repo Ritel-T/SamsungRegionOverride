@@ -7,6 +7,17 @@ import org.junit.Test
 
 class OverrideUiStateTest {
     @Test
+    fun coldStartRestoresTheFirstUsableRecentPreset() {
+        val expected = RegionPresets.COMMON.last()
+
+        assertEquals(
+            expected,
+            RegionPresets.lastUsedOrDefault(listOf("removed@zz", expected.id)),
+        )
+        assertEquals(RegionPresets.DEFAULT, RegionPresets.lastUsedOrDefault(emptyList()))
+    }
+
+    @Test
     fun explicitSimSelectionSurvivesATransientMissingScan() {
         val selectedWhileMissing = resolveSelectedSubIdAfterScan(
             currentSelectedSubId = 11,
