@@ -4,16 +4,17 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Instrumentation;
-import android.app.UiAutomation;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Build;
+import android.os.SystemClock;
+import android.content.pm.PackageManager;
 import android.os.PersistableBundle;
 import android.telephony.CarrierConfigManager;
 import android.telephony.SubscriptionManager;
+import android.util.Log;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
  * preserving the app's package identity expected by Samsung's service implementation.</p>
  */
 public final class CarrierConfigInstrumentation extends Instrumentation {
+    private static final String TAG = "CarrierConfigInstrumentation";
     static final String ARG_ACTION = "action";
     static final String ARG_SUB_ID = "sub_id";
     static final String ARG_COUNTRY_ISO = "country_iso";
@@ -64,19 +66,13 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
     public void onStart() {
         Bundle result = new Bundle();
         int resultCode = Activity.RESULT_CANCELED;
-        UiAutomation automation = null;
+        String stage = "delegate permissions";
         try {
-            // Permission adoption does not require accessibility or view-hierarchy access.
-            int automationFlags = automationFlagsForSdk(Build.VERSION.SDK_INT);
-            automation = getUiAutomation(automationFlags);
-            if (automation == null) {
-                throw new IllegalStateException("UiAutomation connection is unavailable");
-            }
-            automation.adoptShellPermissionIdentity(
-                    Manifest.permission.MODIFY_PHONE_STATE,
-                    Manifest.permission.READ_PHONE_STATE);
+            requestShellPermissions();
 
             String action = arguments.getString(ARG_ACTION, ACTION_PROBE);
+            stage = action;
+            Log.i(TAG, "Executing CarrierConfig action=" + action);
             if (ACTION_PROBE.equals(action)) {
                 result.putString("message", inspectRuntime());
             } else {
@@ -125,34 +121,41 @@ public final class CarrierConfigInstrumentation extends Instrumentation {
             }
             resultCode = Activity.RESULT_OK;
         } catch (Throwable throwable) {
-            result.putString("error", throwable.getClass().getName()
-                    + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage()));
+            if (throwable instanceof InterruptedException) Thread.currentThread().interrupt();
+            result.putString("error", describeFailure(stage, throwable));
+            Log.e(TAG, "CarrierConfig failed at " + stage, throwable);
         } finally {
             encodeResultForCommandHost(result);
-            if (automation != null) {
-                try {
-                    automation.dropShellPermissionIdentity();
-                } catch (Throwable ignored) {
-                    // Instrumentation is ending and AMS will tear down the automation connection.
-                }
-            }
+            // Never create a UiAutomation client: permission delegation does not need accessibility.
+            // Android 15+ AMS removes this instrumentation's delegated identity during normal
+            // finish. The shell host checks for existing delegates before starting on older OSes.
+            Log.i(TAG, "Finishing CarrierConfig instrumentation with code=" + resultCode);
             finish(resultCode, result);
         }
     }
 
-    @SuppressLint("InlinedApi")
-    static int automationFlagsForSdk(int sdkInt) {
-        // Android 17 / One UI 9 can return from FLAG_DONT_USE_ACCESSIBILITY while UiAutomation is
-        // still CONNECTING. A fast instrumentation then reaches finish(), whose unconditional
-        // disconnect throws "Cannot call disconnect() while connecting" after the CarrierConfig
-        // write has already run. Keeping existing accessibility services active forces the normal
-        // connection handshake to complete before getUiAutomation() returns, so finish is safe.
-        if (sdkInt >= 37) {
-            return UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES;
+    private void requestShellPermissions() throws InterruptedException {
+        String token = arguments.getString(PermissionHandshake.ARG_TOKEN, "");
+        if (!token.matches("[a-zA-Z0-9-]{32,64}")) {
+            throw new IllegalArgumentException("Missing or invalid shell permission handshake token");
         }
-        return sdkInt >= Build.VERSION_CODES.S
-                ? UiAutomation.FLAG_DONT_USE_ACCESSIBILITY
-                : UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES;
+        Bundle request = new Bundle();
+        request.putString(PermissionHandshake.STATUS_KEY, token + ":" + android.os.Process.myUid());
+        Log.i(TAG, "Requesting delegated phone permissions from the shell host");
+        sendStatus(0, request);
+        Context context = getTargetContext();
+        PermissionHandshake.awaitPermissions(
+                () -> context.checkSelfPermission(Manifest.permission.MODIFY_PHONE_STATE)
+                        == PackageManager.PERMISSION_GRANTED
+                        && context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE)
+                        == PackageManager.PERMISSION_GRANTED,
+                SystemClock::uptimeMillis, Thread::sleep);
+        Log.i(TAG, "Delegated phone permissions confirmed");
+    }
+
+    static String describeFailure(String stage, Throwable failure) {
+        return stage + ": " + failure.getClass().getName()
+                + (failure.getMessage() == null ? "" : ": " + failure.getMessage());
     }
 
     private static void encodeResultForCommandHost(Bundle result) {

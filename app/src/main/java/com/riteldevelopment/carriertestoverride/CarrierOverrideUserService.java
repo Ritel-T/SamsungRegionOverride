@@ -220,9 +220,8 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
             }
         }
         if (succeeded > 0) {
-            // IMS first, then the name. Cycling the UICC applications makes the framework re-read the
-            // subscription, so a name written before the cycle is a name the cycle can overwrite;
-            // writing after it means this tool has the last word on the record it damaged.
+            // Only observe IMS after the real identity is restored. Do not disable SIM applications:
+            // that state is persistent and the service can die before a matching enable call.
             if (canRecoverIms(networkWasLive, restoreSimIdentity, simRestoreSucceeded)) {
                 appendSection(result, recoverIms(subId));
             } else {
@@ -237,7 +236,7 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
         return result.toString();
     }
 
-    /** Package-visible for a regression test: never cycle while a known fake Network remains live. */
+    /** Do not offer reconnect guidance while a known fake Network identity remains live. */
     static boolean canRecoverIms(boolean networkWasLive, boolean restoreWasRequested,
             boolean restoreSucceeded) {
         return !networkWasLive || (restoreWasRequested && restoreSucceeded);
@@ -262,64 +261,64 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
     }
 
     /**
-     * Brings IMS back after a restore, but only when it actually needs bringing back.
+     * Observes IMS after restore without changing the subscription's enabled state.
      *
-     * <p>Cycling the UICC applications is the programmatic form of toggling the SIM off and on in
-     * Settings, and it is the only thing that recovers a deregistered subscription short of a reboot.
-     * It is also, in itself, a few seconds with no service — so running it unconditionally spends a real
-     * outage to fix nothing. The registration state is checked first and the cycle is skipped when IMS
-     * is already up.</p>
+     * <p>The previous disable/sleep/enable sequence could leave a SIM persistently disabled when the
+     * service died between calls. A finally block cannot protect against process death. Passive
+     * observation and manual Settings guidance require no compensating write from this process.</p>
      *
-     * <p>An unreadable registration state cycles anyway: not knowing is not the same as knowing it is
-     * healthy, and a needless cycle costs seconds where a missed one costs calls until the user
-     * works out they have to reboot.</p>
-     *
-     * <p>Ordering matters and is not incidental: this runs <em>after</em> both layers have been put
-     * back. Cycling while an override is still live re-registers IMS against the fake identity and
-     * deregisters it again — verified on hardware.</p>
-     *
-     * <p>Never fatal. The restore itself has already succeeded by this point, so a device that does not
-     * expose the call should report that and leave the user with the manual workaround, not turn a good
-     * restore into a failure.</p>
+     * <p>Never fatal: a successful identity restore is distinct from confirmed IMS registration.</p>
      */
     private static String recoverIms(int subId) {
-        try {
-            if (TelephonyBridge.isImsRegistered(subId)) {
-                return "IMS: still registered, so the UICC cycle was skipped."
-                        + "\nIMS remained registered at the time of restore.";
+        return observeImsRecovery(new ImsRecoveryProbe() {
+            @Override
+            public boolean isRegistered() throws Exception {
+                return TelephonyBridge.isImsRegistered(subId);
             }
-        } catch (Throwable throwable) {
-            Log.w(TAG, "Could not read the IMS registration state; cycling anyway", throwable);
-        }
+
+            @Override
+            public void pause(long millis) throws InterruptedException {
+                Thread.sleep(millis);
+            }
+        });
+    }
+
+    /** Read-only capability boundary also lets tests exercise failures without Android Binder. */
+    interface ImsRecoveryProbe {
+        boolean isRegistered() throws Exception;
+        void pause(long millis) throws InterruptedException;
+    }
+
+    static String observeImsRecovery(ImsRecoveryProbe probe) {
         try {
-            String cycle = TelephonyBridge.cycleUiccApplications(subId);
-            Throwable unreadable = null;
-            for (int sample = 0; sample < IMS_RECOVERY_SAMPLES; sample++) {
-                try {
-                    if (TelephonyBridge.isImsRegistered(subId)) {
-                        return cycle + "\nIMS: registered again after restore.";
-                    }
-                } catch (Throwable throwable) {
-                    unreadable = throwable;
+            for (int sample = 0; sample <= IMS_RECOVERY_SAMPLES; sample++) {
+                if (probe.isRegistered()) {
+                    return sample == 0 ? "IMS: registered at the time of restore."
+                            : "IMS: registered again after restore.";
+                }
+                if (sample == IMS_RECOVERY_SAMPLES) {
                     break;
                 }
-                Thread.sleep(IMS_RECOVERY_INTERVAL_MILLIS);
+                probe.pause(IMS_RECOVERY_INTERVAL_MILLIS);
             }
             return IMS_RECOVERY_UNCONFIRMED
-                    + (unreadable == null ? ": still not registered after the recovery window."
-                    : ": state could not be read ("
-                    + unreadable.getClass().getSimpleName() + ").")
-                    + "\nThe override was removed. Toggle this SIM off and on in Settings or reboot.";
+                    + ": still not registered after the observation window." + IMS_MANUAL_RECOVERY;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return IMS_RECOVERY_UNCONFIRMED + ": observation was interrupted."
+                    + IMS_MANUAL_RECOVERY;
         } catch (Throwable throwable) {
-            Log.w(TAG, "IMS recovery failed", throwable);
-            return IMS_RECOVERY_UNCONFIRMED + ": " + throwable.getClass().getSimpleName()
-                    + (throwable.getMessage() == null ? "" : ": " + throwable.getMessage())
-                    + "\nIf calls or SMS do not work, turn this SIM off and on in Settings, or reboot.";
+            return IMS_RECOVERY_UNCONFIRMED + ": state could not be read ("
+                    + throwable.getClass().getSimpleName() + ")." + IMS_MANUAL_RECOVERY;
         }
     }
 
     private static final int IMS_RECOVERY_SAMPLES = 15;
     private static final long IMS_RECOVERY_INTERVAL_MILLIS = 1000L;
+    private static final String IMS_MANUAL_RECOVERY =
+            "\nIf this SIM is disabled, enable it in Settings; reboot alone does not re-enable it."
+                    + " If it is already enabled but calls or SMS do not work, toggle it off and on"
+                    + " in Settings or reboot.";
 
     /**
      * Puts the subscription's display name back, when one was captured before the first override.

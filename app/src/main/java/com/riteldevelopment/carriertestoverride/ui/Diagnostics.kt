@@ -2,12 +2,25 @@ package com.riteldevelopment.carriertestoverride.ui
 
 import com.riteldevelopment.carriertestoverride.data.LayerSelection
 import com.riteldevelopment.carriertestoverride.data.OperationKind
+import com.riteldevelopment.carriertestoverride.data.OperationOutcome
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import com.riteldevelopment.carriertestoverride.data.ShizukuStatus
 import java.util.Locale
 
 /** A small, stable vocabulary for the diagnostic text users may choose to share. */
 enum class DiagnosticIms { REGISTERED, UNREGISTERED, UNCONFIRMED, UNKNOWN }
+
+/** Missing observations and failed operations are never evidence that IMS is registered. */
+internal fun OperationOutcome.diagnosticIms(): DiagnosticIms = when {
+    imsUnregistered -> DiagnosticIms.UNREGISTERED
+    imsRecoveryUnconfirmed -> DiagnosticIms.UNCONFIRMED
+    message.lineSequence().any {
+        it.startsWith("IMS: currently registered ") ||
+            it == "IMS: registered at the time of restore." ||
+            it == "IMS: registered again after restore."
+    } -> DiagnosticIms.REGISTERED
+    else -> DiagnosticIms.UNKNOWN
+}
 
 enum class DiagnosticShizuku {
     NOT_RUNNING,

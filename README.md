@@ -155,12 +155,20 @@ The reproduced failure on the reference phone was:
 1. a reconnect occurred while the fake MCC/MNC was live;
 2. Samsung IMS kept the real carrier profile but derived its home domain from the fake MCC/MNC;
 3. registration against that mismatched domain was rejected;
-4. restoring the real identity before a controlled UICC cycle recovered IMS.
+4. restoring the real identity before a controlled UICC cycle recovered IMS in that historical test.
 
 The app therefore applies App country before SIM operator and restores SIM operator before App country.
-It cycles UICC only after the real operator is confirmed, then restores the captured display name and
-flags an IMS state that is not yet confirmed. The post-apply IMS sample describes the current moment;
-later reconnects can still behave differently.
+Restore restores the captured display name and observes IMS for up to 15 seconds without disabling or
+cycling the SIM/UICC. An unregistered or unavailable IMS reading means recovery is unconfirmed, even if
+the overrides were cleared. Check the SIM and mobile service in Android Settings; if needed, re-enable
+the SIM there after restoring the real identity. Version 4.0.0 could leave UICC disabled persistently:
+reboot alone does not re-enable it. The current recovery flow does not fix every IMS registration issue.
+
+The IMS reports in [issue #3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) and
+[issue #4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) concern this framework-wide SIM
+operator limitation. If App country alone meets the target app's needs, leaving SIM operator off can
+reduce exposure to it, but does not guarantee uninterrupted service. The post-apply IMS sample describes
+the current moment; later reconnects can still behave differently.
 
 See [IMS failure investigation](docs/ims-investigation.md) for the reproduced sequences and framework
 references.

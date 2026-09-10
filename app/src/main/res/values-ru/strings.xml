@@ -29,7 +29,7 @@
     <string name="network_not_ready">Для этого слоя нужна ГОТОВАЯ SIM; %1$s: %2$s.</string>
     <string name="network_reconnect_warning">При следующем подключении может нарушить работу IMS/VoLTE. Используйте кратковременно и затем восстановите.</string>
     <string name="layer_still_live">Подмена ещё активна. Выключение исключает слой лишь при следующем применении; функция «Восстановить» удалит его.</string>
-    <string name="pending_state_warning">Предыдущая запись завершилась до сохранения результата. Перед новой подменой выполните восстановление. Если оно не завершится, перезагрузите устройство, чтобы удалить основные подмены, и учтите предупреждение о SIM перед новым сеансом.</string>
+    <string name="pending_state_warning">Предыдущая запись завершилась до сохранения результата. Перед новой подменой выполните восстановление. Если оно не завершится, перезагрузите устройство, чтобы удалить основные подмены, и учтите предупреждение о SIM перед новым сеансом. Перезагрузка не включает отключённую SIM; включите её в настройках.</string>
 
     <string name="action_start_disguise">Начать подмену</string>
     <string name="action_update_disguise">Обновить</string>
@@ -109,7 +109,7 @@
     <string name="wipe_data_summary">Удаляет данные приложения. Вы выйдете из учётной записи, а локальные данные будут удалены.</string>
 
     <string name="dialog_restore_without_markers_title">Для этой SIM нет записей</string>
-    <string name="dialog_restore_without_markers_body">Восстановление всё равно использует текущее положение переключателей слоёв. Очистка страны для приложений удалит все временные тестовые значения CarrierConfig для этой subId. Без снимка перезагрузка обеспечивает более надёжный сброс.</string>
+    <string name="dialog_restore_without_markers_body">Восстановление всё равно использует текущее положение переключателей слоёв. Очистка страны для приложений удалит все временные тестовые значения CarrierConfig для этой subId. Без снимка перезагрузка обеспечивает более надёжный сброс. Перезагрузка не включает отключённую SIM; включите её в настройках.</string>
     <string name="dialog_restore_anyway">Всё равно восстановить</string>
     <string name="dialog_clear_all_title">Удалить все тестовые подмены CarrierConfig?</string>
     <string name="dialog_clear_all_body">Удаляет временные и постоянные тестовые значения CarrierConfig на sub %1$d, включая записанные другими инструментами. Слой сети не восстанавливается; значения другого инструмента нельзя воссоздать.</string>
@@ -119,10 +119,11 @@
     <string name="result_nothing_run">Пока ничего не запускалось.</string>
     <string name="result_cancelled">Отменено.</string>
     <string name="result_operation_failed">Операция не выполнена</string>
-    <string name="result_one_layer_failed">Ошибка одного слоя</string>
+    <string name="result_country_layer_failed">Ошибка страны приложений</string>
+    <string name="result_network_layer_failed">Ошибка оператора SIM</string>
     <string name="result_disguise_ims_unregistered">Подмена активна — IMS не зарегистрирован</string>
     <string name="result_disguise_active">Временная подмена активна</string>
-    <string name="result_restore_unconfirmed">Подмена завершена — проверьте мобильную связь</string>
+    <string name="result_restore_unconfirmed">Подмены удалены — IMS не подтверждён; проверьте SIM в настройках</string>
     <string name="result_restored">Подмена завершена, исходные значения восстановлены</string>
     <string name="result_apps_refreshed">Целевые приложения обновлены</string>
     <string name="result_all_carrier_config_cleared">Все тестовые подмены CarrierConfig удалены</string>

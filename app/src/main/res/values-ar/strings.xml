@@ -29,7 +29,7 @@
     <string name="network_not_ready">تتطلب هذه الطبقة شريحة SIM بحالة READY؛ حالة %1$s هي %2$s.</string>
     <string name="network_reconnect_warning">قد يتوقف IMS/VoLTE عند إعادة الاتصال التالية. استخدمه لفترة وجيزة ثم استعد الإعدادات عند الانتهاء.</string>
     <string name="layer_still_live">لا يزال نشطًا. إيقاف هذا المفتاح يستبعده من التطبيق التالي فقط؛ خيار الاستعادة يزيله.</string>
-    <string name="pending_state_warning">انتهت عملية كتابة سابقة قبل تسجيل نتيجتها. استعد الإعدادات قبل بدء تمويه آخر. إذا تعذرت الاستعادة، فأعد التشغيل لمسح التجاوزات الأساسية واتبع أي تحذير بشأن هوية SIM قبل جلسة جديدة.</string>
+    <string name="pending_state_warning">انتهت عملية كتابة سابقة قبل تسجيل نتيجتها. استعد الإعدادات قبل بدء تمويه آخر. إذا تعذرت الاستعادة، فأعد التشغيل لمسح التجاوزات الأساسية واتبع أي تحذير بشأن هوية SIM قبل جلسة جديدة. إعادة التشغيل لا تفعّل شريحة SIM المعطّلة؛ فعّلها في الإعدادات.</string>
 
     <string name="action_start_disguise">بدء التمويه</string>
     <string name="action_update_disguise">تحديث</string>
@@ -111,7 +111,7 @@
     <string name="wipe_data_summary">يمسح بيانات التطبيق. سيتم تسجيل خروجك وإزالة البيانات المحلية.</string>
 
     <string name="dialog_restore_without_markers_title">لا يوجد سجل لهذه الشريحة</string>
-    <string name="dialog_restore_without_markers_body">تستخدم الاستعادة رغم ذلك مفاتيح الطبقات كما هي الآن. يؤدي مسح بلد التطبيق إلى إزالة جميع قيم اختبار CarrierConfig المؤقتة على subId هذا. عند غياب لقطة محفوظة، تكون إعادة التشغيل أكثر موثوقية لإعادة الضبط.</string>
+    <string name="dialog_restore_without_markers_body">تستخدم الاستعادة رغم ذلك مفاتيح الطبقات كما هي الآن. يؤدي مسح بلد التطبيق إلى إزالة جميع قيم اختبار CarrierConfig المؤقتة على subId هذا. عند غياب لقطة محفوظة، تكون إعادة التشغيل أكثر موثوقية لإعادة الضبط. إعادة التشغيل لا تفعّل شريحة SIM المعطّلة؛ فعّلها في الإعدادات.</string>
     <string name="dialog_restore_anyway">استعادة على أي حال</string>
     <string name="dialog_clear_all_title">مسح جميع تجاوزات اختبار CarrierConfig؟</string>
     <string name="dialog_clear_all_body">يزيل قيم اختبار CarrierConfig المؤقتة والدائمة على sub %1$d، بما فيها القيم التي كتبتها أدوات أخرى. لا يستعيد طبقة الشبكة ولا يمكنه إعادة إنشاء قيم أداة أخرى.</string>
@@ -121,10 +121,11 @@
     <string name="result_nothing_run">لم يتم تشغيل أي شيء بعد.</string>
     <string name="result_cancelled">أُلغي.</string>
     <string name="result_operation_failed">فشلت العملية</string>
-    <string name="result_one_layer_failed">فشلت إحدى الطبقات</string>
+    <string name="result_country_layer_failed">فشل بلد التطبيق</string>
+    <string name="result_network_layer_failed">فشل مشغل SIM</string>
     <string name="result_disguise_ims_unregistered">التمويه نشط - IMS غير مسجل</string>
     <string name="result_disguise_active">التمويه المؤقت نشط</string>
-    <string name="result_restore_unconfirmed">انتهى التمويه - تحقق من خدمة الهاتف</string>
+    <string name="result_restore_unconfirmed">مُسحت التجاوزات - IMS غير مؤكد؛ تحقق من SIM في الإعدادات</string>
     <string name="result_restored">انتهى التمويه واستُعيدت التجاوزات</string>
     <string name="result_apps_refreshed">تم تحديث التطبيقات المستهدفة</string>
     <string name="result_all_carrier_config_cleared">تم مسح جميع تجاوزات اختبار CarrierConfig</string>

@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.kotlin/
 **/build/
 
 # Project-local Gradle home. Kept inside the tree so the build can run fully offline once warmed,

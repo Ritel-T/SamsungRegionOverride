@@ -29,7 +29,7 @@
     <string name="network_not_ready">Esta capa necesita una SIM LISTA; %1$s está %2$s.</string>
     <string name="network_reconnect_warning">Puede interrumpir IMS/VoLTE en la próxima reconexión. Úsala brevemente y restaura al terminar.</string>
     <string name="layer_still_live">Sigue activa. Desactivar este interruptor solo excluye esta capa de la próxima aplicación; Restaurar la elimina.</string>
-    <string name="pending_state_warning">Una escritura anterior terminó antes de que se registrara el resultado. Restaura antes de iniciar otro disfraz. Si la restauración no puede completarse, reinicia para eliminar las sustituciones principales y sigue cualquier aviso sobre la identidad de la SIM antes de iniciar otra sesión.</string>
+    <string name="pending_state_warning">Una escritura anterior terminó antes de que se registrara el resultado. Restaura antes de iniciar otro disfraz. Si la restauración no puede completarse, reinicia para eliminar las sustituciones principales y sigue cualquier aviso sobre la identidad de la SIM antes de iniciar otra sesión. Reiniciar no reactiva una SIM desactivada; actívala en Ajustes.</string>
 
     <string name="action_start_disguise">Iniciar disfraz</string>
     <string name="action_update_disguise">Actualizar</string>
@@ -108,7 +108,7 @@
     <string name="wipe_data_summary">Borra los datos de la aplicación. Se cerrará tu sesión y se eliminarán los datos locales.</string>
 
     <string name="dialog_restore_without_markers_title">No hay nada registrado para esta SIM</string>
-    <string name="dialog_restore_without_markers_body">La restauración usará igualmente el estado actual de los interruptores de capa. Borrar el país de las aplicaciones elimina todos los valores de prueba temporales de CarrierConfig en este subId. Sin una instantánea, reiniciar es la forma más fiable de restablecerlo.</string>
+    <string name="dialog_restore_without_markers_body">La restauración usará igualmente el estado actual de los interruptores de capa. Borrar el país de las aplicaciones elimina todos los valores de prueba temporales de CarrierConfig en este subId. Sin una instantánea, reiniciar es la forma más fiable de restablecerlo. Reiniciar no reactiva una SIM desactivada; actívala en Ajustes.</string>
     <string name="dialog_restore_anyway">Restaurar de todos modos</string>
     <string name="dialog_clear_all_title">¿Borrar todas las sustituciones de prueba de CarrierConfig?</string>
     <string name="dialog_clear_all_body">Elimina los valores de prueba temporales y persistentes de CarrierConfig en sub %1$d, incluidos los escritos por otras herramientas. No restaura la capa Red ni puede reconstruir los valores de otra herramienta.</string>
@@ -118,10 +118,11 @@
     <string name="result_nothing_run">Todavía no se ha ejecutado nada.</string>
     <string name="result_cancelled">Cancelado.</string>
     <string name="result_operation_failed">Error en la operación</string>
-    <string name="result_one_layer_failed">Error en una capa</string>
+    <string name="result_country_layer_failed">Error en país de aplicaciones</string>
+    <string name="result_network_layer_failed">Error en operador SIM</string>
     <string name="result_disguise_ims_unregistered">Disfraz activo: IMS no está registrado</string>
     <string name="result_disguise_active">Disfraz temporal activo</string>
-    <string name="result_restore_unconfirmed">Disfraz finalizado: comprueba el servicio móvil</string>
+    <string name="result_restore_unconfirmed">Sustituciones borradas - IMS sin confirmar; revisa la SIM en Ajustes</string>
     <string name="result_restored">Disfraz finalizado y sustituciones restauradas</string>
     <string name="result_apps_refreshed">Aplicaciones de destino actualizadas</string>
     <string name="result_all_carrier_config_cleared">Se borraron todas las sustituciones de prueba de CarrierConfig</string>

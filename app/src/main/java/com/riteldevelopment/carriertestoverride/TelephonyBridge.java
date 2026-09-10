@@ -17,9 +17,6 @@ final class TelephonyBridge {
     private static final String SUB_INTERFACE_NAME = "com.android.internal.telephony.ISub";
     private static final String METHOD_NAME = "setCarrierTestOverride";
 
-    /** How long the UICC applications stay off before being switched back on. */
-    private static final long UICC_CYCLE_SETTLE_MILLIS = 3000;
-
     /** How long the IMS stack is left down before being re-enabled. */
     private static final long IMS_RESTART_SETTLE_MILLIS = 1500;
 
@@ -130,57 +127,6 @@ final class TelephonyBridge {
         }
         invoke(method, getTelephonyProxy(), new Object[]{subId});
         return "refreshUiccProfile: ok for subId=" + subId;
-    }
-
-    /**
-     * Turns the UICC applications for one subscription off and on.
-     *
-     * <p>This is what the SIM on/off switch in Settings does, and on this hardware it is the only
-     * thing observed to bring IMS back after a region override; {@code refreshUiccProfile} and
-     * {@code disableIms}/{@code enableIms} both leave the stack deregistered.</p>
-     */
-    static String cycleUiccApplications(int subId) throws Exception {
-        requireValidSubId(subId);
-        Class<?> iface = Class.forName(SUB_INTERFACE_NAME);
-        Method setter = findUiccToggleMethod(iface);
-        if (setter == null) {
-            throw new UnsupportedOperationException(
-                    "No supported setUiccApplicationsEnabled signature on this build");
-        }
-        Object sub = getProxy("isub", SUB_INTERFACE_NAME);
-        invoke(setter, sub, buildToggleArgs(setter, subId, false));
-        try {
-            Thread.sleep(UICC_CYCLE_SETTLE_MILLIS);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-        }
-        invoke(setter, sub, buildToggleArgs(setter, subId, true));
-        return "UICC applications cycled for subId=" + subId + " via " + signature(setter);
-    }
-
-    /** Only the two signatures observed in AOSP/vendor interfaces are safe to invoke. */
-    static Method findUiccToggleMethod(Class<?> iface) {
-        for (Method candidate : iface.getMethods()) {
-            if (!"setUiccApplicationsEnabled".equals(candidate.getName())) {
-                continue;
-            }
-            Class<?>[] params = candidate.getParameterTypes();
-            if (params.length == 2
-                    && ((params[0] == int.class && params[1] == boolean.class)
-                    || (params[0] == boolean.class && params[1] == int.class))) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    /** The two known argument orders for setUiccApplicationsEnabled differ by vendor and version. */
-    private static Object[] buildToggleArgs(Method setter, int subId, boolean enabled) {
-        Class<?>[] params = setter.getParameterTypes();
-        if (params.length == 2 && params[0] == boolean.class) {
-            return new Object[]{enabled, subId};
-        }
-        return new Object[]{subId, enabled};
     }
 
     /** Passed as the calling package for ISub reads; this code runs as uid 2000, which is that package. */
@@ -324,8 +270,9 @@ final class TelephonyBridge {
      * <p>Written as a candidate fix for the post-restore deregistration, on the theory that Samsung's
      * IMS service picks a per-slot MNO profile ({@code CU_CN}, {@code Vodafone_GB}, …) from the carrier
      * identity and does not re-pick it when the identity is put back. Measured on SM-S938B the theory
-     * does not hold up: the stack comes back still deregistered. {@link #cycleUiccApplications} is what
-     * actually recovers it. Kept only as a probe, so the negative result stays reproducible.</p>
+     * does not hold up: the stack comes back still deregistered. Reinitializing the SIM recovered it
+     * on that device. Kept only as a probe, so the negative result stays reproducible;
+     * never invoked by restore.</p>
      *
      * <p>Takes a slot index, not a subId: {@code disableIms}/{@code enableIms} are addressed per modem.</p>
      */

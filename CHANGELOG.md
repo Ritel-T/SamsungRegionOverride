@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.0.1 - 2026-09-10
+
+- Removed automatic UICC disable/enable during Restore. Losing the privileged process can no longer
+  strand the SIM in a persistently disabled state through this recovery path (#2).
+- Country operations now request scoped shell phone-state permissions without connecting a
+  UiAutomation accessibility client, avoiding the connection/teardown failure seen on Android 17.
+- Preserve the permission or operation failure instead of replacing it with a teardown crash.
+  Successful Restore clears the pending journal so another disguise can start normally.
+- Name the failed Country or Network layer in the result, and report unknown IMS observations as
+  unknown instead of registered. IMS failures caused by a globally faked Network identity remain a
+  compatibility limit; Restore observes registration without automatically switching the SIM off.
+
 ## 4.0.0 - 2026-09-03
 
 - Redesigned the Compose interface with Material 3 Expressive, adaptive wide-screen layouts, compact

@@ -29,7 +29,7 @@
     <string name="network_not_ready">Esta camada precisa de um chip PRONTO; %1$s está %2$s.</string>
     <string name="network_reconnect_warning">Pode interromper IMS/VoLTE na próxima reconexão. Use por pouco tempo e restaure ao terminar.</string>
     <string name="layer_still_live">Ainda está ativa. Desligar esta opção só exclui a camada da próxima aplicação; Restaurar a remove.</string>
-    <string name="pending_state_warning">Uma gravação anterior terminou antes que o resultado fosse registrado. Restaure antes de iniciar outro disfarce. Se a restauração não for concluída, reinicie para limpar as substituições principais e siga qualquer aviso sobre a identidade do chip antes de iniciar outra sessão.</string>
+    <string name="pending_state_warning">Uma gravação anterior terminou antes que o resultado fosse registrado. Restaure antes de iniciar outro disfarce. Se a restauração não for concluída, reinicie para limpar as substituições principais e siga qualquer aviso sobre a identidade do chip antes de iniciar outra sessão. Reiniciar não reativa um chip desativado; ative-o nas Configurações.</string>
 
     <string name="action_start_disguise">Iniciar disfarce</string>
     <string name="action_update_disguise">Atualizar</string>
@@ -108,7 +108,7 @@
     <string name="wipe_data_summary">Apaga os dados do app. Sua conta será desconectada e os dados locais serão removidos.</string>
 
     <string name="dialog_restore_without_markers_title">Nada registrado para este chip</string>
-    <string name="dialog_restore_without_markers_body">A restauração ainda usa o estado atual das opções de camada. Limpar o país dos apps remove todos os valores de teste temporários do CarrierConfig neste subId. Sem um instantâneo, reiniciar é a forma mais confiável de redefinir.</string>
+    <string name="dialog_restore_without_markers_body">A restauração ainda usa o estado atual das opções de camada. Limpar o país dos apps remove todos os valores de teste temporários do CarrierConfig neste subId. Sem um instantâneo, reiniciar é a forma mais confiável de redefinir. Reiniciar não reativa um chip desativado; ative-o nas Configurações.</string>
     <string name="dialog_restore_anyway">Restaurar mesmo assim</string>
     <string name="dialog_clear_all_title">Limpar todas as substituições de teste do CarrierConfig?</string>
     <string name="dialog_clear_all_body">Remove os valores de teste temporários e persistentes do CarrierConfig em sub %1$d, inclusive valores gravados por outras ferramentas. Isso não restaura a camada Rede e não pode recriar os valores de outra ferramenta.</string>
@@ -118,10 +118,11 @@
     <string name="result_nothing_run">Nenhuma operação foi executada ainda.</string>
     <string name="result_cancelled">Cancelado.</string>
     <string name="result_operation_failed">Falha na operação</string>
-    <string name="result_one_layer_failed">Falha em uma camada</string>
+    <string name="result_country_layer_failed">Falha no país dos apps</string>
+    <string name="result_network_layer_failed">Falha na operadora SIM</string>
     <string name="result_disguise_ims_unregistered">Disfarce ativo: IMS não está registrado</string>
     <string name="result_disguise_active">Disfarce temporário ativo</string>
-    <string name="result_restore_unconfirmed">Disfarce encerrado: verifique o serviço móvel</string>
+    <string name="result_restore_unconfirmed">Substituições limpas - IMS não confirmado; confira o chip nas Configurações</string>
     <string name="result_restored">Disfarce encerrado e substituições restauradas</string>
     <string name="result_apps_refreshed">Apps de destino atualizados</string>
     <string name="result_all_carrier_config_cleared">Todas as substituições de teste do CarrierConfig foram limpas</string>

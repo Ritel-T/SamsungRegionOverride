@@ -29,7 +29,7 @@
     <string name="network_not_ready">ชั้นนี้ต้องใช้ SIM ที่มีสถานะ READY แต่ %1$s มีสถานะ %2$s</string>
     <string name="network_reconnect_warning">IMS/VoLTE อาจใช้งานไม่ได้เมื่อเชื่อมต่อครั้งถัดไป ใช้ชั่วครู่แล้วคืนค่าเมื่อเสร็จ</string>
     <string name="layer_still_live">ยังทำงานอยู่ การปิดสวิตช์นี้เพียงไม่นำชั้นนี้ไปใช้ในครั้งถัดไป ต้องใช้คืนค่าเพื่อลบออก</string>
-    <string name="pending_state_warning">การเขียนครั้งก่อนสิ้นสุดก่อนบันทึกผล โปรดคืนค่าก่อนเริ่มจำลองครั้งใหม่ หากคืนค่าไม่สำเร็จ ให้รีสตาร์ทเพื่อล้างการแทนที่หลัก และทำตามคำเตือนเกี่ยวกับข้อมูลประจำตัว SIM ก่อนเริ่มเซสชันใหม่</string>
+    <string name="pending_state_warning">การเขียนครั้งก่อนสิ้นสุดก่อนบันทึกผล โปรดคืนค่าก่อนเริ่มจำลองครั้งใหม่ หากคืนค่าไม่สำเร็จ ให้รีสตาร์ทเพื่อล้างการแทนที่หลัก และทำตามคำเตือนเกี่ยวกับข้อมูลประจำตัว SIM ก่อนเริ่มเซสชันใหม่ การรีสตาร์ทจะไม่เปิดใช้งาน SIM ที่ปิดไว้ โปรดเปิดใช้งานในการตั้งค่า</string>
 
     <string name="action_start_disguise">เริ่มจำลอง</string>
     <string name="action_update_disguise">อัปเดต</string>
@@ -106,7 +106,7 @@
     <string name="wipe_data_summary">ลบข้อมูลแอป คุณจะออกจากระบบและข้อมูลในเครื่องจะถูกลบ</string>
 
     <string name="dialog_restore_without_markers_title">ไม่มีบันทึกสำหรับ SIM นี้</string>
-    <string name="dialog_restore_without_markers_body">หากคืนค่าต่อ ระบบจะใช้สวิตช์ของแต่ละชั้นตามค่าปัจจุบัน การล้างประเทศของแอปจะลบค่าทดสอบ CarrierConfig ชั่วคราวทั้งหมดใน subId นี้ หากไม่มีสแนปช็อต การรีสตาร์ทเป็นวิธีรีเซ็ตที่น่าเชื่อถือกว่า</string>
+    <string name="dialog_restore_without_markers_body">หากคืนค่าต่อ ระบบจะใช้สวิตช์ของแต่ละชั้นตามค่าปัจจุบัน การล้างประเทศของแอปจะลบค่าทดสอบ CarrierConfig ชั่วคราวทั้งหมดใน subId นี้ หากไม่มีสแนปช็อต การรีสตาร์ทเป็นวิธีรีเซ็ตที่น่าเชื่อถือกว่า การรีสตาร์ทจะไม่เปิดใช้งาน SIM ที่ปิดไว้ โปรดเปิดใช้งานในการตั้งค่า</string>
     <string name="dialog_restore_anyway">คืนค่าต่อ</string>
     <string name="dialog_clear_all_title">ล้างการแทนที่ทดสอบ CarrierConfig ทั้งหมดหรือไม่</string>
     <string name="dialog_clear_all_body">ลบค่าทดสอบ CarrierConfig แบบชั่วคราวและถาวรใน sub %1$d รวมถึงค่าจากเครื่องมืออื่น แต่จะไม่คืนค่าชั้นเครือข่ายและไม่สามารถสร้างค่าของเครื่องมืออื่นขึ้นใหม่ได้</string>
@@ -116,10 +116,11 @@
     <string name="result_nothing_run">ยังไม่ได้ทำงานใด</string>
     <string name="result_cancelled">ยกเลิกแล้ว</string>
     <string name="result_operation_failed">การดำเนินการล้มเหลว</string>
-    <string name="result_one_layer_failed">ชั้นหนึ่งล้มเหลว</string>
+    <string name="result_country_layer_failed">ประเทศของแอปล้มเหลว</string>
+    <string name="result_network_layer_failed">ผู้ให้บริการ SIM ล้มเหลว</string>
     <string name="result_disguise_ims_unregistered">การจำลองทำงาน - IMS ไม่ได้ลงทะเบียน</string>
     <string name="result_disguise_active">การจำลองชั่วคราวทำงานอยู่</string>
-    <string name="result_restore_unconfirmed">สิ้นสุดการจำลองแล้ว - ตรวจสอบบริการมือถือ</string>
+    <string name="result_restore_unconfirmed">ล้างการแทนที่แล้ว - ยังไม่ยืนยัน IMS โปรดตรวจสอบ SIM ในการตั้งค่า</string>
     <string name="result_restored">สิ้นสุดการจำลองและคืนค่าการแทนที่แล้ว</string>
     <string name="result_apps_refreshed">รีเฟรชแอปเป้าหมายแล้ว</string>
     <string name="result_all_carrier_config_cleared">ล้างการแทนที่ทดสอบ CarrierConfig ทั้งหมดแล้ว</string>

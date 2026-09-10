@@ -2,6 +2,8 @@
 
 Test device: Samsung SM-S938B, Android 16, One UI 8.5, dual China Unicom subscriptions. All destructive experiments used the non-default subscription and were restored afterwards.
 
+The UICC cycles below are historical controlled experiments, not the current Restore behavior. Restore no longer disables or cycles UICC; it observes IMS read-only for up to 15 seconds after clearing overrides.
+
 ## Reproduced sequences
 
 | Sequence | Immediate result | Forced reconnect result |
@@ -44,16 +46,19 @@ Therefore:
 
 The non-root Shizuku approach cannot return fake MCC/MNC only to Galaxy apps while returning real MCC/MNC to `com.android.phone` or Samsung IMS. That would require caller/process-specific hooking, typically a rooted/custom framework solution.
 
-This project instead treats the feature as a short session and makes recovery reliable:
+This project instead treats the feature as a short session and preserves an explicit recovery path:
 
 - apply shows a temporary-session warning;
 - Network is never described as call-safe;
 - Restore is primary while a disguise is live;
 - writes are journaled before Binder mutation;
 - Country clear waits for its final reload;
-- UICC is never cycled while a known fake Network may remain;
-- restore polls IMS and reports an unconfirmed recovery;
-- reboot remains the definitive fallback.
+- Restore never disables or cycles UICC, even after the real Network identity is confirmed;
+- Restore observes IMS read-only for up to 15 seconds and reports recovery as unconfirmed if IMS remains unregistered or unavailable;
+- after restoring the real identity, the user checks mobile service and, if needed, re-enables the SIM in Android Settings;
+- version 4.0.0 could leave UICC persistently disabled, and reboot alone does not re-enable it.
+
+The IMS reports in [issue #3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) and [issue #4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) concern the global Network identity limitation. App-country-only use can reduce exposure when it meets the target app's needs, but it is not a service-safety guarantee. Removing automatic UICC cycling avoids that recovery-side mutation; it does not make a fake Network identity safe or resolve every IMS registration failure.
 
 ## What was ruled out
 

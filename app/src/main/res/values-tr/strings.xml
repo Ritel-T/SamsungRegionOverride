@@ -29,7 +29,7 @@
     <string name="network_not_ready">Bu katman için HAZIR bir SIM gerekir; %1$s şu durumda: %2$s.</string>
     <string name="network_reconnect_warning">Sonraki yeniden bağlantıda IMS/VoLTE\'yi bozabilir. Kısa süre kullanıp işiniz bitince geri yükleyin.</string>
     <string name="layer_still_live">Hâlâ etkin. Bu anahtarı kapatmak yalnızca sonraki uygulamada katmanı dışarıda bırakır; Geri yükle işlemi katmanı kaldırır.</string>
-    <string name="pending_state_warning">Önceki yazma işlemi, sonucu kaydedilmeden sona erdi. Yeni bir maskeleme başlatmadan önce geri yükleyin. Geri yükleme tamamlanamazsa temel geçersiz kılmaları temizlemek için yeniden başlatın ve yeni oturumdan önce SIM kimliği uyarılarını izleyin.</string>
+    <string name="pending_state_warning">Önceki yazma işlemi, sonucu kaydedilmeden sona erdi. Yeni bir maskeleme başlatmadan önce geri yükleyin. Geri yükleme tamamlanamazsa temel geçersiz kılmaları temizlemek için yeniden başlatın ve yeni oturumdan önce SIM kimliği uyarılarını izleyin. Yeniden başlatma devre dışı SIM’i etkinleştirmez; Ayarlardan etkinleştirin.</string>
 
     <string name="action_start_disguise">Maskelemeyi başlat</string>
     <string name="action_update_disguise">Güncelle</string>
@@ -107,7 +107,7 @@
     <string name="wipe_data_summary">Uygulama verilerini siler. Oturumunuz kapanır ve yerel veriler kaldırılır.</string>
 
     <string name="dialog_restore_without_markers_title">Bu SIM için kayıt yok</string>
-    <string name="dialog_restore_without_markers_body">Yine de geri yüklemek, katman anahtarlarını mevcut hâliyle kullanır. Uygulama ülkesini temizlemek, bu subId üzerindeki tüm geçici CarrierConfig test değerlerini kaldırır. Anlık görüntü yoksa yeniden başlatma daha güvenilir bir sıfırlamadır.</string>
+    <string name="dialog_restore_without_markers_body">Yine de geri yüklemek, katman anahtarlarını mevcut hâliyle kullanır. Uygulama ülkesini temizlemek, bu subId üzerindeki tüm geçici CarrierConfig test değerlerini kaldırır. Anlık görüntü yoksa yeniden başlatma daha güvenilir bir sıfırlamadır. Yeniden başlatma devre dışı SIM’i etkinleştirmez; Ayarlardan etkinleştirin.</string>
     <string name="dialog_restore_anyway">Yine de geri yükle</string>
     <string name="dialog_clear_all_title">Tüm CarrierConfig test geçersiz kılmaları temizlensin mi?</string>
     <string name="dialog_clear_all_body">Diğer araçların yazdığı değerler dâhil, sub %1$d üzerindeki geçici ve kalıcı CarrierConfig test değerlerini kaldırır. Ağ katmanını geri yüklemez ve başka bir aracın değerlerini yeniden oluşturamaz.</string>
@@ -117,10 +117,11 @@
     <string name="result_nothing_run">Henüz hiçbir şey çalıştırılmadı.</string>
     <string name="result_cancelled">İptal edildi.</string>
     <string name="result_operation_failed">İşlem başarısız oldu</string>
-    <string name="result_one_layer_failed">Bir katman başarısız oldu</string>
+    <string name="result_country_layer_failed">Uygulama ülkesi başarısız</string>
+    <string name="result_network_layer_failed">SIM operatörü başarısız</string>
     <string name="result_disguise_ims_unregistered">Maskeleme etkin — IMS kayıtlı değil</string>
     <string name="result_disguise_active">Geçici maskeleme etkin</string>
-    <string name="result_restore_unconfirmed">Maskeleme sona erdi — mobil hizmeti kontrol edin</string>
+    <string name="result_restore_unconfirmed">Geçersiz kılmalar temizlendi — IMS doğrulanmadı; Ayarlardan SIM’i kontrol edin</string>
     <string name="result_restored">Maskeleme sona erdi ve geçersiz kılmalar geri yüklendi</string>
     <string name="result_apps_refreshed">Hedef uygulamalar yenilendi</string>
     <string name="result_all_carrier_config_cleared">Tüm CarrierConfig test geçersiz kılmaları temizlendi</string>

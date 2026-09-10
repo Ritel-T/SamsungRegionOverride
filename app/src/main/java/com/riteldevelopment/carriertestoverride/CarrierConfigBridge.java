@@ -1,7 +1,10 @@
 package com.riteldevelopment.carriertestoverride;
 
 import android.app.Activity;
+import android.Manifest;
+import android.os.IBinder;
 import android.os.Bundle;
+import android.os.Build;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,6 +14,10 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
+import java.util.Arrays;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
 
 /** Starts the registered CarrierConfig instrumentation from the shell UserService. */
@@ -73,21 +80,32 @@ final class CarrierConfigBridge {
     }
 
     /**
-     * Uses Android's own command host for the watcher and UiAutomationConnection lifecycle.
+     * Uses Android's command host for instrumentation lifecycle and delegates phone permissions
+     * directly from the shell. Its automation Binder remains unconnected, so other automation
+     * services retain their accessibility connection.
      *
-     * <p>Hosting those Binder objects inside a Shizuku UserService worked through Android 16, but
-     * Android 17 can leave UiAutomation in CONNECTING while instrumentation is finishing. A normal
-     * instrumentation start is not an option because ActivityManager force-stops every process in the
-     * package, including the separate UI process. The platform command with {@code --no-restart}
-     * follows the same supported shell path without taking the interface down.</p>
+     * <p>The shell permission delegate requires an active instrumentation with the command host's
+     * non-null automation Binder, but does not require that Binder to register an accessibility
+     * service. {@code --no-restart} also prevents ActivityManager from force-stopping the separate
+     * UI process while starting or finishing this operation.</p>
      */
     private static synchronized String runInstrumentation(Bundle arguments) throws Exception {
         java.lang.Process process = null;
         try {
-            process = new ProcessBuilder(buildCommand(arguments))
+            // Android 15+ finishes only its own delegation. Older frameworks may clear any
+            // delegate when instrumentation ends, so reject an existing one before starting.
+            // This read-only preflight is not atomic with another tool starting a delegation.
+            PermissionHandshake.ensureLegacyDelegationAvailable(Build.VERSION.SDK_INT,
+                    CarrierConfigBridge::readDelegatedPermissions);
+            Bundle runArguments = new Bundle(arguments);
+            String token = UUID.randomUUID().toString();
+            runArguments.putString(PermissionHandshake.ARG_TOKEN, token);
+            PermissionHandshake handshake = new PermissionHandshake(token,
+                    CarrierConfigBridge::delegatePermissions);
+            process = new ProcessBuilder(buildCommand(runArguments))
                     .redirectErrorStream(true)
                     .start();
-            StreamDrain drain = new StreamDrain(process.getInputStream());
+            StreamDrain drain = new StreamDrain(process.getInputStream(), handshake);
             Thread reader = new Thread(drain, "carrier-config-instrumentation-output");
             reader.setDaemon(true);
             reader.start();
@@ -95,10 +113,12 @@ final class CarrierConfigBridge {
             if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 reader.join(TimeUnit.SECONDS.toMillis(1));
+                handshake.throwIfFailed();
                 throw new IllegalStateException("CarrierConfig instrumentation timed out after "
                         + TIMEOUT_SECONDS + " seconds");
             }
             reader.join(TimeUnit.SECONDS.toMillis(1));
+            handshake.throwIfFailed();
             return parseInstrumentationOutput(drain.text(), process.exitValue());
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -108,6 +128,49 @@ final class CarrierConfigBridge {
             if (process != null) {
                 process.destroy();
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> readDelegatedPermissions() throws Exception {
+        Object activity = service("activity", "android.app.IActivityManager");
+        Method getter = Class.forName("android.app.IActivityManager")
+                .getMethod("getDelegatedShellPermissions");
+        return (List<String>) invoke(getter, activity);
+    }
+
+    private static void delegatePermissions(int uid) throws Exception {
+        Object packages = service("package", "android.content.pm.IPackageManager");
+        Method getPackages = Class.forName("android.content.pm.IPackageManager")
+                .getMethod("getPackagesForUid", int.class);
+        String[] names = (String[]) invoke(getPackages, packages, uid);
+        if (names == null || !Arrays.asList(names).contains(BuildConfig.APPLICATION_ID)) {
+            throw new SecurityException("Permission request UID does not belong to this app");
+        }
+        Object activity = service("activity", "android.app.IActivityManager");
+        Method delegate = Class.forName("android.app.IActivityManager").getMethod(
+                "startDelegateShellPermissionIdentity", int.class, String[].class);
+        invoke(delegate, activity, uid, new String[] {
+                Manifest.permission.MODIFY_PHONE_STATE, Manifest.permission.READ_PHONE_STATE});
+        // Android 15+ normal finish revokes only its own delegation; older versions require the
+        // pre-start guard above. Never call the global stop API and revoke another tool's identity.
+    }
+
+    private static Object service(String name, String interfaceName) throws Exception {
+        IBinder binder = (IBinder) Class.forName("android.os.ServiceManager")
+                .getMethod("getService", String.class).invoke(null, name);
+        if (binder == null) throw new IllegalStateException(name + " service is unavailable");
+        return Class.forName(interfaceName + "$Stub").getMethod("asInterface", IBinder.class)
+                .invoke(null, binder);
+    }
+
+    private static Object invoke(Method method, Object target, Object... arguments) throws Exception {
+        try {
+            return method.invoke(target, arguments);
+        } catch (InvocationTargetException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            throw new RuntimeException(cause);
         }
     }
 
@@ -207,9 +270,12 @@ final class CarrierConfigBridge {
     private static final class StreamDrain implements Runnable {
         private final InputStream source;
         private final StringBuilder sink = new StringBuilder();
+        private final PermissionHandshake handshake;
+        private final StringBuilder line = new StringBuilder();
 
-        StreamDrain(InputStream source) {
+        StreamDrain(InputStream source, PermissionHandshake handshake) {
             this.source = source;
+            this.handshake = handshake;
         }
 
         @Override
@@ -218,6 +284,15 @@ final class CarrierConfigBridge {
             try (Reader reader = new InputStreamReader(source, StandardCharsets.UTF_8)) {
                 int read;
                 while ((read = reader.read(buffer)) != -1) {
+                    for (int i = 0; i < read; i++) {
+                        char character = buffer[i];
+                        if (character == '\n') {
+                            handshake.acceptLine(line.toString());
+                            line.setLength(0);
+                        } else if (character != '\r' && line.length() < MAX_OUTPUT_CHARS) {
+                            line.append(character);
+                        }
+                    }
                     synchronized (sink) {
                         int remaining = MAX_OUTPUT_CHARS - sink.length();
                         if (remaining > 0) {

@@ -29,7 +29,7 @@
     <string name="network_not_ready">Lớp này cần SIM ở trạng thái READY; %1$s đang ở trạng thái %2$s.</string>
     <string name="network_reconnect_warning">Có thể làm hỏng IMS/VoLTE ở lần kết nối lại tiếp theo. Chỉ dùng trong thời gian ngắn và khôi phục khi xong.</string>
     <string name="layer_still_live">Vẫn đang hoạt động. Tắt công tắc này chỉ loại lớp khỏi lần áp dụng tiếp theo; Khôi phục mới xóa lớp.</string>
-    <string name="pending_state_warning">Lần ghi trước đã kết thúc trước khi kết quả được lưu. Hãy khôi phục trước khi bắt đầu lần giả lập khác. Nếu không thể khôi phục, hãy khởi động lại để xóa các ghi đè cốt lõi và làm theo cảnh báo nhận dạng SIM trước phiên mới.</string>
+    <string name="pending_state_warning">Lần ghi trước đã kết thúc trước khi kết quả được lưu. Hãy khôi phục trước khi bắt đầu lần giả lập khác. Nếu không thể khôi phục, hãy khởi động lại để xóa các ghi đè cốt lõi và làm theo cảnh báo nhận dạng SIM trước phiên mới. Khởi động lại không bật lại SIM đã tắt; hãy bật SIM trong Cài đặt.</string>
 
     <string name="action_start_disguise">Bắt đầu giả lập</string>
     <string name="action_update_disguise">Cập nhật</string>
@@ -106,7 +106,7 @@
     <string name="wipe_data_summary">Xóa dữ liệu ứng dụng. Bạn sẽ bị đăng xuất và dữ liệu cục bộ sẽ bị xóa.</string>
 
     <string name="dialog_restore_without_markers_title">Không có bản ghi cho SIM này</string>
-    <string name="dialog_restore_without_markers_body">Nếu vẫn khôi phục, ứng dụng sẽ dùng trạng thái hiện tại của các công tắc lớp. Xóa Quốc gia ứng dụng sẽ xóa mọi giá trị kiểm thử CarrierConfig tạm thời trên subId này. Khi không có snapshot, khởi động lại là cách đặt lại đáng tin cậy hơn.</string>
+    <string name="dialog_restore_without_markers_body">Nếu vẫn khôi phục, ứng dụng sẽ dùng trạng thái hiện tại của các công tắc lớp. Xóa Quốc gia ứng dụng sẽ xóa mọi giá trị kiểm thử CarrierConfig tạm thời trên subId này. Khi không có snapshot, khởi động lại là cách đặt lại đáng tin cậy hơn. Khởi động lại không bật lại SIM đã tắt; hãy bật SIM trong Cài đặt.</string>
     <string name="dialog_restore_anyway">Vẫn khôi phục</string>
     <string name="dialog_clear_all_title">Xóa mọi ghi đè kiểm thử CarrierConfig?</string>
     <string name="dialog_clear_all_body">Xóa các giá trị kiểm thử CarrierConfig tạm thời và lâu dài trên sub %1$d, kể cả giá trị do công cụ khác ghi. Thao tác này không khôi phục lớp Mạng và không thể tạo lại giá trị của công cụ khác.</string>
@@ -116,10 +116,11 @@
     <string name="result_nothing_run">Chưa có thao tác nào chạy.</string>
     <string name="result_cancelled">Đã hủy.</string>
     <string name="result_operation_failed">Thao tác thất bại</string>
-    <string name="result_one_layer_failed">Một lớp đã thất bại</string>
+    <string name="result_country_layer_failed">Quốc gia ứng dụng thất bại</string>
+    <string name="result_network_layer_failed">Nhà mạng SIM thất bại</string>
     <string name="result_disguise_ims_unregistered">Giả lập đang hoạt động - IMS chưa đăng ký</string>
     <string name="result_disguise_active">Giả lập tạm thời đang hoạt động</string>
-    <string name="result_restore_unconfirmed">Đã kết thúc giả lập - hãy kiểm tra dịch vụ di động</string>
+    <string name="result_restore_unconfirmed">Đã xóa ghi đè - IMS chưa xác nhận; kiểm tra SIM trong Cài đặt</string>
     <string name="result_restored">Đã kết thúc giả lập và khôi phục các ghi đè</string>
     <string name="result_apps_refreshed">Đã làm mới ứng dụng đích</string>
     <string name="result_all_carrier_config_cleared">Đã xóa mọi ghi đè kiểm thử CarrierConfig</string>

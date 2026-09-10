@@ -29,7 +29,7 @@
     <string name="network_not_ready">Diese Ebene benötigt eine BEREITE SIM; %1$s ist %2$s.</string>
     <string name="network_reconnect_warning">Kann IMS/VoLTE bei der nächsten Neuverbindung stören. Nur kurz verwenden und danach wiederherstellen.</string>
     <string name="layer_still_live">Noch aktiv. Durch Ausschalten wird diese Ebene nur von der nächsten Anwendung ausgeschlossen; Wiederherstellen entfernt sie.</string>
-    <string name="pending_state_warning">Ein vorheriger Schreibvorgang endete, bevor das Ergebnis erfasst wurde. Stellen Sie vor einer neuen Tarnung den Zustand wieder her. Falls dies nicht gelingt, starten Sie das Gerät neu, um die Kernüberschreibungen zu löschen, und beachten Sie vor einer neuen Sitzung alle Warnungen zur SIM-Identität.</string>
+    <string name="pending_state_warning">Ein vorheriger Schreibvorgang endete, bevor das Ergebnis erfasst wurde. Stellen Sie vor einer neuen Tarnung den Zustand wieder her. Falls dies nicht gelingt, starten Sie das Gerät neu, um die Kernüberschreibungen zu löschen, und beachten Sie vor einer neuen Sitzung alle Warnungen zur SIM-Identität. Ein Neustart aktiviert keine deaktivierte SIM; aktivieren Sie sie in den Einstellungen.</string>
 
     <string name="action_start_disguise">Tarnung starten</string>
     <string name="action_update_disguise">Aktualisieren</string>
@@ -107,7 +107,7 @@
     <string name="wipe_data_summary">Löscht die App-Daten. Sie werden abgemeldet und lokale Daten werden entfernt.</string>
 
     <string name="dialog_restore_without_markers_title">Für diese SIM ist nichts erfasst</string>
-    <string name="dialog_restore_without_markers_body">Bei einer Wiederherstellung werden die Ebenenschalter in ihrer aktuellen Stellung verwendet. Durch Löschen des App-Lands werden alle vorübergehenden CarrierConfig-Testwerte dieser subId entfernt. Ohne Momentaufnahme ist ein Neustart die zuverlässigere Rücksetzung.</string>
+    <string name="dialog_restore_without_markers_body">Bei einer Wiederherstellung werden die Ebenenschalter in ihrer aktuellen Stellung verwendet. Durch Löschen des App-Lands werden alle vorübergehenden CarrierConfig-Testwerte dieser subId entfernt. Ohne Momentaufnahme ist ein Neustart die zuverlässigere Rücksetzung. Ein Neustart aktiviert keine deaktivierte SIM; aktivieren Sie sie in den Einstellungen.</string>
     <string name="dialog_restore_anyway">Trotzdem wiederherstellen</string>
     <string name="dialog_clear_all_title">Alle CarrierConfig-Testüberschreibungen löschen?</string>
     <string name="dialog_clear_all_body">Entfernt vorübergehende und dauerhafte CarrierConfig-Testwerte auf sub %1$d, einschließlich Werten anderer Tools. Die Netzwerkebene wird nicht wiederhergestellt, und Werte anderer Tools können nicht rekonstruiert werden.</string>
@@ -117,10 +117,11 @@
     <string name="result_nothing_run">Noch nichts ausgeführt.</string>
     <string name="result_cancelled">Abgebrochen.</string>
     <string name="result_operation_failed">Vorgang fehlgeschlagen</string>
-    <string name="result_one_layer_failed">Eine Ebene ist fehlgeschlagen</string>
+    <string name="result_country_layer_failed">App-Land fehlgeschlagen</string>
+    <string name="result_network_layer_failed">SIM-Anbieter fehlgeschlagen</string>
     <string name="result_disguise_ims_unregistered">Tarnung aktiv – IMS ist nicht registriert</string>
     <string name="result_disguise_active">Vorübergehende Tarnung aktiv</string>
-    <string name="result_restore_unconfirmed">Tarnung beendet – Mobilfunkdienst prüfen</string>
+    <string name="result_restore_unconfirmed">Überschreibungen gelöscht - IMS unbestätigt; SIM in Einstellungen prüfen</string>
     <string name="result_restored">Tarnung beendet und Überschreibungen wiederhergestellt</string>
     <string name="result_apps_refreshed">Ziel-Apps aktualisiert</string>
     <string name="result_all_carrier_config_cleared">Alle CarrierConfig-Testüberschreibungen gelöscht</string>

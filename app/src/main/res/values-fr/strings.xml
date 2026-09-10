@@ -29,7 +29,7 @@
     <string name="network_not_ready">Cette couche nécessite une SIM PRÊTE ; %1$s est %2$s.</string>
     <string name="network_reconnect_warning">Peut interrompre IMS/VoLTE lors de la prochaine reconnexion. Utilisez brièvement, puis restaurez.</string>
     <string name="layer_still_live">Toujours actif. Désactiver cet interrupteur exclut seulement cette couche de la prochaine application ; Restaurer la supprime.</string>
-    <string name="pending_state_warning">Une écriture précédente s’est terminée avant l’enregistrement de son résultat. Restaurez avant de commencer un autre déguisement. Si la restauration échoue, redémarrez pour effacer les substitutions principales et suivez tout avertissement concernant l’identité SIM avant une nouvelle session.</string>
+    <string name="pending_state_warning">Une écriture précédente s’est terminée avant l’enregistrement de son résultat. Restaurez avant de commencer un autre déguisement. Si la restauration échoue, redémarrez pour effacer les substitutions principales et suivez tout avertissement concernant l’identité SIM avant une nouvelle session. Le redémarrage ne réactive pas une SIM désactivée ; activez-la dans les paramètres.</string>
 
     <string name="action_start_disguise">Démarrer le déguisement</string>
     <string name="action_update_disguise">Mettre à jour</string>
@@ -108,7 +108,7 @@
     <string name="wipe_data_summary">Efface les données de l’application. Vous serez déconnecté et les données locales seront supprimées.</string>
 
     <string name="dialog_restore_without_markers_title">Aucun enregistrement pour cette SIM</string>
-    <string name="dialog_restore_without_markers_body">La restauration utilise tout de même l’état actuel des interrupteurs de couche. Effacer le pays des applications supprime toutes les valeurs de test CarrierConfig temporaires de ce subId. En l’absence de sauvegarde, le redémarrage est la réinitialisation la plus fiable.</string>
+    <string name="dialog_restore_without_markers_body">La restauration utilise tout de même l’état actuel des interrupteurs de couche. Effacer le pays des applications supprime toutes les valeurs de test CarrierConfig temporaires de ce subId. En l’absence de sauvegarde, le redémarrage est la réinitialisation la plus fiable. Le redémarrage ne réactive pas une SIM désactivée ; activez-la dans les paramètres.</string>
     <string name="dialog_restore_anyway">Restaurer quand même</string>
     <string name="dialog_clear_all_title">Effacer toutes les substitutions de test CarrierConfig ?</string>
     <string name="dialog_clear_all_body">Supprime les valeurs de test CarrierConfig temporaires et persistantes sur sub %1$d, y compris celles écrites par d’autres outils. Cette action ne restaure pas la couche Réseau et ne peut pas reconstruire les valeurs d’un autre outil.</string>
@@ -118,10 +118,11 @@
     <string name="result_nothing_run">Aucune opération n’a encore été exécutée.</string>
     <string name="result_cancelled">Annulé.</string>
     <string name="result_operation_failed">Échec de l’opération</string>
-    <string name="result_one_layer_failed">Échec d’une couche</string>
+    <string name="result_country_layer_failed">Échec du pays des applications</string>
+    <string name="result_network_layer_failed">Échec de l’opérateur SIM</string>
     <string name="result_disguise_ims_unregistered">Déguisement actif - IMS n’est pas enregistré</string>
     <string name="result_disguise_active">Déguisement temporaire actif</string>
-    <string name="result_restore_unconfirmed">Déguisement terminé - vérifiez le service mobile</string>
+    <string name="result_restore_unconfirmed">Substitutions effacées - IMS non confirmé ; vérifiez la SIM dans les paramètres</string>
     <string name="result_restored">Déguisement terminé et substitutions restaurées</string>
     <string name="result_apps_refreshed">Applications cibles actualisées</string>
     <string name="result_all_carrier_config_cleared">Toutes les substitutions de test CarrierConfig ont été effacées</string>

@@ -29,7 +29,7 @@
     <string name="network_not_ready">This layer needs a READY SIM; %1$s is %2$s.</string>
     <string name="network_reconnect_warning">May break IMS/VoLTE at the next reconnect. Use briefly and restore when finished.</string>
     <string name="layer_still_live">Still live. Turning this switch off only excludes it from the next apply; Restore removes it.</string>
-    <string name="pending_state_warning">A previous write ended before its result was recorded. Restore before starting another disguise. If Restore cannot finish, reboot to clear core overrides and follow any SIM identity warning before a new session.</string>
+    <string name="pending_state_warning">A previous write ended before its result was recorded. Restore before starting another disguise. If Restore cannot finish, reboot to clear core overrides and follow any SIM identity warning before a new session. Reboot does not re-enable a disabled SIM; enable it in Settings.</string>
 
     <string name="action_start_disguise">Start disguise</string>
     <string name="action_update_disguise">Update</string>
@@ -107,7 +107,7 @@
     <string name="wipe_data_summary">Erases app data. You will be signed out and local data will be removed.</string>
 
     <string name="dialog_restore_without_markers_title">Nothing recorded for this SIM</string>
-    <string name="dialog_restore_without_markers_body">Restoring anyway uses the layer switches as they stand. Clearing app country removes every transient CarrierConfig test value on this subId. With no snapshot, reboot is the more reliable reset.</string>
+    <string name="dialog_restore_without_markers_body">Restoring anyway uses the layer switches as they stand. Clearing app country removes every transient CarrierConfig test value on this subId. With no snapshot, reboot is the more reliable reset. Reboot does not re-enable a disabled SIM; enable it in Settings.</string>
     <string name="dialog_restore_anyway">Restore anyway</string>
     <string name="dialog_clear_all_title">Clear every CarrierConfig test override?</string>
     <string name="dialog_clear_all_body">Removes transient and persistent CarrierConfig test values on sub %1$d, including values written by other tools. It does not restore the Network layer and cannot rebuild another tool\'s values.</string>
@@ -117,10 +117,11 @@
     <string name="result_nothing_run">Nothing has run yet.</string>
     <string name="result_cancelled">Cancelled.</string>
     <string name="result_operation_failed">Operation failed</string>
-    <string name="result_one_layer_failed">One layer failed</string>
+    <string name="result_country_layer_failed">App country failed</string>
+    <string name="result_network_layer_failed">SIM operator failed</string>
     <string name="result_disguise_ims_unregistered">Disguise active - IMS is not registered</string>
     <string name="result_disguise_active">Temporary disguise active</string>
-    <string name="result_restore_unconfirmed">Disguise ended - check mobile service</string>
+    <string name="result_restore_unconfirmed">Overrides cleared - IMS unconfirmed; check SIM in Settings</string>
     <string name="result_restored">Disguise ended and overrides restored</string>
     <string name="result_apps_refreshed">Target apps refreshed</string>
     <string name="result_all_carrier_config_cleared">All CarrierConfig test overrides cleared</string>

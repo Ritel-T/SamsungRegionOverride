@@ -29,7 +29,7 @@
     <string name="network_not_ready">Lapisan ini memerlukan SIM berstatus READY; %1$s berstatus %2$s.</string>
     <string name="network_reconnect_warning">Dapat merusak IMS/VoLTE saat tersambung ulang. Gunakan sebentar lalu pulihkan setelah selesai.</string>
     <string name="layer_still_live">Masih aktif. Menonaktifkan sakelar ini hanya mengecualikannya dari penerapan berikutnya; Pulihkan akan menghapusnya.</string>
-    <string name="pending_state_warning">Penulisan sebelumnya berakhir sebelum hasilnya tercatat. Pulihkan sebelum memulai penyamaran lain. Jika pemulihan tidak dapat diselesaikan, mulai ulang perangkat untuk menghapus override inti dan ikuti peringatan identitas SIM sebelum sesi baru.</string>
+    <string name="pending_state_warning">Penulisan sebelumnya berakhir sebelum hasilnya tercatat. Pulihkan sebelum memulai penyamaran lain. Jika pemulihan tidak dapat diselesaikan, mulai ulang perangkat untuk menghapus override inti dan ikuti peringatan identitas SIM sebelum sesi baru. Memulai ulang tidak mengaktifkan SIM yang dinonaktifkan; aktifkan di Setelan.</string>
 
     <string name="action_start_disguise">Mulai penyamaran</string>
     <string name="action_update_disguise">Perbarui</string>
@@ -106,7 +106,7 @@
     <string name="wipe_data_summary">Menghapus data aplikasi. Anda akan keluar dan data lokal akan dihapus.</string>
 
     <string name="dialog_restore_without_markers_title">Tidak ada catatan untuk SIM ini</string>
-    <string name="dialog_restore_without_markers_body">Pemulihan tetap menggunakan sakelar lapisan saat ini. Menghapus Negara aplikasi akan menghapus semua nilai uji CarrierConfig sementara pada subId ini. Tanpa snapshot, memulai ulang perangkat lebih andal untuk menyetel ulang.</string>
+    <string name="dialog_restore_without_markers_body">Pemulihan tetap menggunakan sakelar lapisan saat ini. Menghapus Negara aplikasi akan menghapus semua nilai uji CarrierConfig sementara pada subId ini. Tanpa snapshot, memulai ulang perangkat lebih andal untuk menyetel ulang. Memulai ulang tidak mengaktifkan SIM yang dinonaktifkan; aktifkan di Setelan.</string>
     <string name="dialog_restore_anyway">Tetap pulihkan</string>
     <string name="dialog_clear_all_title">Hapus semua override uji CarrierConfig?</string>
     <string name="dialog_clear_all_body">Menghapus nilai uji CarrierConfig sementara dan persisten pada sub %1$d, termasuk nilai dari alat lain. Ini tidak memulihkan lapisan Jaringan dan tidak dapat membuat ulang nilai alat lain.</string>
@@ -116,10 +116,11 @@
     <string name="result_nothing_run">Belum ada yang dijalankan.</string>
     <string name="result_cancelled">Dibatalkan.</string>
     <string name="result_operation_failed">Operasi gagal</string>
-    <string name="result_one_layer_failed">Satu lapisan gagal</string>
+    <string name="result_country_layer_failed">Negara aplikasi gagal</string>
+    <string name="result_network_layer_failed">Operator SIM gagal</string>
     <string name="result_disguise_ims_unregistered">Penyamaran aktif - IMS tidak terdaftar</string>
     <string name="result_disguise_active">Penyamaran sementara aktif</string>
-    <string name="result_restore_unconfirmed">Penyamaran berakhir - periksa layanan seluler</string>
+    <string name="result_restore_unconfirmed">Override dihapus - IMS belum dikonfirmasi; periksa SIM di Setelan</string>
     <string name="result_restored">Penyamaran berakhir dan override dipulihkan</string>
     <string name="result_apps_refreshed">Aplikasi target diperbarui</string>
     <string name="result_all_carrier_config_cleared">Semua override uji CarrierConfig dihapus</string>

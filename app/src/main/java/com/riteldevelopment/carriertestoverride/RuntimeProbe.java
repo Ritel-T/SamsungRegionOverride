@@ -59,10 +59,6 @@ public final class RuntimeProbe {
             System.out.println(TelephonyBridge.listMethods("sub", args[1]));
             return;
         }
-        if ("uicc-cycle".equals(command) && args.length == 2) {
-            System.out.println(TelephonyBridge.cycleUiccApplications(Integer.parseInt(args[1])));
-            return;
-        }
         if ("ims-state".equals(command) && args.length == 2) {
             System.out.println("isImsRegistered(" + args[1] + ")="
                     + TelephonyBridge.isImsRegistered(Integer.parseInt(args[1])));
@@ -108,14 +104,14 @@ public final class RuntimeProbe {
             return;
         }
         // Every branch above is listed here. A command that works but is undocumented is a command
-        // nobody finds, which is what happened to sub-methods and uicc-cycle.
+        // nobody finds.
         throw new IllegalArgumentException("Usage: RuntimeProbe ["
                 + "sim-probe"
                 + " | methods NAME_SUBSTRING | sub-methods NAME_SUBSTRING"
                 + " | sim-set SUB_ID MCCMNC|- IMSI|- NAME|-"
                 + " | sim-restore SUB_ID MCCMNC|- NAME|-"
                 + " | ims-state SUB_ID | sim-fingerprint SUB_ID | ims-restart SLOT_INDEX"
-                + " | uicc-cycle SUB_ID | uicc-refresh SUB_ID"
+                + " | uicc-refresh SUB_ID"
                 + " | display-read SUB_ID | display-set SUB_ID NAME SOURCE"
                 + " | country-apply SUB_ID ISO NAME"
                 + " | country-clear SUB_ID [RESTORE_ISO]]");

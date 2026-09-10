@@ -1,12 +1,29 @@
 package com.riteldevelopment.carriertestoverride.ui
 
 import com.riteldevelopment.carriertestoverride.data.OperationKind
+import com.riteldevelopment.carriertestoverride.data.OperationOutcome
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticsTest {
+    @Test
+    fun failedAndUnavailableImsReadsAreNotReportedAsRegistered() {
+        val failed = OperationOutcome(OperationKind.RESTORE, 1,
+            "ERROR: App country layer restore failed", null, true, false, true)
+        assertEquals(DiagnosticIms.UNKNOWN, failed.diagnosticIms())
+        assertEquals(DiagnosticIms.UNKNOWN, failed.copy(kind = OperationKind.APPLY,
+            message = "IMS: could not be checked (SecurityException).", isError = false)
+            .diagnosticIms())
+        assertEquals(DiagnosticIms.REGISTERED, failed.copy(
+            message = "IMS: registered at the time of restore.").diagnosticIms())
+        assertEquals(DiagnosticIms.UNCONFIRMED, failed.copy(
+            imsRecoveryUnconfirmed = true).diagnosticIms())
+        assertEquals(DiagnosticIms.UNREGISTERED, failed.copy(
+            imsUnregistered = true).diagnosticIms())
+    }
     @Test
     fun safeTextKeepsSupportFieldsButDropsPrivateIdentifiers() {
         val text = DiagnosticReport(

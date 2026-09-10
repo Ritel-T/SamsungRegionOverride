@@ -29,7 +29,7 @@
     <string name="network_not_ready">此层需要状态为“就绪”的 SIM 卡；%1$s 当前为%2$s。</string>
     <string name="network_reconnect_warning">可能在下次重连时导致 IMS/VoLTE 失效。请仅短时使用，完成后立即恢复。</string>
     <string name="layer_still_live">仍在生效。关闭此开关只会在下次应用时排除此层；“恢复”才会移除它。</string>
-    <string name="pending_state_warning">上一次写入在记录结果前已结束。开始下一次伪装前，请先执行“恢复”。如果“恢复”无法完成，请重启以清除核心覆盖，并在开始新会话前遵循出现的任何 SIM 身份警告。</string>
+    <string name="pending_state_warning">上一次写入在记录结果前已结束。开始下一次伪装前，请先执行“恢复”。如果“恢复”无法完成，请重启以清除核心覆盖，并在开始新会话前遵循出现的任何 SIM 身份警告。 重启不会重新启用已停用的 SIM，请在系统设置中启用。</string>
 
     <string name="action_start_disguise">开始伪装</string>
     <string name="action_update_disguise">更新</string>
@@ -106,7 +106,7 @@
     <string name="wipe_data_summary">清除应用数据。你将退出登录，本地数据也会被移除。</string>
 
     <string name="dialog_restore_without_markers_title">未记录此 SIM 卡的信息</string>
-    <string name="dialog_restore_without_markers_body">仍要恢复时，将按当前层开关执行。清除“应用国家/地区”会移除此 subId 的所有临时 CarrierConfig 测试值。没有快照时，重启是更可靠的重置方式。</string>
+    <string name="dialog_restore_without_markers_body">仍要恢复时，将按当前层开关执行。清除“应用国家/地区”会移除此 subId 的所有临时 CarrierConfig 测试值。没有快照时，重启是更可靠的重置方式。 重启不会重新启用已停用的 SIM，请在系统设置中启用。</string>
     <string name="dialog_restore_anyway">仍要恢复</string>
     <string name="dialog_clear_all_title">清除所有 CarrierConfig 测试覆盖？</string>
     <string name="dialog_clear_all_body">移除 sub %1$d 的临时和持久 CarrierConfig 测试值，包括其他工具写入的值。此操作不会恢复 SIM 运营商层，也无法重建其他工具设置的值。</string>
@@ -116,10 +116,11 @@
     <string name="result_nothing_run">尚未执行任何操作。</string>
     <string name="result_cancelled">已取消。</string>
     <string name="result_operation_failed">操作失败</string>
-    <string name="result_one_layer_failed">一个层执行失败</string>
+    <string name="result_country_layer_failed">应用国家/地区失败</string>
+    <string name="result_network_layer_failed">SIM 运营商失败</string>
     <string name="result_disguise_ims_unregistered">伪装已启用 - IMS 未注册</string>
     <string name="result_disguise_active">临时伪装已启用</string>
-    <string name="result_restore_unconfirmed">伪装已结束 - 请检查移动通信服务</string>
+    <string name="result_restore_unconfirmed">覆盖已清除 - IMS 未确认；请在设置中检查 SIM</string>
     <string name="result_restored">伪装已结束，覆盖已恢复</string>
     <string name="result_apps_refreshed">目标应用已刷新</string>
     <string name="result_all_carrier_config_cleared">已清除所有 CarrierConfig 测试覆盖</string>

@@ -671,7 +671,9 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
             else -> ResultTone.SUCCESS
         }
         val headlineRes = when {
-            partial -> R.string.result_one_layer_failed
+            simLayerFailed && countryLayerFailed -> R.string.result_operation_failed
+            countryLayerFailed -> R.string.result_country_layer_failed
+            simLayerFailed -> R.string.result_network_layer_failed
             isError -> R.string.result_operation_failed
             imsUnregistered -> R.string.result_disguise_ims_unregistered
             imsRecoveryUnconfirmed -> R.string.result_restore_unconfirmed
@@ -696,13 +698,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                     isError -> DiagnosticFailure.OPERATION
                     else -> DiagnosticFailure.NONE
                 },
-                ims = when {
-                    imsUnregistered -> DiagnosticIms.UNREGISTERED
-                    imsRecoveryUnconfirmed -> DiagnosticIms.UNCONFIRMED
-                    kind == OperationKind.APPLY || kind == OperationKind.RESTORE ->
-                        DiagnosticIms.REGISTERED
-                    else -> DiagnosticIms.UNKNOWN
-                },
+                ims = diagnosticIms(),
                 runtime = DiagnosticReport.runtime(
                     probe = probe,
                     requested = kind != OperationKind.REFRESH_APPS,

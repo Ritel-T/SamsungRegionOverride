@@ -37,7 +37,7 @@ data class LayerSelection(
     val none: Boolean get() = !simIdentity && !appCountry
 }
 
-/** Stored live or pending state is authoritative when deciding whether a UICC cycle is safe. */
+/** Stored live or pending state determines whether the real Network identity was restored. */
 internal fun networkMayBeLive(flags: OverrideStore.Flags): Boolean =
     flags.simIdentity || flags.simPending
 
