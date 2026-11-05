@@ -120,7 +120,12 @@ reminder and shortcut simply remain hidden.
 
 ## Requirements and tested scope
 
-- Android 10 (API 29) or newer.
+- Installation: Android 10 (API 29) or newer.
+- **App country:** the current permission-check and `am instrument --no-restart` path requires Android
+  12 (API 31) or newer and the required firmware interfaces. Android 10/11 cannot use this Country
+  path. A read-only capability check rejects new Country disguises before recording a pending write.
+- **SIM operator:** uses a separate telephony interface. Country being unavailable does not establish
+  whether SIM operator works on that device; it is not an Android 11 compatibility guarantee.
 - Shizuku 13+ running as shell or root and authorized for this app. Root is not required.
 - An active SIM or eSIM; the selected SIM must be `READY` when using the SIM operator layer.
 - Recent Samsung firmware is the supported focus. Other Samsung and non-Samsung implementations have not
@@ -128,6 +133,11 @@ reminder and shortcut simply remain hidden.
 
 Development and hands-on testing currently center on a Galaxy S25 Ultra (SM-S938B), including Android 16 /
 One UI 8.5 and Android 17 / One UI 9 Beta. Other devices and carrier combinations can behave differently.
+
+Restore still attempts the requested SIM operator recovery when Country is unavailable. A failed
+Country restore retains its recovery records; do not clear app data or use Apply as a recovery step.
+Diagnostics report `network_runtime` (the Network interface inspection) separately from `country_path`
+(the Country path prerequisites). `SUPPORTED` does not prove a write, reload or actual call succeeds.
 
 ## Target apps
 

@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride.ui
 
 import com.riteldevelopment.carriertestoverride.data.LayerSelection
+import com.riteldevelopment.carriertestoverride.CountryCapability
 import com.riteldevelopment.carriertestoverride.data.OperationKind
 import com.riteldevelopment.carriertestoverride.data.OperationOutcome
 import com.riteldevelopment.carriertestoverride.data.OverrideRepository
@@ -74,6 +75,7 @@ data class DiagnosticReport(
     val runtime: DiagnosticRuntime,
     val exception: String? = null,
     val durationMs: Long? = null,
+    val countryPath: CountryCapability.Status = CountryCapability.Status.NOT_REQUESTED,
 ) {
     /**
      * Stable, reviewable text for clipboard/share actions. No URL query or automatic upload is involved.
@@ -95,6 +97,7 @@ data class DiagnosticReport(
             "ims=${ims.name}; shizuku=${shizuku.name}; stage=${stage?.name ?: "NONE"}"
         )
         appendLine("failure=${failure.name}; runtime=${runtime.name}")
+        appendLine("network_runtime=${runtime.name}; country_path=${countryPath.name}")
         exception?.let { appendLine("exception=${safeToken(it)}") }
         durationMs?.let { appendLine("duration_ms=${it.coerceIn(0, 600_000)}") }
     }.trimEnd()

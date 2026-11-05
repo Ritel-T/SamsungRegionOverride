@@ -1,6 +1,7 @@
 package com.riteldevelopment.carriertestoverride.data
 
 import com.riteldevelopment.carriertestoverride.CarrierOverrideUserService
+import com.riteldevelopment.carriertestoverride.CountryCapability
 import com.riteldevelopment.carriertestoverride.ICarrierOverrideService
 import com.riteldevelopment.carriertestoverride.R
 import kotlinx.coroutines.CoroutineDispatcher
@@ -109,6 +110,21 @@ class OverrideRepository(
             throw OverrideException(R.string.error_sim_identity_unbound)
         }
         val service = connect(onStage)
+        // Check Country in the privileged process before capturing originals or marking any write pending.
+        // Network-only operations and Restore remain independent of this apply preflight.
+        if (layers.appCountry) {
+            val probe = withContext(io) { service.inspectRuntime() }
+            val reason = CountryCapability.failureReason(probe)
+            if (reason != null) return OperationOutcome(
+                kind = OperationKind.APPLY,
+                subId = sim.subId,
+                message = "ERROR: ${CarrierOverrideUserService.COUNTRY_LAYER_APPLY_FAILED}\n$reason",
+                probe = probe,
+                isError = true,
+                simLayerFailed = false,
+                countryLayerFailed = true,
+            )
+        }
         val fingerprint = withContext(io) {
             runCatching { service.readSimFingerprint(sim.subId) }.getOrNull()
         }

@@ -92,6 +92,7 @@ final class CarrierConfigBridge {
     private static synchronized String runInstrumentation(Bundle arguments) throws Exception {
         java.lang.Process process = null;
         try {
+            CountryCapability.requireSupported(CountryCapability.inspect(Build.VERSION.SDK_INT));
             // Android 15+ finishes only its own delegation. Older frameworks may clear any
             // delegate when instrumentation ends, so reject an existing one before starting.
             // This read-only preflight is not atomic with another tool starting a delegation.

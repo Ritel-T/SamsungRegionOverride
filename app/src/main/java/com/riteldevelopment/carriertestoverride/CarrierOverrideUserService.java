@@ -44,7 +44,8 @@ public final class CarrierOverrideUserService extends ICarrierOverrideService.St
                     .append(throwable.getClass().getSimpleName())
                     .append(throwable.getMessage() == null ? "" : ": " + throwable.getMessage());
         }
-        // Do not probe CarrierConfig here. Its probe is itself an instrumentation run, and the real
+        result.append('\n').append(CountryCapability.inspect(android.os.Build.VERSION.SDK_INT));
+        // Do not start CarrierConfig instrumentation here. Its probe is itself an instrumentation run, and the real
         // Country operation starts another one immediately afterwards. Android 17 Beta can receive
         // that second start before AMS has detached the first run, crashing system_server's
         // startInstrumentation path and leaving UiAutomation half-connected. The actual Country call

@@ -111,13 +111,22 @@
 
 ## 要求与测试范围
 
-- Android 10（API 29）或更高版本；
+- 安装要求：Android 10（API 29）或更高版本；
+- **应用国家/地区：**当前权限预检查及 `am instrument --no-restart` 路径要求 Android 12（API 31）
+  或更高版本，并需固件提供对应接口。Android 10/11 无法使用此 Country 路径；新操作会在记录待恢复
+  写入前进行只读能力检查。
+- **SIM 运营商：**使用独立的电话接口。Country 不可用不代表此层必然可用或不可用，也不代表已验证
+  Android 11 兼容性。
 - Shizuku 13+，以 shell 或 root 运行并完成授权；本应用不要求 root；
 - 手机中有可用的 SIM 或 eSIM；使用“SIM 运营商”层时，所选 SIM 需处于 `READY` 状态；
 - 主要面向较新的三星固件，其他三星和非三星系统尚未充分验证。
 
 目前的开发和实机测试主要在 Galaxy S25 Ultra（SM-S938B）上完成，覆盖 Android 16 / One UI 8.5
 和 Android 17 / One UI 9 Beta。其他设备、固件和运营商组合可能有不同表现。
+
+Country 不可用时，Restore 仍会尝试所请求的 SIM 运营商恢复，并保留 Country 恢复失败的记录。
+请勿清除应用数据或使用 Apply 代替恢复。诊断中的 `network_runtime` 是 Network 接口探测结果，
+`country_path` 是 Country 路径的前置能力判定；`SUPPORTED` 不代表写入、刷新或实际通话已成功。
 
 ## 目标应用
 

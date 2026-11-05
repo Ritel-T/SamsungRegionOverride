@@ -42,11 +42,13 @@ class DiagnosticsTest {
             stage = OverrideRepository.Stage.BINDING,
             failure = DiagnosticFailure.OPERATION,
             runtime = DiagnosticRuntime.AVAILABLE,
+            countryPath = com.riteldevelopment.carriertestoverride.CountryCapability.Status.UNSUPPORTED_ANDROID,
             exception = "SecurityException",
             durationMs = 42,
         ).toSafeText()
 
         assertTrue(text.startsWith("SRO-DIAGNOSTIC/1"))
+        assertTrue(text.contains("network_runtime=AVAILABLE; country_path=UNSUPPORTED_ANDROID"))
         assertTrue(text.contains("operation=APPLY"))
         assertTrue(text.contains("target_country=gb"))
         assertTrue(text.contains("stage=BINDING"))

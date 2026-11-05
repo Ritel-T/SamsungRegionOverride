@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.riteldevelopment.carriertestoverride.BuildConfig
+import com.riteldevelopment.carriertestoverride.CountryCapability
 import com.riteldevelopment.carriertestoverride.R
 import com.riteldevelopment.carriertestoverride.data.InstrumentationHost
 import com.riteldevelopment.carriertestoverride.data.LayerSelection
@@ -699,8 +700,11 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
                     else -> DiagnosticFailure.NONE
                 },
                 ims = diagnosticIms(),
+                countryPath = if (kind == OperationKind.REFRESH_APPS)
+                    CountryCapability.Status.NOT_REQUESTED
+                else CountryCapability.status(probe),
                 runtime = DiagnosticReport.runtime(
-                    probe = probe,
+                    probe = probe?.takeUnless { it.startsWith("SIM identity probe unavailable:") },
                     requested = kind != OperationKind.REFRESH_APPS,
                 ),
             ),
@@ -713,6 +717,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         failure: DiagnosticFailure,
         ims: DiagnosticIms = DiagnosticIms.UNKNOWN,
         runtime: DiagnosticRuntime = DiagnosticRuntime.NOT_REQUESTED,
+        countryPath: CountryCapability.Status = CountryCapability.Status.NOT_REQUESTED,
         exception: String? = null,
     ): DiagnosticReport = DiagnosticReport(
         appVersion = _state.value.device.appVersion,
@@ -730,6 +735,7 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         stage = lastStage,
         failure = failure,
         runtime = runtime,
+        countryPath = countryPath,
         exception = exception,
         durationMs = operationStartedAt.takeIf { it > 0L }
             ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) },
