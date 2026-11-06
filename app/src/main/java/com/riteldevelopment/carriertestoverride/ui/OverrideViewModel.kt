@@ -758,9 +758,9 @@ class OverrideViewModel(application: Application) : AndroidViewModel(application
         const val MAX_NAME = 80
         const val SIM_REFRESH_ATTEMPTS = 7
         const val SIM_REFRESH_INTERVAL_MS = 800L
-        const val GITHUB_PROJECT_URL = "https://github.com/Ritel-T/SamsungRegionOverride"
+        const val GITHUB_PROJECT_URL = "https://github.com/RitelDevs/SamsungRegionOverride"
         const val GITHUB_ISSUE_URL =
-            "https://github.com/Ritel-T/SamsungRegionOverride/issues/new?template=bug-report.yml"
+            "https://github.com/RitelDevs/SamsungRegionOverride/issues/new?template=bug-report.yml"
     }
 }
 

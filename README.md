@@ -10,7 +10,7 @@ On the tested Galaxy, mobile data remained available throughout apply and restor
 can still affect calling or messaging if IMS reconnects later, so short sessions followed by a prompt
 restore are recommended.
 
-[Download the latest signed APK](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest)
+[Download the latest signed APK](https://github.com/RitelDevs/SamsungRegionOverride/releases/latest)
 
 > **Upgrading from 3.x:** version 4 uses the new Android package id `com.ritelt.regionoverride`, so it
 > installs beside version 3 instead of replacing it. End every version 3 disguise before uninstalling
@@ -75,7 +75,7 @@ away without crowding the main workflow.
 
 ## Quick start
 
-1. Install the APK from [Releases](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest).
+1. Install the APK from [Releases](https://github.com/RitelDevs/SamsungRegionOverride/releases/latest).
 2. Start Shizuku and grant Samsung Region Override access.
 3. Select the SIM carrying mobile data, then choose a country/carrier preset.
 4. Enable only the layer or layers your target app needs.
@@ -174,8 +174,8 @@ the overrides were cleared. Check the SIM and mobile service in Android Settings
 the SIM there after restoring the real identity. Version 4.0.0 could leave UICC disabled persistently:
 reboot alone does not re-enable it. The current recovery flow does not fix every IMS registration issue.
 
-The IMS reports in [issue #3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) and
-[issue #4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) concern this framework-wide SIM
+The IMS reports in [issue #3](https://github.com/RitelDevs/SamsungRegionOverride/issues/3) and
+[issue #4](https://github.com/RitelDevs/SamsungRegionOverride/issues/4) concern this framework-wide SIM
 operator limitation. If App country alone meets the target app's needs, leaving SIM operator off can
 reduce exposure to it, but does not guarantee uninterrupted service. The post-apply IMS sample describes
 the current moment; later reconnects can still behave differently.

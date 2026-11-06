@@ -45,8 +45,8 @@ when both fail. Expand local details to distinguish an override failure from unc
 - `OPERATION`: inspect the app version, stage and runtime availability first, then request a focused
   reproduction on the affected firmware.
 
-The IMS reports in issues [#3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) and
-[#4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) concern the global SIM operator override.
+The IMS reports in issues [#3](https://github.com/RitelDevs/SamsungRegionOverride/issues/3) and
+[#4](https://github.com/RitelDevs/SamsungRegionOverride/issues/4) concern the global SIM operator override.
 If App country alone satisfies the target app, leaving SIM operator off may reduce exposure, but does
 not guarantee that IMS will remain registered. Do not report a successful override or a short healthy
 IMS sample as proof that the underlying IMS limitation is fixed.

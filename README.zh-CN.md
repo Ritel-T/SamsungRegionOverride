@@ -8,7 +8,7 @@
 在已测试的 Galaxy 上，应用和恢复期间移动数据都保持可用。如果系统之后触发 IMS 重连，
 “SIM 运营商”层仍可能影响通话或短信，因此建议短时间使用，并在用完后及时恢复。
 
-[下载最新版签名 APK](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest)
+[下载最新版签名 APK](https://github.com/RitelDevs/SamsungRegionOverride/releases/latest)
 
 > **从 3.x 升级：**4.0 使用新的 Android 包名 `com.ritelt.regionoverride`，会与 3.x 并存，
 > 而不是覆盖安装。卸载旧版前，请先在旧版中结束所有伪装。恢复快照、历史选择和 Shizuku
@@ -69,7 +69,7 @@
 
 ## 快速使用
 
-1. 从 [Releases](https://github.com/Ritel-T/SamsungRegionOverride/releases/latest) 安装 APK。
+1. 从 [Releases](https://github.com/RitelDevs/SamsungRegionOverride/releases/latest) 安装 APK。
 2. 启动 Shizuku，并向 Samsung Region Override 授权。
 3. 选择承载移动数据的 SIM，再选择目标国家和运营商。
 4. 只开启目标应用需要的层。
@@ -161,8 +161,8 @@ SIM/UICC。IMS 未注册或无法读取时，即使覆盖已清除，也只能�
 系统设置中检查 SIM 和移动通信服务；必要时，在恢复真实身份后手动重新启用 SIM。4.0.0 可能留下
 持久停用的 UICC，单靠重启不会重新启用它。当前恢复流程并未解决所有 IMS 注册问题。
 
-[issue #3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) 和
-[issue #4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) 中的 IMS 问题涉及上述全局
+[issue #3](https://github.com/RitelDevs/SamsungRegionOverride/issues/3) 和
+[issue #4](https://github.com/RitelDevs/SamsungRegionOverride/issues/4) 中的 IMS 问题涉及上述全局
 SIM 运营商伪装限制。如果仅“应用国家/地区”就能满足目标应用，保持“SIM 运营商”关闭可以减少
 这类问题的触发机会，但不保证通信始终正常。应用后的 IMS 观察反映的是当时状态，后续重连仍可能
 出现变化。

@@ -58,7 +58,7 @@ This project instead treats the feature as a short session and preserves an expl
 - after restoring the real identity, the user checks mobile service and, if needed, re-enables the SIM in Android Settings;
 - version 4.0.0 could leave UICC persistently disabled, and reboot alone does not re-enable it.
 
-The IMS reports in [issue #3](https://github.com/Ritel-T/SamsungRegionOverride/issues/3) and [issue #4](https://github.com/Ritel-T/SamsungRegionOverride/issues/4) concern the global Network identity limitation. App-country-only use can reduce exposure when it meets the target app's needs, but it is not a service-safety guarantee. Removing automatic UICC cycling avoids that recovery-side mutation; it does not make a fake Network identity safe or resolve every IMS registration failure.
+The IMS reports in [issue #3](https://github.com/RitelDevs/SamsungRegionOverride/issues/3) and [issue #4](https://github.com/RitelDevs/SamsungRegionOverride/issues/4) concern the global Network identity limitation. App-country-only use can reduce exposure when it meets the target app's needs, but it is not a service-safety guarantee. Removing automatic UICC cycling avoids that recovery-side mutation; it does not make a fake Network identity safe or resolve every IMS registration failure.
 
 ## What was ruled out
 
